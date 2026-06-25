@@ -5298,12 +5298,17 @@
           const duplicateHints = websiteSubmissionDuplicateHints(row, rows);
           const customerHint = websiteSubmissionCustomerMatchHint(row);
           const canCreateServiceOrder = websiteSubmissionCanCreateServiceOrder(row);
+          const workflowHint = websiteSubmissionWorkflowHint(row, duplicateHints.length);
           return `
             <article title="Rå innsending beholdes uendret til den behandles server-side.">
               <div>
                 <strong>${escapeHtml(name || "Ukjent innsending")}</strong>
                 <span>${escapeHtml(text || "Ny innsending")}</span>
                 ${message ? `<small>${escapeHtml(message).slice(0, 180)}</small>` : ""}
+                <div class="website-workflow-hint ${escapeHtml(workflowHint.kind)}">
+                  <strong>${escapeHtml(workflowHint.label)}</strong>
+                  <span>${escapeHtml(workflowHint.detail)}</span>
+                </div>
                 ${duplicateHints.length ? `<small class="website-duplicate-hint">Mulig duplikat: ${escapeHtml(duplicateHints.join(", "))}</small>` : ""}
                 ${customerHint ? `<small class="website-duplicate-hint">${escapeHtml(customerHint)}</small>` : ""}
               </div>
@@ -5346,6 +5351,13 @@
       if (reasons.length) matches.push({ row: other, reasons });
     }
     return matches;
+  }
+
+  function websiteSubmissionDuplicateSummary(row) {
+    return websiteSubmissionDuplicateRows(row)
+      .slice(0, 3)
+      .map((item) => `${websiteSubmissionName(item.row)} (${item.reasons.join(", ")})`)
+      .join("; ");
   }
 
   function plainObject(value) {
@@ -5482,6 +5494,25 @@
     return websiteSubmissionIsService(row) && !row?.created_job_id;
   }
 
+  function websiteSubmissionWorkflowHint(row, duplicateCount = 0) {
+    if (websiteSubmissionCanCreateServiceOrder(row)) {
+      return {
+        kind: duplicateCount ? "service duplicate" : "service",
+        label: "Anbefalt: Lag serviceordre",
+        detail: duplicateCount
+          ? "Service/feil. Behandle én innsending, marker eventuell kopi lest."
+          : "Service, feil eller fakturerbar hjelp som bør bli ordre.",
+      };
+    }
+    return {
+      kind: duplicateCount ? "lead duplicate" : "lead",
+      label: "Anbefalt: Lag lead",
+      detail: duplicateCount
+        ? "Tilbud/befaring. Behandle én innsending, marker eventuell kopi lest."
+        : "Tilbud, befaring eller ny kundeoppfølging før ordre.",
+    };
+  }
+
   function websiteSubmissionOrderType(row) {
     const text = websiteSubmissionServiceText(row);
     if (/\b(reklamasjon|garanti)\b/i.test(text)) return "reklamasjon";
@@ -5602,6 +5633,15 @@
     if (!values.name && !values.phone && !values.email && !values.address) {
       throw new Error("Nettsideinnsendingen mangler nok kontaktinfo til å lage lead.");
     }
+    const duplicateRows = websiteSubmissionDuplicateRows(row);
+    if (duplicateRows.length) {
+      const ok = await askForConfirmation({
+        title: "Mulig duplikat",
+        message: `Fant annen åpen nettsideinnsending som ligner: ${websiteSubmissionDuplicateSummary(row)}. Fortsett og lag lead for valgt innsending?`,
+        confirmLabel: "Lag lead",
+      });
+      if (!ok) return;
+    }
     const savedLead = await store.saveLeadDraft(values);
     leads.unshift(savedLead);
     const updated = await store.updateWebsiteSubmission(id, {
@@ -5631,13 +5671,9 @@
     }
     const duplicateRows = websiteSubmissionDuplicateRows(row);
     if (duplicateRows.length) {
-      const duplicateText = duplicateRows
-        .slice(0, 3)
-        .map((item) => `${websiteSubmissionName(item.row)} (${item.reasons.join(", ")})`)
-        .join("; ");
       const ok = await askForConfirmation({
         title: "Mulig duplikat",
-        message: `Fant annen åpen nettsideinnsending som ligner: ${duplicateText}. Fortsett og lag serviceordre for valgt innsending?`,
+        message: `Fant annen åpen nettsideinnsending som ligner: ${websiteSubmissionDuplicateSummary(row)}. Fortsett og lag serviceordre for valgt innsending?`,
         confirmLabel: "Lag serviceordre",
       });
       if (!ok) return;

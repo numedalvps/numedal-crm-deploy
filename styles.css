@@ -1135,6 +1135,49 @@ textarea {
   font-weight: 800;
 }
 
+.website-workflow-hint {
+  display: grid;
+  gap: 2px;
+  width: fit-content;
+  max-width: 100%;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: #eff6ff;
+}
+
+.website-workflow-hint strong,
+.website-workflow-hint span {
+  display: block;
+  color: #1d4ed8;
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.website-workflow-hint span {
+  font-weight: 800;
+}
+
+.website-workflow-hint.service {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.website-workflow-hint.service strong,
+.website-workflow-hint.service span {
+  color: #166534;
+}
+
+.website-workflow-hint.duplicate {
+  border-color: #fdba74;
+  background: #fff7ed;
+}
+
+.website-workflow-hint.duplicate strong,
+.website-workflow-hint.duplicate span {
+  color: #9a3412;
+}
+
 .intake-inbox-panel {
   border: 1px solid #fed7aa;
   border-radius: 8px;
