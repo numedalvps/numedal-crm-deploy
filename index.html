@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260625-4" />
+    <link rel="stylesheet" href="./styles.css?v=20260625-5" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -18,10 +18,10 @@
           <button id="loginSubmitButton" type="submit">Logg inn</button>
           <p id="loginMessage" class="login-message"></p>
         </form>
-        <p class="demo-label">Lokal utviklingsdemo</p>
-        <div class="login-actions">
-          <button data-login="admin" type="button">Logg inn som Gunnar</button>
-          <button data-login="tech" type="button">Logg inn som Hubert</button>
+        <p class="demo-label hidden">Lokal utviklingsdemo</p>
+        <div class="login-actions demo-login-actions hidden">
+          <button data-login="admin" class="hidden" type="button">Logg inn som Gunnar</button>
+          <button data-login="tech" class="hidden" type="button">Logg inn som Hubert</button>
         </div>
       </section>
     </div>
@@ -857,10 +857,10 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260625-4"></script>
-    <script src="./supabase-adapter.js?v=20260625-4"></script>
-    <script src="./intake-parser.js?v=20260625-4"></script>
-    <script src="./app.js?v=20260625-4"></script>
+    <script src="./supabase-config.js?v=20260625-5"></script>
+    <script src="./supabase-adapter.js?v=20260625-5"></script>
+    <script src="./intake-parser.js?v=20260625-5"></script>
+    <script src="./app.js?v=20260625-5"></script>
   </body>
 </html>
 

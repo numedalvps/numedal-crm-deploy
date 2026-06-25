@@ -4466,8 +4466,10 @@
         ? "Lokal utviklingsdemo. Ikke bruk dette til ekte kundedata."
         : databaseUnavailableMessage;
     el.loginForm.classList.toggle("hidden", !store.isConfigured);
-    document.querySelector(".demo-label")?.classList.toggle("hidden", !demoEnabled || store.isConfigured);
-    document.querySelectorAll("[data-login]").forEach((button) => button.classList.toggle("hidden", !demoEnabled || store.isConfigured));
+    const showDemoLogin = demoEnabled && !store.isConfigured;
+    document.querySelector(".demo-label")?.classList.toggle("hidden", !showDemoLogin);
+    document.querySelector(".demo-login-actions")?.classList.toggle("hidden", !showDemoLogin);
+    document.querySelectorAll("[data-login]").forEach((button) => button.classList.toggle("hidden", !showDemoLogin));
     if (missingProductionDatabase && el.loginMessage) el.loginMessage.textContent = databaseUnavailableMessage;
 
     if (!currentUser) {
