@@ -5268,12 +5268,14 @@
           const message = websiteSubmissionMessage(row);
           const date = row.received_at ? formatDate(isoDate(new Date(row.received_at))) : "";
           const text = [websiteSubmissionTypeLabel(row), row.normalized_phone, row.normalized_email, date].filter(Boolean).join(" · ");
+          const duplicateHints = websiteSubmissionDuplicateHints(row, rows);
           return `
             <article title="Rå innsending beholdes uendret til den behandles server-side.">
               <div>
                 <strong>${escapeHtml(name || "Ukjent innsending")}</strong>
                 <span>${escapeHtml(text || "Ny innsending")}</span>
                 ${message ? `<small>${escapeHtml(message).slice(0, 180)}</small>` : ""}
+                ${duplicateHints.length ? `<small class="website-duplicate-hint">Mulig duplikat: ${escapeHtml(duplicateHints.join(", "))}</small>` : ""}
               </div>
               <div class="mini-action-row">
                 <button data-create-website-lead="${escapeHtml(row.id)}" type="button" title="Opprett lead fra denne nettsideinnsendingen.">Lag lead</button>
@@ -5285,6 +5287,23 @@
         }).join("")}
       </div>
     `;
+  }
+
+  function websiteSubmissionDuplicateHints(row, rows = websiteSubmissions || []) {
+    const phone = compactPhone(firstFilled(row?.normalized_phone, websiteSubmissionCustomer(row).phone));
+    const email = String(firstFilled(row?.normalized_email, websiteSubmissionCustomer(row).email)).trim().toLowerCase();
+    const name = normalizeMatch(websiteSubmissionName(row));
+    const reasons = new Set();
+    for (const other of rows) {
+      if (!other || other.id === row?.id) continue;
+      const otherPhone = compactPhone(firstFilled(other.normalized_phone, websiteSubmissionCustomer(other).phone));
+      const otherEmail = String(firstFilled(other.normalized_email, websiteSubmissionCustomer(other).email)).trim().toLowerCase();
+      const otherName = normalizeMatch(websiteSubmissionName(other));
+      if (phone && otherPhone && phone === otherPhone) reasons.add("samme telefon");
+      if (email && otherEmail && email === otherEmail) reasons.add("samme e-post");
+      if (name && otherName && name === otherName) reasons.add("samme navn");
+    }
+    return [...reasons];
   }
 
   function plainObject(value) {
@@ -5444,6 +5463,59 @@
     setSyncStatus(status === "read" ? "Nettsideinnsending markert lest." : "Nettsideinnsending markert som spam.", "ok");
   }
 
+  function leadCustomerMatchValues(entry) {
+    const lead = entry?.lead || {};
+    const customer = entry?.customer || leadCustomerFromRow(lead);
+    return {
+      name: cleanDisplayName(customer),
+      phone: customer.phone || lead.phone || "",
+      email: customer.email || lead.email || "",
+      street: customer.visit_street || lead.address || "",
+      city: customer.visit_city || customer.location_tag || lead.city || "",
+    };
+  }
+
+  function leadCustomerCandidates(entry) {
+    if (!entry?.lead || leadCustomerId(entry.lead)) return [];
+    return aiRegistrationCandidates(leadCustomerMatchValues(entry))
+      .filter((item) => item.score >= 40)
+      .slice(0, 5);
+  }
+
+  function strongLeadCustomerCandidate(entry) {
+    return leadCustomerCandidates(entry).find((item) => item.score >= 120) || null;
+  }
+
+  function leadCustomerMatchHtml(entry) {
+    const candidates = leadCustomerCandidates(entry);
+    if (!candidates.length) return "";
+    return `
+      <section class="detail-section attention compact-warning">
+        <h3>Mulig eksisterende kundekort</h3>
+        <p>Fant aktive kundekort som ligner. Koble til eksisterende kunde hvis dette er samme person, ellers kan du opprette nytt kundekort.</p>
+        <div class="lead-match-list">
+          ${candidates.map(({ customer, score, reasons }) => {
+            const key = customerKey(customer);
+            const reasonText = (reasons || []).length ? reasons.join(", ") : (score >= 100 ? "sterk match" : "mulig treff");
+            return `
+              <article>
+                <div>
+                  <strong>${escapeHtml(cleanDisplayName(customer))}</strong>
+                  <span>${escapeHtml([customer.visit_city || customer.location_tag, customer.phone, customer.email].filter(Boolean).join(" · ") || "Lite info")}</span>
+                  <small>${score >= 120 ? "Svært sannsynlig treff" : "Mulig treff"}: ${escapeHtml(reasonText)}</small>
+                </div>
+                <div class="mini-action-row">
+                  <button data-link-lead-customer="${escapeHtml(leadEntryKey(entry))}" data-link-existing-customer="${escapeHtml(key)}" type="button">Koble kundekort</button>
+                  <button class="secondary" data-open-lead-customer="${escapeHtml(key)}" type="button">Åpne</button>
+                </div>
+              </article>
+            `;
+          }).join("")}
+        </div>
+      </section>
+    `;
+  }
+
   function leadCustomerDraft(entry) {
     const lead = entry?.lead || {};
     const customer = entry?.customer || leadCustomerFromRow(lead);
@@ -5476,6 +5548,39 @@
     };
   }
 
+  async function linkWebsiteSubmissionToCustomerFromLead(lead, customerId) {
+    const linkedSubmission = (websiteSubmissions || []).find((row) => row.id === lead.raw_submission_id || row.created_lead_id === lead.id);
+    const linkedSubmissionId = lead.raw_submission_id || linkedSubmission?.id || "";
+    if (!linkedSubmissionId || !store.updateWebsiteSubmission) return;
+    const updatedSubmission = await store.updateWebsiteSubmission(linkedSubmissionId, { created_customer_id: customerId });
+    mergeWebsiteSubmission(linkedSubmissionId, { created_customer_id: customerId }, updatedSubmission);
+  }
+
+  async function linkLeadToExistingCustomer(entryKey, customerId) {
+    if (!store.updateLead) throw new Error("Kobling av lead krever oppdatert Supabase-adapter.");
+    const entry = allLeadEntries().find((item) => leadEntryKey(item) === entryKey);
+    if (!entry?.lead) throw new Error("Fant ikke leaden.");
+    const customer = findCustomer(customerId);
+    if (!customer) throw new Error("Fant ikke kundekortet som skulle kobles.");
+    const updatedLead = await store.updateLead(entry.lead.id, { existing_customer_id: customerKey(customer) });
+    const leadIndex = leads.findIndex((lead) => lead.id === updatedLead.id);
+    if (leadIndex >= 0) leads[leadIndex] = updatedLead;
+    else leads.unshift(updatedLead);
+    await linkWebsiteSubmissionToCustomerFromLead(updatedLead, customerKey(customer));
+    await saveServiceEvent(customer, {
+      event_date: isoDate(new Date()),
+      event_type: "Lead koblet til kundekort",
+      note: leadNoteForEntry({ ...entry, lead: updatedLead, customer }) || "Lead koblet til eksisterende kundekort.",
+    });
+    selectedLeadId = `lead:${updatedLead.id}`;
+    selectedCustomerId = customerKey(customer);
+    currentLeadFilter = leadStatusForEntry({ ...entry, lead: updatedLead, customer }) || "followup";
+    if (el.leadStatusFilter) el.leadStatusFilter.value = currentLeadFilter;
+    renderAll();
+    setView("leads");
+    setSyncStatus("Lead koblet til eksisterende kundekort. Du kan nå sette status, booke eller opprette ordre.", "ok");
+  }
+
   async function createCustomerFromLead(entryKey) {
     if (!store.saveCustomer || !store.updateLead) throw new Error("Opprett kundekort fra lead krever oppdatert Supabase-adapter.");
     const entry = allLeadEntries().find((item) => leadEntryKey(item) === entryKey);
@@ -5485,6 +5590,12 @@
       selectedCustomerId = existingCustomerId;
       setView("customers");
       setSyncStatus("Leaden er allerede koblet til kundekort.", "ok");
+      return;
+    }
+    const strongCandidate = strongLeadCustomerCandidate(entry);
+    if (strongCandidate) {
+      setSyncStatus(`Fant mulig eksisterende kundekort: ${cleanDisplayName(strongCandidate.customer)}. Bruk Koble kundekort hvis dette er samme kunde.`, "ok");
+      renderLeadDetail();
       return;
     }
     const draft = leadCustomerDraft(entry);
@@ -5499,12 +5610,7 @@
     if (leadIndex >= 0) leads[leadIndex] = updatedLead;
     else leads.unshift(updatedLead);
 
-    const linkedSubmission = (websiteSubmissions || []).find((row) => row.id === updatedLead.raw_submission_id || row.created_lead_id === updatedLead.id);
-    const linkedSubmissionId = updatedLead.raw_submission_id || linkedSubmission?.id || "";
-    if (linkedSubmissionId && store.updateWebsiteSubmission) {
-      const updatedSubmission = await store.updateWebsiteSubmission(linkedSubmissionId, { created_customer_id: savedCustomer.id });
-      mergeWebsiteSubmission(linkedSubmissionId, { created_customer_id: savedCustomer.id }, updatedSubmission);
-    }
+    await linkWebsiteSubmissionToCustomerFromLead(updatedLead, savedCustomer.id);
 
     await saveServiceEvent(savedCustomer, {
       event_date: isoDate(new Date()),
@@ -5562,6 +5668,7 @@
         ${realCustomer ? `<button data-open-lead-customer="${escapeHtml(key)}" type="button">Åpne kundekort</button>` : ""}
         ${!realCustomer && entry?.lead ? `<button class="order-primary" data-create-customer-from-lead="${escapeHtml(leadEntryKey(entry))}" type="button">Opprett kundekort</button>` : ""}
       </div>
+      ${!realCustomer && entry?.lead ? leadCustomerMatchHtml(entry) : ""}
       <section class="detail-section">
         <h3>Oppfølging</h3>
         ${realCustomer ? leadStatusControlHtml(customer, status) : `<p class="muted">Denne leaden ligger som henvendelse. Opprett kundekort først når saken er reell og skal følges opp videre.</p>`}
@@ -8712,6 +8819,12 @@
     if (createCustomer) {
       createCustomerFromLead(createCustomer.dataset.createCustomerFromLead)
         .catch((error) => setSyncStatus(error.message || "Klarte ikke opprette kundekort fra lead.", "error"));
+      return;
+    }
+    const linkCustomer = event.target.closest("[data-link-lead-customer]");
+    if (linkCustomer) {
+      linkLeadToExistingCustomer(linkCustomer.dataset.linkLeadCustomer, linkCustomer.dataset.linkExistingCustomer)
+        .catch((error) => setSyncStatus(error.message || "Klarte ikke koble lead til kundekort.", "error"));
       return;
     }
     const open = event.target.closest("[data-open-lead-customer]");

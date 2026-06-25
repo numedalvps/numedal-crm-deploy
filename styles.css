@@ -1184,6 +1184,16 @@ textarea {
   flex-wrap: wrap;
 }
 
+.website-duplicate-hint {
+  display: inline-flex;
+  width: fit-content;
+  border: 1px solid #fdba74;
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: #fff7ed;
+  color: #9a3412;
+}
+
 .compact-action-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -2017,6 +2027,36 @@ textarea {
 .detail-section.attention {
   border-color: #fed7aa;
   background: #fff7ed;
+}
+
+.lead-match-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.lead-match-list article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid #fdba74;
+  border-radius: 8px;
+  padding: 10px;
+  background: #fff;
+}
+
+.lead-match-list strong,
+.lead-match-list span,
+.lead-match-list small {
+  display: block;
+}
+
+.lead-match-list span,
+.lead-match-list small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .duplicate-links {
