@@ -4564,12 +4564,14 @@
     const upcomingBookings = bookingRows().filter((row) => row.booking.date >= isoDate(new Date())).length;
     const moveRows = moveQueueRows();
     const billingRows = billingQueueRows();
+    const activeLeadCount = allLeadEntries().filter((entry) => !["won", "lost"].includes(leadStatusForEntry(entry))).length;
+    const openWebsiteSubmissionCount = openWebsiteSubmissionRows().length;
     el.redMetric.textContent = redCount.toLocaleString("nb-NO");
     el.yellowMetric.textContent = yellowCount.toLocaleString("nb-NO");
     el.greenMetric.textContent = greenCount.toLocaleString("nb-NO");
     el.bookedMetric.textContent = bookingRows().length.toLocaleString("nb-NO");
     if (el.dashboardServiceCount) el.dashboardServiceCount.textContent = (redCount + yellowCount).toLocaleString("nb-NO");
-    if (el.dashboardLeadCount) el.dashboardLeadCount.textContent = allLeadEntries().filter((entry) => !["won", "lost"].includes(leadStatusForEntry(entry))).length.toLocaleString("nb-NO");
+    if (el.dashboardLeadCount) el.dashboardLeadCount.textContent = (activeLeadCount + openWebsiteSubmissionCount).toLocaleString("nb-NO");
     if (el.dashboardBookingCount) el.dashboardBookingCount.textContent = upcomingBookings.toLocaleString("nb-NO");
     if (el.dashboardMoveCount) el.dashboardMoveCount.textContent = moveRows.length.toLocaleString("nb-NO");
     if (el.dashboardBillingCount) el.dashboardBillingCount.textContent = billingRows.length.toLocaleString("nb-NO");
@@ -5275,7 +5277,7 @@
 
   function renderWebsiteSubmissionInbox() {
     if (!el.websiteSubmissionInbox) return;
-    const rows = (websiteSubmissions || []).filter((row) => ["new", "duplicate_possible", "failed"].includes(row.processing_status || "new"));
+    const rows = openWebsiteSubmissionRows();
     el.websiteSubmissionInbox.classList.toggle("hidden", !rows.length);
     if (!rows.length) {
       el.websiteSubmissionInbox.innerHTML = "";
@@ -5323,6 +5325,10 @@
         }).join("")}
       </div>
     `;
+  }
+
+  function openWebsiteSubmissionRows() {
+    return (websiteSubmissions || []).filter((row) => ["new", "duplicate_possible", "failed"].includes(row.processing_status || "new"));
   }
 
   function websiteSubmissionDuplicateHints(row, rows = websiteSubmissions || []) {
