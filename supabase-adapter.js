@@ -997,6 +997,7 @@
           intake_source: "hurtigregistrering",
           action: values?.action || "create_lead",
           parser: values?.parser || "simple_text_recognition",
+          source_intake_id: values?.source_intake_id || null,
           original_kept: Boolean(values?.keepOriginal),
           original_text: values?.keepOriginal ? values?.raw || null : null,
         },

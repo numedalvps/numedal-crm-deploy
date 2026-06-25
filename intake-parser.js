@@ -133,7 +133,7 @@
         evidence: sourceWindow(raw, dateMatch.index, dateMatch[0].length),
       });
     }
-    const phoneLabelRegex = /^\s*(?:telefon|tlf|mobil|mob)\s*:?\s*([^\n\r]+)/gim;
+    const phoneLabelRegex = /^\s*(?:telefon|tlf\.?|mobil|mob\.?)\s*:?\s*([^\n\r]+)/gim;
     let labelMatch;
     while ((labelMatch = phoneLabelRegex.exec(raw))) {
       const originalLabelValue = cleanLine(labelMatch[1]);
@@ -167,7 +167,7 @@
       const tightContext = sourceWindow(raw, match.index, original.length, 18);
       const normalizedContext = normalize(lineContext || context);
       const normalizedTightContext = normalize(tightContext);
-      const badContextPattern = /\b(?:org|org nr|orgnr|organisasjonsnummer|ordre|ordrenummer|faktura|kundenummer|kontonr|konto nr|kontonummer|iban|fodsel|fodselsnummer|fodselsnr|personnummer|fnr|belop|sum)\b/;
+      const badContextPattern = /\b(?:org|org nr|orgnr|organisasjonsnummer|ordre|ordrenummer|saksnr|saksnummer|faktura|kundenummer|kontonr|konto nr|kontonummer|kid|iban|mva|fodsel|fodselsnummer|fodselsnr|personnummer|fnr|belop|sum)\b/;
       const looksLikeDate = /\b\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b/.test(original)
         || /\b(?:dato|sendt|mottatt|kl|klokken)\b/.test(normalizedContext) && /20\d{2}/.test(original);
       const badContext = badContextPattern.test(normalizedTightContext);
@@ -247,7 +247,7 @@
     const lines = raw.split(/\r?\n/).map(cleanLine).filter(Boolean);
     for (let i = 0; i < Math.min(lines.length, 8); i += 1) {
       const line = lines[i];
-      if (/^\d{1,2}:\d{2}$/.test(line) || /^\d/.test(line) || /@|telefon|tlf|adresse|postnr|sted|opprinnelig melding|melding/i.test(line)) continue;
+      if (/^\d{1,2}:\d{2}$/.test(line) || /^\d/.test(line) || /@|telefon|tlf|adresse|postnr|sted|opprinnelig melding|melding|internt|notat|uten kunde/i.test(line)) continue;
       if (isOwnName(line)) continue;
       const words = line.split(/\s+/).filter(Boolean);
       if (words.length >= 2 && words.length <= 4 && words.every((word) => /^[A-ZÆØÅa-zæøå.'-]+$/.test(word))) {
@@ -349,7 +349,7 @@
   function inferIntent(text) {
     const n = normalize(text);
     const explicitAcceptance = /\b(?:aksepterer|akseptert|godtar|godkjent|onsker a bestille|ønsker å bestille|sett oss opp|bekreftet tilbudet)\b/.test(n);
-    if (/\b(?:ignorer|slett alle|returner telefonnummeret|tidligere instruksjoner)\b/.test(n)) {
+    if (/\b(?:ignorer|slett alle|returner telefonnummeret|tidligere instruksjoner|sett status til vunnet)\b/.test(n)) {
       return { category: "general_history", confidence: "low", explicitAcceptance: false, warning: "Mulig instruksjon i kildetekst. Behandles kun som kundemelding." };
     }
     if (/\b(?:industristovsuger|stovsuger|leie|utleie|isopro)\b/.test(n)) return { category: "rental", confidence: "high", explicitAcceptance: false };
@@ -447,8 +447,9 @@
     const warnings = [];
     const usablePhones = phones.filter((item) => !item.rejected && !item.own);
     const usableEmails = emails.filter((item) => !item.own);
+    const uniqueEmailValues = new Set(usableEmails.map((item) => item.value).filter(Boolean));
     if (usablePhones.length > 1) warnings.push({ code: "multiple_phones", message: "Flere mulige telefonnummer funnet. Velg riktig før lagring.", severity: "warning" });
-    if (usableEmails.length > 1) warnings.push({ code: "multiple_emails", message: "Flere mulige e-postadresser funnet. Velg riktig før lagring.", severity: "warning" });
+    if (uniqueEmailValues.size > 1) warnings.push({ code: "multiple_emails", message: "Flere mulige e-postadresser funnet. Velg riktig før lagring.", severity: "warning" });
     if (emails.some((item) => item.own)) warnings.push({ code: "own_email_detected", message: "Bedriftens egen e-post finnes i teksten og er ikke valgt som kunde.", severity: "info" });
     if (phones.some((item) => item.own)) warnings.push({ code: "own_phone_detected", message: "Bedriftens eget telefonnummer finnes i teksten og er ikke valgt som kunde.", severity: "info" });
     if (!usablePhones.length && !usableEmails.length) warnings.push({ code: "no_contact", message: "Fant ikke sikker telefon eller e-post.", severity: "warning" });

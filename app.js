@@ -1936,6 +1936,9 @@
     if (values.action === "create_lead" && store.saveLeadDraft) {
       const savedLead = await store.saveLeadDraft({
         ...values,
+        keepOriginal: values.keepOriginal && !sourceIntakeId,
+        raw: sourceIntakeId ? "" : values.raw,
+        source_intake_id: sourceIntakeId || null,
         parser: aiRegistrationDraft.analysis?.parser || "simple_text_recognition",
       });
       leads.unshift(savedLead);
@@ -1971,10 +1974,11 @@
       saved = customerToSave;
     }
 
+    const keepOriginalInEvent = values.keepOriginal && !sourceIntakeId;
     await saveServiceEvent(saved, {
       event_date: isoDate(new Date()),
       event_type: aiRegistrationTypes[values.type]?.eventType || "Hurtigregistrering",
-      note: values.keepOriginal
+      note: keepOriginalInEvent
         ? `${values.note}\n\nOriginaltekst:\n${values.raw}`.trim()
         : values.note,
     });
