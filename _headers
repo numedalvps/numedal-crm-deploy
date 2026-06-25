@@ -1,0 +1,8 @@
+﻿/*
+  Cache-Control: public, max-age=300
+
+/index.html
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/
+  Cache-Control: no-cache, no-store, must-revalidate
