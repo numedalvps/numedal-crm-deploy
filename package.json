@@ -1,0 +1,10 @@
+{
+  "name": "numedal-crm-webapp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Intern CRM-webapp for Numedal Varmepumpeservice.",
+  "scripts": {
+    "test:intake": "node tests/intake.test.js",
+    "check": "node --check app.js && node --check supabase-adapter.js && node --check intake-parser.js && node tests/intake.test.js"
+  }
+}
