@@ -3552,6 +3552,19 @@
     return id ? orders[id] || null : null;
   }
 
+  function findJob(jobId) {
+    const id = String(jobId || "").trim();
+    return id ? (jobs || []).find((job) => String(job.id || "") === id) || null : null;
+  }
+
+  function orderIdForActivity(activity) {
+    const metadataOrderId = activity?.metadata?.order_id || "";
+    if (metadataOrderId && findOrder(metadataOrderId)) return metadataOrderId;
+    const job = findJob(activity?.job_id || activity?.jobId);
+    if (job?.source_table === "orders" && job.source_id && findOrder(job.source_id)) return job.source_id;
+    return "";
+  }
+
   function linkedOrderForBooking(bookingId) {
     const id = normalizeOrderId(bookingId);
     if (!id) return null;
@@ -5022,6 +5035,20 @@
         text: shortEventNote(event.note || "") || formatDate(event.event_date),
       });
     }
+    for (const activity of activities || []) {
+      const customer = findCustomer(activity.customer_id);
+      const orderId = orderIdForActivity(activity);
+      if (!customer && !orderId) continue;
+      items.push({
+        time: activityTime(activity.occurred_at || activity.created_at),
+        kind: "activity",
+        customerId: customer ? customerKey(customer) : "",
+        orderId,
+        title: activity.summary || "CRM-aktivitet",
+        customer: customer ? cleanDisplayName(customer) : "CRM",
+        text: shortEventNote(activity.body || activity.activity_type || "") || "Aktivitet",
+      });
+    }
     for (const customer of customers) {
       if (!customer.updated_at || !/manuell|manual/i.test(`${customer.source || ""} ${customer.legacy_lime_id || customer.lime_id || ""}`)) continue;
       items.push({
@@ -5628,11 +5655,34 @@
       note,
       created_at: new Date().toISOString(),
     });
+    let savedActivity = null;
+    let activityWarning = "";
+    try {
+      savedActivity = await saveActivityRecord({
+        customer_id: customerKey(customer),
+        job_id: order.jobId || order.job_id || null,
+        activity_type: "website_submission",
+        summary: `${orderTypeLabel(type)} opprettet fra nettside`,
+        body: note,
+        metadata: {
+          source: "website_submission",
+          public_reference: row.public_reference || null,
+          submission_type: row.submission_type || null,
+          website_submission_id: row.id || null,
+          order_id: order.id || null,
+          created_customer: Boolean(created),
+          matched_customer_id: match?.customer ? customerKey(match.customer) : null,
+        },
+      });
+    } catch (error) {
+      activityWarning = error.message || "Aktivitet ble ikke lagret.";
+    }
     const updatedPatch = {
       processing_status: "processed",
       created_customer_id: customer.id || customerKey(customer),
     };
     if (order.jobId || order.job_id) updatedPatch.created_job_id = order.jobId || order.job_id;
+    if (savedActivity?.id) updatedPatch.created_activity_id = savedActivity.id;
     const updated = await store.updateWebsiteSubmission(id, updatedPatch);
     mergeWebsiteSubmission(id, updatedPatch, updated);
     await saveServiceEvent(customer, {
@@ -5651,7 +5701,7 @@
     if (el.orderStatusFilter) el.orderStatusFilter.value = currentOrderFilter;
     if (el.orderSearch) el.orderSearch.value = "";
     setView("orders");
-    setSyncStatus("Serviceordre opprettet fra nettsideinnsending.", "ok");
+    setSyncStatus(activityWarning ? `Serviceordre opprettet fra nettsideinnsending. Aktivitetsspor ble ikke lagret: ${activityWarning}` : "Serviceordre opprettet fra nettsideinnsending.", "ok");
   }
 
   async function updateWebsiteSubmissionStatus(id, status) {
@@ -8147,6 +8197,31 @@
       return addServiceEventToLocalCache(customer, saved);
     }
     return addServiceEventToLocalCache(customer, row);
+  }
+
+  async function saveActivityRecord(activity = {}) {
+    const row = {
+      customer_id: activity.customer_id || activity.customerId || null,
+      lead_id: activity.lead_id || activity.leadId || null,
+      job_id: activity.job_id || activity.jobId || null,
+      activity_type: activity.activity_type || activity.activityType || "note",
+      summary: activity.summary || "CRM-aktivitet",
+      body: activity.body || null,
+      metadata: activity.metadata && typeof activity.metadata === "object" ? activity.metadata : {},
+      occurred_at: activity.occurred_at || activity.occurredAt || new Date().toISOString(),
+    };
+    if (store.isConfigured && store.saveActivity) {
+      const saved = await store.saveActivity(row);
+      activities.unshift(saved);
+      return saved;
+    }
+    const local = {
+      ...row,
+      id: `activity-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      created_at: new Date().toISOString(),
+    };
+    activities.unshift(local);
+    return local;
   }
 
   function updateCustomerInMemory(customer) {

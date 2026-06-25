@@ -1010,6 +1010,25 @@
       if (activityError) throw activityError;
       return data;
     },
+    async saveActivity(activity = {}) {
+      const supabase = await requireClient();
+      const dbActivity = {
+        customer_id: isUuid(activity.customer_id || activity.customerId) ? (activity.customer_id || activity.customerId) : null,
+        lead_id: isUuid(activity.lead_id || activity.leadId) ? (activity.lead_id || activity.leadId) : null,
+        location_id: isUuid(activity.location_id || activity.locationId) ? (activity.location_id || activity.locationId) : null,
+        installation_id: isUuid(activity.installation_id || activity.installationId) ? (activity.installation_id || activity.installationId) : null,
+        job_id: isUuid(activity.job_id || activity.jobId) ? (activity.job_id || activity.jobId) : null,
+        actor_profile_id: isUuid(activity.actor_profile_id || activity.actorProfileId) ? (activity.actor_profile_id || activity.actorProfileId) : null,
+        activity_type: activity.activity_type || activity.activityType || "note",
+        summary: activity.summary || "CRM-aktivitet",
+        body: activity.body || null,
+        metadata: activity.metadata && typeof activity.metadata === "object" ? activity.metadata : {},
+        occurred_at: activity.occurred_at || activity.occurredAt || new Date().toISOString(),
+      };
+      const { data, error } = await supabase.from("activities").insert(dbActivity).select("*").single();
+      if (error) throw error;
+      return data;
+    },
     async updateLead(id, patch = {}) {
       const supabase = await requireClient();
       if (!isUuid(id)) throw new Error("Ugyldig lead-id.");
