@@ -3988,11 +3988,15 @@
       updated_at: new Date().toISOString(),
     };
     setBookingIdsForOrder(record, bookingIdsForOrder(record));
-    if (store.isConfigured && store.saveOrder) {
+    if (store.isConfigured && store.saveOrder && !options.localOnly) {
       const saved = await store.saveOrder(nextId, record);
       orders[saved.id] = saved;
       if (nextId !== saved.id) delete orders[nextId];
       return saved;
+    }
+    if (store.isConfigured && options.localOnly) {
+      orders[nextId] = record;
+      return record;
     }
     requireLocalDemoStorage();
     orders[nextId] = record;
@@ -4085,10 +4089,10 @@
     setSyncStatus(`${ids.length} ordre slettet.`, "ok");
   }
 
-  async function ensureOrderForBooking(bookingId, booking, overrides = {}) {
+  async function ensureOrderForBooking(bookingId, booking, overrides = {}, options = {}) {
     if (!bookingId || !booking?.customerId) return null;
     const existing = findOrder(booking.orderId) || linkedOrderForBooking(bookingId);
-    const draft = orderDraftForBooking(bookingId, booking, { ...overrides, id: existing?.id });
+    const draft = orderDraftForBooking(bookingId, booking, { ...overrides, id: existing?.id || overrides.id });
     const merged = existing ? {
       ...existing,
       ...draft,
@@ -4096,8 +4100,11 @@
       title: existing.title || draft.title,
       note: overrides.note ?? existing.note ?? draft.note,
     } : draft;
+    if ("invoicedAt" in overrides || "invoiced_at" in overrides) {
+      merged.invoicedAt = overrides.invoicedAt || overrides.invoiced_at || "";
+    }
     setBookingIdsForOrder(merged, [...bookingIdsForOrder(existing), bookingId]);
-    const saved = await saveOrderRecord(merged.id, merged, { quiet: true });
+    const saved = await saveOrderRecord(merged.id, merged, { quiet: true, localOnly: options.localOnly });
     if (bookings[bookingId]) {
       bookings[bookingId].orderId = saved.id;
       if (!store.isConfigured) saveLocalBookings();
@@ -7743,7 +7750,14 @@
     return addServiceEventToLocalCache(customer, row);
   }
 
-  async function saveCustomerAfterCompletion(customer) {
+  function updateCustomerInMemory(customer) {
+    const index = customers.findIndex((item) => customerKey(item) === customerKey(customer));
+    if (index >= 0) customers[index] = customer;
+    return customer;
+  }
+
+  async function saveCustomerAfterCompletion(customer, options = {}) {
+    if (options.localOnly) return updateCustomerInMemory(customer);
     if (store.isConfigured) {
       const saved = await store.saveCustomer(customer);
       const index = customers.findIndex((item) => customerKey(item) === customerKey(saved));
@@ -7782,9 +7796,10 @@
     }
   }
 
-  async function saveInstallationAfterCompletion(customer, installationId, patch) {
+  async function saveInstallationAfterCompletion(customer, installationId, patch, options = {}) {
     if (!installationId) return null;
     const updated = updateLocalInstallation(customer, installationId, patch);
+    if (options.localOnly) return updated;
     if (store.isConfigured && store.saveInstallationPatch) {
       const saved = await store.saveInstallationPatch(installationId, patch);
       updateLocalInstallation(customer, installationId, saved);
@@ -8078,6 +8093,7 @@
       paymentDone ? (customer.pays_cash ? "Cash markert mottatt ved fullføring." : "Faktura markert ferdig/sendt ved fullføring.") : "",
       userNote,
     ].filter(Boolean);
+    const useAdminCompletionRpc = store.isConfigured && isAdmin() && store.completeBookingAsAdmin;
 
     if (store.isConfigured && !isAdmin()) {
       await setBookingDone(completingBookingId, true, {
@@ -8093,6 +8109,7 @@
       return;
     }
 
+    let customerNoteLine = "";
     if (type === "service") {
       customer.last_service_date = doneDate;
       customer.service_dates = appendServiceDate(customer, doneDate);
@@ -8101,7 +8118,7 @@
         await saveInstallationAfterCompletion(customer, selectedInstallation.id, {
           last_service_at: doneDate,
           next_service_due: nextAction === "service_followup" ? nextServiceDate : null,
-        });
+        }, { localOnly: useAdminCompletionRpc });
         recalculateCustomerServiceFromInstallations(customer);
       } else if (nextAction === "service_followup") customer.next_service_due = nextServiceDate;
       else if (nextAction === "none") customer.next_service_due = "";
@@ -8112,7 +8129,7 @@
         await saveInstallationAfterCompletion(customer, selectedInstallation.id, {
           installed_at: selectedInstallation.installed_at || doneDate,
           next_service_due: nextAction === "service_followup" ? nextServiceDate : null,
-        });
+        }, { localOnly: useAdminCompletionRpc });
         recalculateCustomerServiceFromInstallations(customer);
       } else if (nextAction === "service_followup") customer.next_service_due = nextServiceDate;
       else if (nextAction === "none") customer.next_service_due = "";
@@ -8123,28 +8140,87 @@
           note: `Installasjon etter befaring ${formatDate(doneDate)}.${userNote ? `\n${userNote}` : ""}`,
         };
       } else if (nextAction === "offer_followup") {
-        customer.local_note = appendCustomerNote(customer, `Befaring fullført ${formatDate(doneDate)}. Trenger tilbud/oppfølging.${userNote ? ` ${userNote}` : ""}`);
+        customerNoteLine = `Befaring fullført ${formatDate(doneDate)}. Trenger tilbud/oppfølging.${userNote ? ` ${userNote}` : ""}`;
+        customer.local_note = appendCustomerNote(customer, customerNoteLine);
       }
     } else if (type === "blaseisolering") {
-      customer.local_note = appendCustomerNote(customer, `Blåseisolering fullført ${formatDate(doneDate)}.${userNote ? ` ${userNote}` : ""}`);
+      customerNoteLine = `Blåseisolering fullført ${formatDate(doneDate)}.${userNote ? ` ${userNote}` : ""}`;
+      customer.local_note = appendCustomerNote(customer, customerNoteLine);
     } else if (serviceWorkType(type)) {
-      customer.local_note = appendCustomerNote(customer, `Servicearbeid/timejobb fullført ${formatDate(doneDate)}.${userNote ? ` ${userNote}` : ""}`);
+      customerNoteLine = `Servicearbeid/timejobb fullført ${formatDate(doneDate)}.${userNote ? ` ${userNote}` : ""}`;
+      customer.local_note = appendCustomerNote(customer, customerNoteLine);
     }
 
     const completedBooking = {
       ...row.booking,
       status: "done",
       needs_move: false,
+      done_at: doneDate,
       note: [cleanBookingNote(row.booking.note), completionPaymentMarker].filter(Boolean).join("\n"),
       invoiced: paymentDone && completionPaymentMode === "invoice" ? true : row.booking.invoiced,
       paid_cash: paymentDone && completionPaymentMode === "cash" ? true : row.booking.paid_cash,
     };
+    const completionEventType = `${bookingJobLabel(row)} fullført`;
+    const completionEventNote = eventLines.join("\n");
+    const orderNote = userNote || cleanBookingNote(row.booking.note || "");
+
+    if (useAdminCompletionRpc) {
+      const linkedOrder = linkedOrderForBooking(completingBookingId);
+      const rpcResult = await store.completeBookingAsAdmin(completingBookingId, {
+        completedOn: doneDate,
+        eventType: completionEventType,
+        eventNote: completionEventNote,
+        bookingNote: completedBooking.note,
+        orderId: linkedOrder?.id || row.booking.orderId || "",
+        orderNote,
+        billingStatus,
+        paymentMode: paymentDone ? completionPaymentMode : "",
+        paymentDone,
+        nextAction,
+        nextServiceDate: nextAction === "service_followup" ? nextServiceDate : "",
+        installationId: selectedInstallation?.id || "",
+        customerNoteLine,
+      });
+      updateCustomerInMemory(customer);
+      bookings[completingBookingId] = completedBooking;
+      await ensureOrderForBooking(completingBookingId, completedBooking, {
+        id: rpcResult.order_id || linkedOrder?.id,
+        status: "completed",
+        billingStatus,
+        completedAt: doneDate,
+        invoicedAt: paymentDone ? doneDate : "",
+        note: orderNote,
+      }, { localOnly: true });
+      addServiceEventToLocalCache(customer, {
+        id: rpcResult.service_event_id,
+        customer_id: customer.id || customerKey(customer),
+        event_date: doneDate,
+        event_type: completionEventType,
+        note: completionEventNote,
+        created_at: new Date().toISOString(),
+      });
+      el.completionDialog.close();
+      const shouldOpenInstallation = completionFollowupBooking;
+      completingBookingId = "";
+      completionFollowupBooking = null;
+      renderAll();
+      setSyncStatus("Jobb fullført og kundekort oppdatert.", "ok");
+      if (shouldOpenInstallation) {
+        openBookingDialog(shouldOpenInstallation.customerId);
+        el.bookingType.value = "installasjon";
+        el.bookingDuration.value = "180";
+        el.bookingResource.value = "Hubert";
+        el.bookingNote.value = shouldOpenInstallation.note;
+        renderBookingMonth();
+      }
+      return;
+    }
 
     await saveCustomerAfterCompletion(customer);
     await saveServiceEvent(customer, {
       event_date: doneDate,
-      event_type: `${bookingJobLabel(row)} fullført`,
-      note: eventLines.join("\n"),
+      event_type: completionEventType,
+      note: completionEventNote,
     });
     await saveBookingRecord(completingBookingId, completedBooking);
     await setBookingDone(completingBookingId, true, { completedAt: doneDate });
@@ -8152,7 +8228,7 @@
       status: "completed",
       billingStatus,
       completedAt: doneDate,
-      note: userNote || cleanBookingNote(row.booking.note || ""),
+      note: orderNote,
     });
     el.completionDialog.close();
     const shouldOpenInstallation = completionFollowupBooking;

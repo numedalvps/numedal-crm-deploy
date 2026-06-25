@@ -860,6 +860,28 @@
         }
       }
     },
+    async completeBookingAsAdmin(id, options = {}) {
+      const supabase = await requireClient();
+      const completedOn = normalizeDate(options.completedOn || options.completedAt) || localIsoDate(new Date());
+      const { data, error } = await supabase.rpc("complete_booking_as_admin", {
+        p_booking_id: id,
+        p_completed_on: completedOn,
+        p_event_type: options.eventType || null,
+        p_event_note: options.eventNote || null,
+        p_booking_note: options.bookingNote || null,
+        p_order_id: isUuid(options.orderId) ? options.orderId : null,
+        p_order_note: options.orderNote || null,
+        p_billing_status: options.billingStatus || "not_ready",
+        p_payment_mode: options.paymentMode || null,
+        p_payment_done: Boolean(options.paymentDone),
+        p_next_action: options.nextAction || "none",
+        p_next_service_due: normalizeDate(options.nextServiceDate),
+        p_installation_id: isUuid(options.installationId) ? options.installationId : null,
+        p_customer_note_line: options.customerNoteLine || null,
+      });
+      if (error) throw error;
+      return data || {};
+    },
     async markBookingNeedsMove(id, reason, options = {}) {
       const supabase = await requireClient();
       const markedAt = normalizeDate(options.markedAt || options.date) || localIsoDate(new Date());
