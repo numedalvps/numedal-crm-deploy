@@ -1118,9 +1118,18 @@
     return activities.find((activity) => activity.lead_id === lead.id) || null;
   }
 
+  function latestNoteActivityForLead(lead) {
+    if (!lead?.id) return null;
+    return activities.find((activity) => (
+      activity.lead_id === lead.id
+      && !["status_change", "lead_status"].includes(String(activity.activity_type || "").toLowerCase())
+    )) || null;
+  }
+
   function leadNoteFromDb(lead) {
     if (!lead) return "";
-    const activity = latestActivityForLead(lead);
+    const activity = latestNoteActivityForLead(lead);
+    if (String(activity?.activity_type || "").toLowerCase() === "note") return String(activity.body || "").trim();
     return String(activity?.body || lead.product_interest || lead.source_detail || "").trim();
   }
 
@@ -1188,6 +1197,44 @@
     setSyncStatus(status ? `Lead satt til: ${leadStatusLabel(status)}.` : "Lead-status fjernet.", "ok");
   }
 
+  function updateLeadInMemory(lead) {
+    if (!lead?.id) return lead;
+    const index = leads.findIndex((item) => item.id === lead.id);
+    if (index >= 0) leads[index] = lead;
+    else leads.unshift(lead);
+    return lead;
+  }
+
+  function leadEntryForTarget(target) {
+    return allLeadEntries().find((entry) => leadEntryKey(entry) === target || leadEntryCustomerKey(entry) === target) || null;
+  }
+
+  async function setLeadRecordStatus(entryKey, status) {
+    if (!store.updateLead) throw new Error("Endring av database-lead krever oppdatert Supabase-adapter.");
+    const entry = leadEntryForTarget(entryKey);
+    if (!entry?.lead?.id) throw new Error("Fant ikke leaden.");
+    const updatedLead = updateLeadInMemory(await store.updateLead(entry.lead.id, { status }));
+    await saveActivityRecord({
+      customer_id: leadCustomerId(updatedLead) || null,
+      lead_id: updatedLead.id,
+      activity_type: "status_change",
+      summary: `Lead: ${leadStatusLabel(status)}`,
+      body: `Leadstatus satt til: ${leadStatusLabel(status)}.`,
+      metadata: { source: "lead_detail" },
+    });
+    selectedLeadId = `lead:${updatedLead.id}`;
+    currentLeadFilter = status || "followup";
+    if (el.leadStatusFilter) el.leadStatusFilter.value = currentLeadFilter;
+    renderAll();
+    setView("leads");
+    setSyncStatus(`Lead satt til: ${leadStatusLabel(status)}.`, "ok");
+  }
+
+  async function setLeadStatusTarget(target, status) {
+    if (String(target || "").startsWith("lead:")) return setLeadRecordStatus(target, status);
+    return setLeadStatus(target, status);
+  }
+
   async function saveLeadNote(customerId, note) {
     const customer = findCustomer(customerId);
     if (!customer) return;
@@ -1201,6 +1248,29 @@
     });
     selectedLeadId = customerId;
     setSyncStatus("Leadnotat lagret.", "ok");
+  }
+
+  async function saveLeadRecordNote(entryKey, note) {
+    const entry = leadEntryForTarget(entryKey);
+    if (!entry?.lead?.id) throw new Error("Fant ikke leaden.");
+    const customerId = leadCustomerId(entry.lead) || "";
+    await saveActivityRecord({
+      customer_id: customerId || null,
+      lead_id: entry.lead.id,
+      activity_type: "note",
+      summary: note.trim() ? "Leadnotat" : "Leadnotat ryddet",
+      body: note.trim() || null,
+      metadata: { source: "lead_detail" },
+    });
+    selectedLeadId = `lead:${entry.lead.id}`;
+    renderAll();
+    setView("leads");
+    setSyncStatus("Leadnotat lagret.", "ok");
+  }
+
+  async function saveLeadNoteTarget(target, note) {
+    if (String(target || "").startsWith("lead:")) return saveLeadRecordNote(target, note);
+    return saveLeadNote(target, note);
   }
 
   async function setLeadInactive(customerId) {
@@ -1225,8 +1295,8 @@
     setSyncStatus("Lead satt inaktiv.", "ok");
   }
 
-  function leadStatusControlHtml(customer, statusOverride = "") {
-    const key = customerKey(customer);
+  function leadStatusControlHtml(customer, statusOverride = "", targetKey = "") {
+    const key = targetKey || customerKey(customer);
     const current = statusOverride || leadStatusForCustomer(customer);
     const options = Object.entries(leadStatuses).map(([value, info]) => (
       `<option value="${value}" ${current === value ? "selected" : ""}>${escapeHtml(info.label)}</option>`
@@ -5950,7 +6020,9 @@
       return;
     }
     const key = customerKey(customer);
+    const leadTarget = entry?.lead?.id ? leadEntryKey(entry) : key;
     const realCustomer = Boolean(findCustomer(key));
+    const canEditLead = realCustomer || Boolean(entry?.lead);
     const status = leadStatusForEntry(entry);
     const note = leadNoteForEntry(entry);
     el.leadDetail.innerHTML = `
@@ -5973,18 +6045,19 @@
       ${!realCustomer && entry?.lead ? leadCustomerMatchHtml(entry) : ""}
       <section class="detail-section">
         <h3>Oppfølging</h3>
-        ${realCustomer ? leadStatusControlHtml(customer, status) : `<p class="muted">Denne leaden ligger som henvendelse. Opprett kundekort først når saken er reell og skal følges opp videre.</p>`}
+        ${canEditLead ? leadStatusControlHtml(customer, status, leadTarget) : `<p class="muted">Denne leaden ligger som henvendelse. Opprett kundekort først når saken er reell og skal følges opp videre.</p>`}
+        ${!realCustomer && entry?.lead ? `<p class="muted">Du kan følge opp status og notat her. Opprett kundekort når saken er reell og skal bli kunde, ordre eller booking.</p>` : ""}
         <div class="lead-status-actions">
-          ${realCustomer ? `<button data-lead-set-status="needs_offer" data-lead-status-customer="${escapeHtml(key)}" type="button">Tilbud må sendes</button>
-          <button data-lead-set-status="offer_sent" data-lead-status-customer="${escapeHtml(key)}" type="button">Tilbud sendt</button>
-          <button data-lead-set-status="won" data-lead-status-customer="${escapeHtml(key)}" type="button">Vunnet</button>
-          <button data-lead-set-status="lost" data-lead-status-customer="${escapeHtml(key)}" type="button">Tapt</button>
-          <button class="secondary" data-inactivate-lead="${escapeHtml(key)}" type="button">Sett inaktiv</button>` : ""}
+          ${canEditLead ? `<button data-lead-set-status="needs_offer" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button">Tilbud må sendes</button>
+          <button data-lead-set-status="offer_sent" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button">Tilbud sendt</button>
+          <button data-lead-set-status="won" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button">Vunnet</button>
+          <button data-lead-set-status="lost" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button">Tapt</button>
+          ${realCustomer && !entry?.lead ? `<button class="secondary" data-inactivate-lead="${escapeHtml(key)}" type="button">Sett inaktiv</button>` : ""}` : ""}
         </div>
         <label class="lead-note-editor">Notat
-          <textarea data-lead-note-text="${escapeHtml(key)}" rows="4" placeholder="Hva er gjort, hva venter vi på, og hva er neste steg?">${escapeHtml(note)}</textarea>
+          <textarea data-lead-note-text="${escapeHtml(leadTarget)}" rows="4" placeholder="Hva er gjort, hva venter vi på, og hva er neste steg?">${escapeHtml(note)}</textarea>
         </label>
-        ${realCustomer ? `<button data-save-lead-note="${escapeHtml(key)}" type="button">Lagre notat</button>` : ""}
+        ${canEditLead ? `<button data-save-lead-note="${escapeHtml(leadTarget)}" type="button">Lagre notat</button>` : ""}
       </section>
       <section class="detail-section lead-template-section">
         <h3>E-postmaler</h3>
@@ -9106,19 +9179,19 @@
   el.customerDetail.addEventListener("change", (event) => {
     const select = event.target.closest("[data-lead-status-customer]");
     if (!select) return;
-    setLeadStatus(select.dataset.leadStatusCustomer, select.value)
+    setLeadStatusTarget(select.dataset.leadStatusCustomer, select.value)
       .catch((error) => setSyncStatus(error.message || "Klarte ikke endre leadstatus.", "error"));
   });
   el.leadDetail?.addEventListener("change", (event) => {
     const select = event.target.closest("[data-lead-status-customer]");
     if (!select) return;
-    setLeadStatus(select.dataset.leadStatusCustomer, select.value)
+    setLeadStatusTarget(select.dataset.leadStatusCustomer, select.value)
       .catch((error) => setSyncStatus(error.message || "Klarte ikke endre leadstatus.", "error"));
   });
   el.leadDetail?.addEventListener("click", (event) => {
     const statusButton = event.target.closest("[data-lead-set-status]");
     if (statusButton) {
-      setLeadStatus(statusButton.dataset.leadStatusCustomer, statusButton.dataset.leadSetStatus)
+      setLeadStatusTarget(statusButton.dataset.leadStatusCustomer, statusButton.dataset.leadSetStatus)
         .catch((error) => setSyncStatus(error.message || "Klarte ikke endre leadstatus.", "error"));
       return;
     }
@@ -9132,7 +9205,7 @@
     if (saveNote) {
       const customerId = saveNote.dataset.saveLeadNote;
       const textarea = el.leadDetail.querySelector(`[data-lead-note-text="${CSS.escape(customerId)}"]`);
-      saveLeadNote(customerId, textarea?.value || "")
+      saveLeadNoteTarget(customerId, textarea?.value || "")
         .catch((error) => setSyncStatus(error.message || "Klarte ikke lagre leadnotat.", "error"));
       return;
     }
