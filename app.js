@@ -516,8 +516,29 @@
     return customer?.id || customer?.lime_id || "";
   }
 
+  function repairTextEncoding(value) {
+    let text = String(value ?? "");
+    if (!/[ÃÂâ]/.test(text)) return text;
+    const replacements = [
+      ["Ã¦", "æ"], ["Ã†", "Æ"],
+      ["Ã¸", "ø"], ["Ã˜", "Ø"],
+      ["Ã¥", "å"], ["Ã…", "Å"],
+      ["Ã©", "é"], ["Ã¨", "è"], ["Ã¼", "ü"],
+      ["Ã¶", "ö"], ["Ã¤", "ä"],
+      ["Â·", "·"], ["Â ", " "], ["Â", ""],
+      ["â€“", "-"], ["â€”", "-"],
+      ["â€˜", "'"], ["â€™", "'"],
+      ["â€œ", '"'], ["â€", '"'],
+      ["â€¦", "..."], ["â€¢", "-"],
+    ];
+    for (const [bad, good] of replacements) {
+      text = text.replaceAll(bad, good);
+    }
+    return text;
+  }
+
   function normalizeMatch(value) {
-    return String(value || "")
+    return repairTextEncoding(value)
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase()
@@ -644,7 +665,7 @@
   }
 
   function cleanDisplayName(customer) {
-    return String(customer?.name || "Uten navn").replace(/^★\s*/, "");
+    return repairTextEncoding(customer?.name || "Uten navn").replace(/^★\s*/, "");
   }
 
   function isManualStarred(customer) {
@@ -7870,7 +7891,7 @@
   }
 
   function escapeHtml(value) {
-    return String(value ?? "")
+    return repairTextEncoding(value)
       .replaceAll("&", "&amp;")
       .replaceAll("<", "&lt;")
       .replaceAll(">", "&gt;")

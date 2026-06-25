@@ -2,7 +2,7 @@
   const config = window.NUMEDAL_SUPABASE || {};
   const appEnv = config.appEnv || config.APP_ENV || "production";
   const browserImportEnabled = appEnv === "development" && config.enableBrowserImport === true;
-  const databaseUnavailableMessage = "CRM-et fikk ikke kontakt med databasen. Ingen endringer er lagret. PrÃ¸v igjen eller kontakt administrator.";
+  const databaseUnavailableMessage = "CRM-et fikk ikke kontakt med databasen. Ingen endringer er lagret. Prøv igjen eller kontakt administrator.";
   const isConfigured = Boolean(config.url && config.anonKey && window.supabase);
   const client = isConfigured ? window.supabase.createClient(config.url, config.anonKey) : null;
 
@@ -23,8 +23,29 @@
     return `${year}-${month}-${day}`;
   }
 
+  function repairTextEncoding(value) {
+    let text = String(value ?? "");
+    if (!/[ÃÂâ]/.test(text)) return text;
+    const replacements = [
+      ["Ã¦", "æ"], ["Ã†", "Æ"],
+      ["Ã¸", "ø"], ["Ã˜", "Ø"],
+      ["Ã¥", "å"], ["Ã…", "Å"],
+      ["Ã©", "é"], ["Ã¨", "è"], ["Ã¼", "ü"],
+      ["Ã¶", "ö"], ["Ã¤", "ä"],
+      ["Â·", "·"], ["Â ", " "], ["Â", ""],
+      ["â€“", "-"], ["â€”", "-"],
+      ["â€˜", "'"], ["â€™", "'"],
+      ["â€œ", '"'], ["â€", '"'],
+      ["â€¦", "..."], ["â€¢", "-"],
+    ];
+    for (const [bad, good] of replacements) {
+      text = text.replaceAll(bad, good);
+    }
+    return text;
+  }
+
   function normalizeMatch(value) {
-    return String(value || "")
+    return repairTextEncoding(value)
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase()
@@ -596,7 +617,7 @@
       if (!client) return null;
       const { data } = await withTimeout(
         client.auth.getSession(),
-        "Supabase svarer ikke pÃ¥ sesjonssjekk. Sjekk nett/refresh siden.",
+        "Supabase svarer ikke på sesjonssjekk. Sjekk nett/refresh siden.",
       );
       return data.session || null;
     },
@@ -617,7 +638,7 @@
       const supabase = await requireClient();
       const { data: userData, error: userError } = await withTimeout(
         supabase.auth.getUser(),
-        "Supabase svarer ikke pÃ¥ brukeroppslag.",
+        "Supabase svarer ikke på brukeroppslag.",
       );
       if (userError) throw userError;
       const user = userData.user;
