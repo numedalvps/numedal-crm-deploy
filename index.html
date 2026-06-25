@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260625-22" />
+    <link rel="stylesheet" href="./styles.css?v=20260625-23" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -247,6 +247,7 @@
                 <button data-order-filter-shortcut="scheduled" type="button"><strong id="orderScheduledMetric">0</strong><span>Booket</span></button>
                 <button data-order-filter-shortcut="billing_ready" type="button"><strong id="orderBillingMetric">0</strong><span>Må faktureres</span></button>
                 <button data-order-filter-shortcut="completed" type="button"><strong id="orderCompletedMetric">0</strong><span>Utført</span></button>
+                <button data-order-filter-shortcut="missing_job" type="button" title="Vis aktive ordre som ikke er koblet til ny jobs-modell."><strong id="orderMissingJobMetric">0</strong><span>Mangler jobbspeil</span></button>
               </div>
               <div class="search-row">
                 <input id="orderSearch" type="search" placeholder="Søk ordre, kunde, telefon, sted" />
@@ -257,6 +258,7 @@
                   <option value="completed">Utført</option>
                   <option value="billing_ready">Må faktureres</option>
                   <option value="invoiced">Fakturert</option>
+                  <option value="missing_job">Mangler jobbspeil</option>
                 </select>
               </div>
               <div class="order-bulk-actions">
@@ -869,10 +871,10 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260625-22"></script>
-    <script src="./supabase-adapter.js?v=20260625-22"></script>
-    <script src="./intake-parser.js?v=20260625-22"></script>
-    <script src="./app.js?v=20260625-22"></script>
+    <script src="./supabase-config.js?v=20260625-23"></script>
+    <script src="./supabase-adapter.js?v=20260625-23"></script>
+    <script src="./intake-parser.js?v=20260625-23"></script>
+    <script src="./app.js?v=20260625-23"></script>
   </body>
 </html>
 

@@ -251,6 +251,7 @@
     orderScheduledMetric: document.getElementById("orderScheduledMetric"),
     orderBillingMetric: document.getElementById("orderBillingMetric"),
     orderCompletedMetric: document.getElementById("orderCompletedMetric"),
+    orderMissingJobMetric: document.getElementById("orderMissingJobMetric"),
     orderSelectAll: document.getElementById("orderSelectAll"),
     deleteSelectedOrdersButton: document.getElementById("deleteSelectedOrdersButton"),
     orderSelectionSummary: document.getElementById("orderSelectionSummary"),
@@ -3814,6 +3815,11 @@
     return orderBillingStatusFromJob(job) || order?.billingStatus || order?.billing_status || "not_ready";
   }
 
+  function orderMissingJobMirror(row) {
+    const order = row?.order || row || {};
+    return store.isConfigured && (order.status || "") !== "cancelled" && !row?.job && !jobForOrder(order);
+  }
+
   function serviceWorkType(type) {
     return ["reparasjon", "servicearbeid", "reklamasjon"].includes(String(type || "").toLowerCase());
   }
@@ -6226,6 +6232,7 @@
         if (filter === "all") return true;
         if (filter === "billing_ready") return billing === "ready";
         if (filter === "invoiced") return billing === "sent" || billing === "paid";
+        if (filter === "missing_job") return orderMissingJobMirror(row);
         return status === filter;
       })
       .filter((row) => !search || orderSearchText(row).includes(search));
@@ -6255,6 +6262,7 @@
     if (el.orderScheduledMetric) el.orderScheduledMetric.textContent = rows.filter((row) => orderEffectiveStatus(row.order, row.job) === "scheduled").length.toLocaleString("nb-NO");
     if (el.orderBillingMetric) el.orderBillingMetric.textContent = rows.filter((row) => orderEffectiveBillingStatus(row.order, row.job) === "ready").length.toLocaleString("nb-NO");
     if (el.orderCompletedMetric) el.orderCompletedMetric.textContent = rows.filter((row) => orderEffectiveStatus(row.order, row.job) === "completed").length.toLocaleString("nb-NO");
+    if (el.orderMissingJobMetric) el.orderMissingJobMetric.textContent = rows.filter(orderMissingJobMirror).length.toLocaleString("nb-NO");
     const list = filteredOrders();
     const visibleRows = list.slice(0, 250);
     const visibleIds = visibleRows.map((row) => row.id);
