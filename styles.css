@@ -1653,6 +1653,37 @@ textarea {
   color: #166534;
 }
 
+.order-badge.job {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.order-badge.job.draft {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.order-badge.job.planned {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.order-badge.job.in_progress {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.order-badge.job.completed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.order-badge.job.cancelled,
+.order-badge.job.missing {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 .job-flow {
   display: grid;
   gap: 10px;

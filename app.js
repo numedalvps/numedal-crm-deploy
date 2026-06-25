@@ -801,6 +801,37 @@
     paid: "Betalt",
   };
 
+  const jobWorkStatuses = {
+    draft: {
+      label: "Jobbkladd",
+      help: "Jobbspeilet finnes, men er ikke booket ennå.",
+    },
+    planned: {
+      label: "Jobb planlagt",
+      help: "Jobben finnes i jobs-tabellen og er planlagt.",
+    },
+    in_progress: {
+      label: "Jobb pågår",
+      help: "Jobben finnes i jobs-tabellen og er markert pågående.",
+    },
+    completed: {
+      label: "Jobb utført",
+      help: "Jobben finnes i jobs-tabellen og er markert utført.",
+    },
+    cancelled: {
+      label: "Jobb avsluttet",
+      help: "Jobben er avsluttet i jobs-tabellen.",
+    },
+  };
+
+  const jobBillingStatuses = {
+    not_ready: "Ikke klar",
+    ready_for_invoice: "Klar til faktura",
+    exported: "Eksportert",
+    invoiced: "Fakturert",
+    credit_needed: "Kredit må sjekkes",
+  };
+
   const leadTemplates = {
     heatpump_info_request: {
       title: "Spør om bilder/info",
@@ -3645,6 +3676,18 @@
     return id ? (jobs || []).find((job) => String(job.id || "") === id) || null : null;
   }
 
+  function jobForOrder(orderOrId) {
+    const order = typeof orderOrId === "object" ? orderOrId : findOrder(orderOrId);
+    const orderId = normalizeOrderId(typeof orderOrId === "object" ? order?.id : orderOrId);
+    const directJob = findJob(order?.jobId || order?.job_id);
+    if (directJob) return directJob;
+    if (!orderId) return null;
+    return (jobs || []).find((job) => (
+      job?.source_table === "orders"
+      && normalizeOrderId(job.source_id) === orderId
+    )) || null;
+  }
+
   function orderIdForActivity(activity) {
     const metadataOrderId = activity?.metadata?.order_id || "";
     if (metadataOrderId && findOrder(metadataOrderId)) return metadataOrderId;
@@ -3674,6 +3717,7 @@
           id: normalized.id,
           order: normalized,
           customer: findCustomer(normalized.customerId),
+          job: jobForOrder(normalized),
         };
       })
       .filter((row) => row.order && row.customer)
@@ -3699,6 +3743,48 @@
 
   function billingStatusLabel(status) {
     return billingStatuses[status || "not_ready"] || "Ikke klar";
+  }
+
+  function jobWorkStatusLabel(status) {
+    return jobWorkStatuses[status || "draft"]?.label || "Jobb";
+  }
+
+  function jobWorkStatusHelp(status) {
+    return jobWorkStatuses[status || "draft"]?.help || "Jobbspeil i jobs-tabellen.";
+  }
+
+  function jobBillingStatusLabel(status) {
+    return jobBillingStatuses[status || "not_ready"] || "Ikke klar";
+  }
+
+  function jobStatusClass(status) {
+    return String(status || "draft").replace(/[^a-z0-9_-]/gi, "-");
+  }
+
+  function orderJobBadge(order, job = jobForOrder(order)) {
+    if (job) {
+      const status = job.work_status || "draft";
+      return `<span class="order-badge job ${escapeHtml(jobStatusClass(status))}" title="${escapeHtml(jobWorkStatusHelp(status))}">${escapeHtml(jobWorkStatusLabel(status))}</span>`;
+    }
+    if ((order?.status || "") === "cancelled") {
+      return `<span class="order-badge job cancelled" title="Avsluttede jobber skjules fra aktiv jobbliste.">Jobb avsluttet</span>`;
+    }
+    if (!store.isConfigured) return "";
+    return `<span class="order-badge job missing" title="Ordren er ikke speilet til jobs-tabellen ennå.">Mangler jobbspeil</span>`;
+  }
+
+  function orderBadgesHtml(order, job = jobForOrder(order)) {
+    return `${orderStatusBadge(order)}${orderBillingBadge(order)}${orderJobBadge(order, job)}`;
+  }
+
+  function orderJobSummary(order, job = jobForOrder(order)) {
+    if (!job && (order?.status || "") === "cancelled") return "Jobb avsluttet";
+    if (!job) return store.isConfigured ? "Mangler jobbspeil" : "Ikke aktivert i demo";
+    const parts = [
+      jobWorkStatusLabel(job.work_status),
+      jobBillingStatusLabel(job.billing_status),
+    ].filter(Boolean);
+    return parts.join(" · ");
   }
 
   function serviceWorkType(type) {
@@ -3770,12 +3856,16 @@
   function orderSearchText(row) {
     const order = row.order;
     const customer = row.customer;
+    const job = row.job || jobForOrder(order);
     return normalizeMatch([
       order.title,
       order.note,
       order.type,
       order.status,
       order.billingStatus || order.billing_status,
+      job?.title,
+      job?.work_status,
+      job?.billing_status,
       cleanDisplayName(customer),
       customer.phone,
       customer.email,
@@ -5104,6 +5194,7 @@
     }
     for (const row of orderRows()) {
       const time = activityTime(row.order.updated_at || row.order.created_at || row.order.scheduledDate, row.order.scheduledDate);
+      const jobText = row.job ? ` · ${jobWorkStatusLabel(row.job.work_status)}` : "";
       items.push({
         time,
         kind: "order",
@@ -5111,7 +5202,7 @@
         orderId: row.id,
         title: "Ordre",
         customer: row.customer?.name || "Uten navn",
-        text: `${orderStatusLabel(row.order.status || "unscheduled")} · ${orderTypeLabel(row.order.type)} · ${orderDateText(row.order)}`,
+        text: `${orderStatusLabel(row.order.status || "unscheduled")} · ${orderTypeLabel(row.order.type)} · ${orderDateText(row.order)}${jobText}`,
       });
     }
     for (const event of allServiceEvents()) {
@@ -6151,7 +6242,7 @@
       button.type = "button";
       button.dataset.orderId = row.id;
       button.innerHTML = `
-        <strong>${orderStatusBadge(row.order)}${orderBillingBadge(row.order)}${escapeHtml(row.order.title || orderTitleFromBooking(row.customer, row.order))}</strong>
+        <strong>${orderBadgesHtml(row.order, row.job)}${escapeHtml(row.order.title || orderTitleFromBooking(row.customer, row.order))}</strong>
         <small>${escapeHtml(cleanDisplayName(row.customer))} · ${escapeHtml(orderTypeLabel(row.order.type))} · ${escapeHtml(orderDateText(row.order))}</small>
         <span>${escapeHtml(row.order.note || addressFor(row.customer) || row.customer.location_tag || "Ingen notat").slice(0, 150)}</span>
       `;
@@ -6174,9 +6265,10 @@
       .map((id) => bookingRows().find((row) => row.id === id))
       .filter(Boolean);
     const flow = orderWorkflowState(order, linkedBookings);
+    const linkedJob = jobForOrder(order);
     el.orderDetail.innerHTML = `
       <div class="customer-title">
-        <div class="title-pills">${orderStatusBadge(order)}${orderBillingBadge(order)}</div>
+        <div class="title-pills">${orderBadgesHtml(order, linkedJob)}</div>
         <h2>${customerStarHtml(customer, { showEmpty: true })}${customerCashBadgeHtml(customer)}${escapeHtml(order.title || orderTitleFromBooking(customer, order))}</h2>
         <p>${escapeHtml(cleanDisplayName(customer))} · ${escapeHtml(addressFor(customer) || customer.location_tag || "Adresse mangler")}</p>
       </div>
@@ -6194,6 +6286,7 @@
         <div><dt>Type</dt><dd>${escapeHtml(orderTypeLabel(order.type))}</dd></div>
         <div><dt>Status</dt><dd>${escapeHtml(orderStatusLabel(order.status || "unscheduled"))}</dd></div>
         <div><dt>Faktura</dt><dd>${escapeHtml(billingStatusLabel(order.billingStatus || order.billing_status))}</dd></div>
+        <div><dt>Jobbspeil</dt><dd>${escapeHtml(orderJobSummary(order, linkedJob))}</dd></div>
         <div><dt>Dato</dt><dd>${escapeHtml(orderDateText(order))}</dd></div>
         <div><dt>Telefon</dt><dd class="copy-field">${phoneField(customer.phone)}</dd></div>
       </dl>
@@ -6224,8 +6317,8 @@
           ${rows.map((order) => `
             <article>
               <div>
-                <strong>${orderStatusBadge(order)}${orderBillingBadge(order)}${escapeHtml(order.title || orderTypeLabel(order.type))}</strong>
-                <span>${escapeHtml(orderDateText(order))} · ${escapeHtml(billingStatusLabel(order.billingStatus || order.billing_status))}</span>
+                <strong>${orderBadgesHtml(order)}${escapeHtml(order.title || orderTypeLabel(order.type))}</strong>
+                <span>${escapeHtml(orderDateText(order))} · ${escapeHtml(billingStatusLabel(order.billingStatus || order.billing_status))} · ${escapeHtml(orderJobSummary(order))}</span>
                 ${workflowInlineHtml(orderWorkflowState(order))}
               </div>
               <button data-open-order="${escapeHtml(order.id)}" type="button">Åpne ordre</button>
