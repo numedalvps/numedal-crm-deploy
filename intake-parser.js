@@ -133,6 +133,27 @@
         evidence: sourceWindow(raw, dateMatch.index, dateMatch[0].length),
       });
     }
+    const phoneLabelRegex = /^\s*(?:telefon|tlf|mobil|mob)\s*:?\s*([^\n\r]+)/gim;
+    let labelMatch;
+    while ((labelMatch = phoneLabelRegex.exec(raw))) {
+      const originalLabelValue = cleanLine(labelMatch[1]);
+      const corrected = originalLabelValue.replace(/[Oo]/g, "0").replace(/[Il|]/g, "1");
+      if (corrected === originalLabelValue || (corrected.match(/\d/g) || []).length < 8) continue;
+      const correctedMatch = corrected.match(/(?:\+47\s*)?(?:\d[\s().-]*){8,11}/);
+      if (!correctedMatch) continue;
+      const compact = compactPhone(correctedMatch[0]);
+      const own = OWN_PHONE_DIGITS.has(compact);
+      candidates.push({
+        value: compact,
+        original: originalLabelValue,
+        own,
+        rejected: own || compact.length !== 8,
+        reason: own ? "Bedriftens eget nummer" : compact.length !== 8 ? "Ikke norsk telefonnummer" : "",
+        confidence: own ? "low" : "medium",
+        evidence: cleanLine(labelMatch[0]),
+        ocrCorrected: true,
+      });
+    }
     const regex = /(?:\+47\s*)?(?:\d[\s().-]*){8,11}/g;
     let match;
     while ((match = regex.exec(raw))) {
@@ -143,12 +164,15 @@
       const lineEnd = raw.indexOf("\n", match.index);
       const lineContext = cleanLine(raw.slice(lineStart, lineEnd >= 0 ? lineEnd : raw.length));
       const context = sourceWindow(raw, match.index, original.length, 54);
+      const tightContext = sourceWindow(raw, match.index, original.length, 18);
       const normalizedContext = normalize(lineContext || context);
+      const normalizedTightContext = normalize(tightContext);
+      const badContextPattern = /\b(?:org|org nr|orgnr|organisasjonsnummer|ordre|ordrenummer|faktura|kundenummer|kontonr|konto nr|kontonummer|iban|fodsel|fodselsnummer|fodselsnr|personnummer|fnr|belop|sum)\b/;
       const looksLikeDate = /\b\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b/.test(original)
         || /\b(?:dato|sendt|mottatt|kl|klokken)\b/.test(normalizedContext) && /20\d{2}/.test(original);
-      const badContext = /\b(?:org nr|orgnr|organisasjonsnummer|ordre|ordrenummer|faktura|kundenummer|kontonummer|belop|sum)\b/.test(normalizedContext);
+      const badContext = badContextPattern.test(normalizedTightContext);
       const goodContext = /\b(?:telefon|tlf|mobil|mob|ring|ringes|kan naes|kan nåes|\+47)\b/.test(normalizedContext);
-      const insideLongNumber = digits.length > 10 || digits.length === 9 && /\b(?:org nr|orgnr|organisasjonsnummer)\b/.test(normalizedContext);
+      const insideLongNumber = digits.length > 10 || digits.length === 9;
       if (compact.length !== 8 || looksLikeDate || badContext || insideLongNumber) {
         candidates.push({
           value: compact,
@@ -411,9 +435,10 @@
 
   function sensitiveFlags(text) {
     const n = normalize(text);
+    const raw = String(text || "");
     const flags = [];
-    if (/\b\d{11}\b/.test(String(text || ""))) flags.push("national_identity_number");
-    if (/\b\d{4}[.\s-]?\d{2}[.\s-]?\d{5}\b/.test(String(text || "")) || /\bkontonummer\b/.test(n)) flags.push("bank_information");
+    if (/\b\d{11}\b/.test(raw)) flags.push("national_identity_number");
+    if (/\b\d{4}[.\s-]\d{2}[.\s-]\d{5}\b/.test(raw) || /\b(?:kontonr|konto nr|kontonummer)\b/.test(n)) flags.push("bank_information");
     if (/\b(?:kode|nøkkelboks|nokkelboks|dorkode|dørkode)\b/.test(n)) flags.push("access_code");
     return flags;
   }
@@ -423,6 +448,7 @@
     const usablePhones = phones.filter((item) => !item.rejected && !item.own);
     const usableEmails = emails.filter((item) => !item.own);
     if (usablePhones.length > 1) warnings.push({ code: "multiple_phones", message: "Flere mulige telefonnummer funnet. Velg riktig før lagring.", severity: "warning" });
+    if (usableEmails.length > 1) warnings.push({ code: "multiple_emails", message: "Flere mulige e-postadresser funnet. Velg riktig før lagring.", severity: "warning" });
     if (emails.some((item) => item.own)) warnings.push({ code: "own_email_detected", message: "Bedriftens egen e-post finnes i teksten og er ikke valgt som kunde.", severity: "info" });
     if (phones.some((item) => item.own)) warnings.push({ code: "own_phone_detected", message: "Bedriftens eget telefonnummer finnes i teksten og er ikke valgt som kunde.", severity: "info" });
     if (!usablePhones.length && !usableEmails.length) warnings.push({ code: "no_contact", message: "Fant ikke sikker telefon eller e-post.", severity: "warning" });
