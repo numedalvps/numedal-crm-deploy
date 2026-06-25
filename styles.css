@@ -1113,14 +1113,22 @@ textarea {
 
 .website-submission-list article {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 3px;
+  align-items: center;
   border: 1px solid #dbeafe;
   border-radius: 8px;
   padding: 8px 10px;
   background: #fff;
 }
 
-.website-submission-list span {
+.website-submission-list article > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.website-submission-list span,
+.website-submission-list small {
   color: var(--muted);
   font-size: 12px;
   font-weight: 800;

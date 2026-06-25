@@ -5192,18 +5192,183 @@
       </div>
       <div class="website-submission-list">
         ${rows.slice(0, 6).map((row) => {
-          const payload = row.payload || {};
-          const name = payload.name || payload.navn || payload.fullName || row.normalized_email || row.normalized_phone || row.public_reference;
-          const text = [row.submission_type, row.normalized_phone, row.normalized_email, row.processing_status].filter(Boolean).join(" · ");
+          const name = websiteSubmissionName(row);
+          const message = websiteSubmissionMessage(row);
+          const date = row.received_at ? formatDate(isoDate(new Date(row.received_at))) : "";
+          const text = [websiteSubmissionTypeLabel(row), row.normalized_phone, row.normalized_email, date].filter(Boolean).join(" · ");
           return `
             <article title="Rå innsending beholdes uendret til den behandles server-side.">
-              <strong>${escapeHtml(name || "Ukjent innsending")}</strong>
-              <span>${escapeHtml(text || "Ny innsending")}</span>
+              <div>
+                <strong>${escapeHtml(name || "Ukjent innsending")}</strong>
+                <span>${escapeHtml(text || "Ny innsending")}</span>
+                ${message ? `<small>${escapeHtml(message).slice(0, 180)}</small>` : ""}
+              </div>
+              <div class="mini-action-row">
+                <button data-create-website-lead="${escapeHtml(row.id)}" type="button" title="Opprett lead fra denne nettsideinnsendingen.">Lag lead</button>
+                <button class="secondary" data-website-submission-status="read" data-website-submission-id="${escapeHtml(row.id)}" type="button" title="Skjul fra innboksen uten å opprette lead.">Marker lest</button>
+                <button class="secondary" data-website-submission-status="spam" data-website-submission-id="${escapeHtml(row.id)}" type="button" title="Marker som spam/ugyldig og skjul fra innboksen.">Spam</button>
+              </div>
             </article>
           `;
         }).join("")}
       </div>
     `;
+  }
+
+  function plainObject(value) {
+    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  }
+
+  function firstFilled(...values) {
+    for (const value of values) {
+      const text = String(value || "").trim();
+      if (text) return text;
+    }
+    return "";
+  }
+
+  function websiteSubmissionPayload(row) {
+    return plainObject(row?.payload);
+  }
+
+  function websiteSubmissionCustomer(row) {
+    const payload = websiteSubmissionPayload(row);
+    return plainObject(payload.customer);
+  }
+
+  function websiteSubmissionRequest(row) {
+    const payload = websiteSubmissionPayload(row);
+    return plainObject(payload.request);
+  }
+
+  function websiteSubmissionSupport(row) {
+    const payload = websiteSubmissionPayload(row);
+    return plainObject(payload.support);
+  }
+
+  function websiteSubmissionAttribution(row) {
+    const payload = websiteSubmissionPayload(row);
+    return plainObject(payload.attribution);
+  }
+
+  function websiteSubmissionName(row) {
+    const payload = websiteSubmissionPayload(row);
+    const customer = websiteSubmissionCustomer(row);
+    return firstFilled(customer.name, payload.name, payload.navn, payload.fullName, row?.normalized_email, row?.normalized_phone, row?.public_reference);
+  }
+
+  function websiteSubmissionMessage(row) {
+    const payload = websiteSubmissionPayload(row);
+    const request = websiteSubmissionRequest(row);
+    return firstFilled(request.message, payload.message, payload.melding, payload.note, payload.notes);
+  }
+
+  function websiteSubmissionTypeLabel(row) {
+    const type = String(row?.submission_type || websiteSubmissionPayload(row).submission_type || "").toLowerCase();
+    const labels = {
+      lead: "Lead",
+      new_heat_pump: "Ny varmepumpe",
+      quote_request: "Tilbud",
+      site_visit_request: "Befaring",
+      service_request: "Service",
+      support_request: "Servicehjelp",
+      insulation: "Blåseisolering",
+      rental: "Utleie",
+      other: "Annet",
+    };
+    return labels[type] || type || "Nettside";
+  }
+
+  function websiteSubmissionLeadValues(row) {
+    const payload = websiteSubmissionPayload(row);
+    const customer = websiteSubmissionCustomer(row);
+    const request = websiteSubmissionRequest(row);
+    const support = websiteSubmissionSupport(row);
+    const attribution = websiteSubmissionAttribution(row);
+    const postalCode = firstFilled(customer.postal_code, customer.zip, payload.postal_code, payload.zip);
+    const sourcePage = firstFilled(attribution.page_url, attribution.landing_page, payload.source_page, row?.landing_page);
+    const productInterest = [
+      websiteSubmissionTypeLabel(row),
+      request.request_type,
+      request.service_reason,
+      request.preferred_contact_method,
+      support.symptom_slug,
+      support.billable ? "Fakturerbar hjelp" : "",
+    ].filter(Boolean).join(" · ");
+    const note = [
+      `Nettsideinnsending ${row?.public_reference || ""}`.trim(),
+      websiteSubmissionMessage(row),
+      sourcePage ? `Side: ${sourcePage}` : "",
+      row?.idempotency_key ? `Idempotency: ${row.idempotency_key}` : "",
+    ].filter(Boolean).join("\n");
+    return {
+      name: websiteSubmissionName(row),
+      phone: firstFilled(customer.phone, payload.phone, row?.normalized_phone),
+      email: firstFilled(customer.email, payload.email, row?.normalized_email),
+      postal_code: postalCode,
+      zip: postalCode,
+      address: firstFilled(customer.address, payload.address, request.address),
+      street: firstFilled(customer.address, payload.address, request.address),
+      city: firstFilled(customer.city, payload.city, postalCityByZip[postalCode]),
+      source: "Nettside",
+      source_detail: [row?.public_reference, sourcePage].filter(Boolean).join(" · ") || "Nettsideinnsending",
+      product_interest: productInterest,
+      note,
+      lead_status: "followup",
+      action: "create_lead",
+      parser: "website_submission",
+      keepOriginal: true,
+      raw: JSON.stringify(payload, null, 2),
+    };
+  }
+
+  function mergeWebsiteSubmission(id, patch, updated = null) {
+    websiteSubmissions = (websiteSubmissions || []).map((row) => (
+      row.id === id ? { ...row, ...patch, ...(updated || {}) } : row
+    ));
+  }
+
+  async function createLeadFromWebsiteSubmission(id) {
+    if (!store.saveLeadDraft || !store.updateWebsiteSubmission) {
+      throw new Error("Nettsideinnsendinger krever Supabase og oppdatert adapter.");
+    }
+    const row = (websiteSubmissions || []).find((item) => item.id === id);
+    if (!row) throw new Error("Fant ikke nettsideinnsendingen.");
+    const values = websiteSubmissionLeadValues(row);
+    if (!values.name && !values.phone && !values.email && !values.address) {
+      throw new Error("Nettsideinnsendingen mangler nok kontaktinfo til å lage lead.");
+    }
+    const savedLead = await store.saveLeadDraft(values);
+    leads.unshift(savedLead);
+    const updated = await store.updateWebsiteSubmission(id, {
+      processing_status: "processed",
+      created_lead_id: savedLead.id,
+    });
+    mergeWebsiteSubmission(id, { processing_status: "processed", created_lead_id: savedLead.id }, updated);
+    selectedLeadId = `lead:${savedLead.id}`;
+    currentLeadFilter = "followup";
+    if (el.leadStatusFilter) el.leadStatusFilter.value = currentLeadFilter;
+    renderLeads();
+    setSyncStatus("Lead opprettet fra nettsideinnsending.", "ok");
+  }
+
+  async function updateWebsiteSubmissionStatus(id, status) {
+    if (!store.updateWebsiteSubmission) throw new Error("Kan ikke oppdatere nettsideinnsending uten Supabase.");
+    const row = (websiteSubmissions || []).find((item) => item.id === id);
+    if (!row) throw new Error("Fant ikke nettsideinnsendingen.");
+    if (status === "spam") {
+      const ok = await askForConfirmation({
+        title: "Marker som spam",
+        message: `Marker ${websiteSubmissionName(row)} som spam/ugyldig?`,
+        confirmLabel: "Marker spam",
+        tone: "danger",
+      });
+      if (!ok) return;
+    }
+    const updated = await store.updateWebsiteSubmission(id, { processing_status: status });
+    mergeWebsiteSubmission(id, { processing_status: status }, updated);
+    renderLeads();
+    setSyncStatus(status === "read" ? "Nettsideinnsending markert lest." : "Nettsideinnsending markert som spam.", "ok");
   }
 
   function leadTemplateButtons(customer) {
@@ -8134,6 +8299,19 @@
     if (!button) return;
     selectedLeadId = button.dataset.leadId;
     renderLeads();
+  });
+  el.websiteSubmissionInbox?.addEventListener("click", (event) => {
+    const createLead = event.target.closest("[data-create-website-lead]");
+    if (createLead) {
+      createLeadFromWebsiteSubmission(createLead.dataset.createWebsiteLead)
+        .catch((error) => setSyncStatus(error.message || "Klarte ikke lage lead fra nettsideinnsending.", "error"));
+      return;
+    }
+    const statusButton = event.target.closest("[data-website-submission-status]");
+    if (statusButton) {
+      updateWebsiteSubmissionStatus(statusButton.dataset.websiteSubmissionId, statusButton.dataset.websiteSubmissionStatus)
+        .catch((error) => setSyncStatus(error.message || "Klarte ikke oppdatere nettsideinnsending.", "error"));
+    }
   });
   el.orderList?.addEventListener("click", (event) => {
     const button = event.target.closest("[data-order-id]");

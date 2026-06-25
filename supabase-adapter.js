@@ -960,6 +960,27 @@
       if (activityError) throw activityError;
       return data;
     },
+    async updateWebsiteSubmission(id, patch = {}) {
+      const supabase = await requireClient();
+      if (!isUuid(id)) throw new Error("Ugyldig nettsideinnsending-id.");
+      const dbPatch = {};
+      const statuses = ["new", "read", "duplicate_possible", "processed", "invalid", "spam", "failed"];
+      if ("processing_status" in patch && statuses.includes(patch.processing_status)) {
+        dbPatch.processing_status = patch.processing_status;
+      }
+      for (const key of ["created_lead_id", "created_customer_id", "created_job_id", "created_activity_id"]) {
+        if (key in patch) dbPatch[key] = isUuid(patch[key]) ? patch[key] : null;
+      }
+      if (!Object.keys(dbPatch).length) return null;
+      const { data, error } = await supabase
+        .from("website_submissions")
+        .update(dbPatch)
+        .eq("id", id)
+        .select("*")
+        .single();
+      if (error) throw error;
+      return data;
+    },
     async analyzeIntake(payload) {
       const supabase = await requireClient();
       const { data, error } = await supabase.functions.invoke("analyze-intake", {
