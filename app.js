@@ -4333,7 +4333,7 @@
   }
 
   function moveMarkerRegex() {
-    return /\[Må flyttes[^\]]*\]/i;
+    return /\[Må flyttes[^\]]*\]/gi;
   }
 
   function markerText(note, regex) {
@@ -7651,6 +7651,23 @@
     return [...dates].sort().join("; ");
   }
 
+  function addServiceEventToLocalCache(customer, event) {
+    const key = customerKey(customer);
+    const row = {
+      id: event.id,
+      customer_id: event.customer_id || key,
+      lime_id: event.lime_id || customer.lime_id,
+      event_date: event.event_date,
+      event_type: event.event_type,
+      note: event.note,
+      created_at: event.created_at,
+    };
+    const list = serviceEventsByCustomer.get(key) || [];
+    list.unshift(row);
+    serviceEventsByCustomer.set(key, list);
+    return row;
+  }
+
   async function saveServiceEvent(customer, event) {
     const key = customerKey(customer);
     const row = {
@@ -7662,14 +7679,9 @@
     };
     if (store.isConfigured && store.saveServiceEvent) {
       const saved = await store.saveServiceEvent({ ...row, customerId: customer.id || key });
-      const list = serviceEventsByCustomer.get(key) || [];
-      list.unshift(saved);
-      serviceEventsByCustomer.set(key, list);
-      return;
+      return addServiceEventToLocalCache(customer, saved);
     }
-    const list = serviceEventsByCustomer.get(key) || [];
-    list.unshift(row);
-    serviceEventsByCustomer.set(key, list);
+    return addServiceEventToLocalCache(customer, row);
   }
 
   async function saveCustomerAfterCompletion(customer) {
@@ -7918,17 +7930,30 @@
     if (!row) throw new Error("Fant ikke bookingen.");
     const cleanReason = String(reason || "").trim() || "Må avtales på nytt";
     const today = isoDate(new Date());
+    const event = {
+      event_date: today,
+      event_type: "Må flyttes",
+      note: `${bookingJobLabel(row)} ${formatDate(row.booking.date)} kl. ${bookingTimeText(row.booking)} må flyttes. Årsak: ${cleanReason}.`,
+    };
     const updatedBooking = {
       ...row.booking,
       note: `${cleanBookingNote(row.booking.note)}\n[Må flyttes ${today}: ${cleanReason}]`.trim(),
       needs_move: true,
     };
+    if (store.isConfigured && store.markBookingNeedsMove) {
+      const savedEvent = await store.markBookingNeedsMove(id, cleanReason, {
+        markedAt: today,
+        eventNote: event.note,
+        customerId: row.customer.id || customerKey(row.customer),
+      });
+      bookings[id] = updatedBooking;
+      addServiceEventToLocalCache(row.customer, savedEvent || event);
+      renderAll();
+      setSyncStatus("Jobb markert som må flyttes. Historikk er lagret på kundekortet.", "ok");
+      return;
+    }
     await saveBookingRecord(id, updatedBooking);
-    await saveServiceEvent(row.customer, {
-      event_date: today,
-      event_type: "Må flyttes",
-      note: `${bookingJobLabel(row)} ${formatDate(row.booking.date)} kl. ${bookingTimeText(row.booking)} må flyttes. Årsak: ${cleanReason}.`,
-    });
+    await saveServiceEvent(row.customer, event);
     renderAll();
     setSyncStatus("Jobb markert som må flyttes. Historikk er lagret på kundekortet.", "ok");
   }

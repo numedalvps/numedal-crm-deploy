@@ -859,6 +859,26 @@
         }
       }
     },
+    async markBookingNeedsMove(id, reason, options = {}) {
+      const supabase = await requireClient();
+      const markedAt = normalizeDate(options.markedAt || options.date) || localIsoDate(new Date());
+      const eventNote = options.eventNote || null;
+      const { data, error } = await supabase.rpc("mark_booking_needs_move", {
+        p_booking_id: id,
+        p_reason: reason || null,
+        p_marked_at: markedAt,
+        p_event_note: eventNote,
+      });
+      if (error) throw error;
+      return {
+        id: data,
+        customer_id: options.customerId || null,
+        event_date: markedAt,
+        event_type: "Må flyttes",
+        note: eventNote,
+        created_at: new Date().toISOString(),
+      };
+    },
     async saveServiceEvent(event) {
       const supabase = await requireClient();
       const customerId = event.customerId || event.customer_id;
