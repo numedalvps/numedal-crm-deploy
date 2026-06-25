@@ -5269,6 +5269,8 @@
           const date = row.received_at ? formatDate(isoDate(new Date(row.received_at))) : "";
           const text = [websiteSubmissionTypeLabel(row), row.normalized_phone, row.normalized_email, date].filter(Boolean).join(" · ");
           const duplicateHints = websiteSubmissionDuplicateHints(row, rows);
+          const customerHint = websiteSubmissionCustomerMatchHint(row);
+          const canCreateServiceOrder = websiteSubmissionCanCreateServiceOrder(row);
           return `
             <article title="Rå innsending beholdes uendret til den behandles server-side.">
               <div>
@@ -5276,8 +5278,10 @@
                 <span>${escapeHtml(text || "Ny innsending")}</span>
                 ${message ? `<small>${escapeHtml(message).slice(0, 180)}</small>` : ""}
                 ${duplicateHints.length ? `<small class="website-duplicate-hint">Mulig duplikat: ${escapeHtml(duplicateHints.join(", "))}</small>` : ""}
+                ${customerHint ? `<small class="website-duplicate-hint">${escapeHtml(customerHint)}</small>` : ""}
               </div>
               <div class="mini-action-row">
+                ${canCreateServiceOrder ? `<button data-create-website-service-order="${escapeHtml(row.id)}" type="button" title="Opprett kundekort og serviceordre fra denne nettsideinnsendingen.">Lag serviceordre</button>` : ""}
                 <button data-create-website-lead="${escapeHtml(row.id)}" type="button" title="Opprett lead fra denne nettsideinnsendingen.">Lag lead</button>
                 <button class="secondary" data-website-submission-status="read" data-website-submission-id="${escapeHtml(row.id)}" type="button" title="Skjul fra innboksen uten å opprette lead.">Marker lest</button>
                 <button class="secondary" data-website-submission-status="spam" data-website-submission-id="${escapeHtml(row.id)}" type="button" title="Marker som spam/ugyldig og skjul fra innboksen.">Spam</button>
@@ -5342,6 +5346,12 @@
     return plainObject(payload.attribution);
   }
 
+  function websiteSubmissionSourcePage(row) {
+    const payload = websiteSubmissionPayload(row);
+    const attribution = websiteSubmissionAttribution(row);
+    return firstFilled(attribution.page_url, attribution.landing_page, payload.source_page, row?.landing_page);
+  }
+
   function websiteSubmissionName(row) {
     const payload = websiteSubmissionPayload(row);
     const customer = websiteSubmissionCustomer(row);
@@ -5375,9 +5385,8 @@
     const customer = websiteSubmissionCustomer(row);
     const request = websiteSubmissionRequest(row);
     const support = websiteSubmissionSupport(row);
-    const attribution = websiteSubmissionAttribution(row);
     const postalCode = firstFilled(customer.postal_code, customer.zip, payload.postal_code, payload.zip);
-    const sourcePage = firstFilled(attribution.page_url, attribution.landing_page, payload.source_page, row?.landing_page);
+    const sourcePage = websiteSubmissionSourcePage(row);
     const productInterest = [
       websiteSubmissionTypeLabel(row),
       request.request_type,
@@ -5414,6 +5423,131 @@
     };
   }
 
+  function websiteSubmissionServiceText(row) {
+    return [
+      row?.submission_type,
+      websiteSubmissionTypeLabel(row),
+      websiteSubmissionMessage(row),
+      JSON.stringify(websiteSubmissionRequest(row)),
+      JSON.stringify(websiteSubmissionSupport(row)),
+    ].filter(Boolean).join(" ");
+  }
+
+  function websiteSubmissionIsService(row) {
+    const type = String(row?.submission_type || websiteSubmissionPayload(row).submission_type || "").toLowerCase();
+    if (["service_request", "support_request"].includes(type)) return true;
+    const text = websiteSubmissionServiceText(row);
+    return /\b(service|support|reparasjon|reklamasjon|garanti|feil|hjelp|problem|problemer|lekker|lekkasje|drypp|støy|lyd|lukter|fungerer ikke|is|vann|rens|vedlikehold|timejobb|flytte|demonter|monter)\b/i.test(text);
+  }
+
+  function websiteSubmissionCanCreateServiceOrder(row) {
+    return websiteSubmissionIsService(row) && !row?.created_job_id;
+  }
+
+  function websiteSubmissionOrderType(row) {
+    const text = websiteSubmissionServiceText(row);
+    if (/\b(reklamasjon|garanti)\b/i.test(text)) return "reklamasjon";
+    if (String(row?.submission_type || "").toLowerCase() === "support_request") return "reparasjon";
+    if (serviceWorkNoteRegex().test(text)) return "reparasjon";
+    if (/\b(feil|hjelp|problem|problemer|lekker|lekkasje|drypp|støy|lyd|lukter|fungerer ikke|is|vann|timejobb|flytte|demonter|monter)\b/i.test(text)) return "reparasjon";
+    return "service";
+  }
+
+  function websiteSubmissionMatchValues(row) {
+    const values = websiteSubmissionLeadValues(row);
+    return {
+      name: values.name || "",
+      phone: values.phone || "",
+      email: values.email || "",
+      street: values.street || values.address || "",
+      city: values.city || "",
+    };
+  }
+
+  function websiteSubmissionCustomerCandidates(row) {
+    return aiRegistrationCandidates(websiteSubmissionMatchValues(row))
+      .filter((item) => item.score >= 40)
+      .slice(0, 5);
+  }
+
+  function strongWebsiteSubmissionCustomerCandidate(row) {
+    return websiteSubmissionCustomerCandidates(row).find((item) => item.score >= 120) || null;
+  }
+
+  function websiteSubmissionCustomerMatchHint(row) {
+    const candidate = strongWebsiteSubmissionCustomerCandidate(row);
+    if (!candidate?.customer) return "";
+    const reasons = candidate.reasons?.length ? candidate.reasons.join(", ") : "sterk match på kundeinfo";
+    return `Kundetreff: ${cleanDisplayName(candidate.customer)} (${reasons})`;
+  }
+
+  function websiteSubmissionAddressText(row) {
+    const values = websiteSubmissionLeadValues(row);
+    const place = [values.zip, values.city].filter(Boolean).join(" ");
+    return [values.street || values.address, place].filter(Boolean).join(", ");
+  }
+
+  function websiteSubmissionOrderNote(row) {
+    const values = websiteSubmissionLeadValues(row);
+    const request = websiteSubmissionRequest(row);
+    const support = websiteSubmissionSupport(row);
+    const sourcePage = websiteSubmissionSourcePage(row);
+    const address = websiteSubmissionAddressText(row);
+    return [
+      `Nettsideinnsending ${row?.public_reference || ""}`.trim(),
+      `Type: ${websiteSubmissionTypeLabel(row)}`,
+      websiteSubmissionMessage(row),
+      request.request_type ? `Ønske: ${request.request_type}` : "",
+      request.service_reason ? `Årsak: ${request.service_reason}` : "",
+      request.preferred_contact_method ? `Kontaktmetode: ${request.preferred_contact_method}` : "",
+      support.symptom_slug ? `Symptom: ${support.symptom_slug}` : "",
+      support.billable ? "Merket som fakturerbar hjelp i skjema." : "",
+      values.phone ? `Telefon: ${values.phone}` : "",
+      values.email ? `E-post: ${values.email}` : "",
+      address ? `Adresse: ${address}` : "",
+      sourcePage ? `Side: ${sourcePage}` : "",
+      row?.idempotency_key ? `Idempotency: ${row.idempotency_key}` : "",
+    ].filter(Boolean).join("\n");
+  }
+
+  function websiteSubmissionCustomerDraft(row) {
+    const values = websiteSubmissionLeadValues(row);
+    const type = websiteSubmissionOrderType(row);
+    const fallbackName = `Ukjent kunde ${values.phone || values.email || ""}`.trim();
+    return {
+      source: "Nettside",
+      name: values.name || fallbackName || "Ukjent kunde",
+      phone: values.phone || "",
+      email: values.email || "",
+      visit_street: values.street || values.address || "",
+      visit_zip: values.zip || values.postal_code || "",
+      visit_city: values.city || "",
+      location_tag: values.city || "",
+      model_or_note: values.product_interest || "",
+      tags: uniqueTags(["Nettside", type === "service" ? "Service" : "Servicearbeid"]),
+      local_note: [
+        `${weekdayDate(isoDate(new Date()), { long: true })}: Kundekort opprettet fra nettsideinnsending.`,
+        websiteSubmissionOrderNote(row),
+      ].filter(Boolean).join("\n"),
+    };
+  }
+
+  async function customerForWebsiteSubmissionOrder(row) {
+    const linkedCustomer = row?.created_customer_id ? findCustomer(row.created_customer_id) : null;
+    if (linkedCustomer) return { customer: linkedCustomer, created: false, match: null };
+    const candidate = strongWebsiteSubmissionCustomerCandidate(row);
+    if (candidate?.customer) return { customer: candidate.customer, created: false, match: candidate };
+    const draft = websiteSubmissionCustomerDraft(row);
+    if (!draft.name && !draft.phone && !draft.email && !draft.visit_street) {
+      throw new Error("Nettsideinnsendingen mangler nok kontaktinfo til å lage kundekort.");
+    }
+    const savedCustomer = await store.saveCustomer(draft);
+    const index = customers.findIndex((customer) => customerKey(customer) === customerKey(savedCustomer));
+    if (index >= 0) customers[index] = savedCustomer;
+    else customers.unshift(savedCustomer);
+    return { customer: savedCustomer, created: true, match: null };
+  }
+
   function mergeWebsiteSubmission(id, patch, updated = null) {
     websiteSubmissions = (websiteSubmissions || []).map((row) => (
       row.id === id ? { ...row, ...patch, ...(updated || {}) } : row
@@ -5442,6 +5576,58 @@
     if (el.leadStatusFilter) el.leadStatusFilter.value = currentLeadFilter;
     renderLeads();
     setSyncStatus("Lead opprettet fra nettsideinnsending.", "ok");
+  }
+
+  async function createServiceOrderFromWebsiteSubmission(id) {
+    if (!store.saveCustomer || !store.saveOrder || !store.updateWebsiteSubmission) {
+      throw new Error("Serviceordre fra nettside krever Supabase og oppdatert adapter.");
+    }
+    const row = (websiteSubmissions || []).find((item) => item.id === id);
+    if (!row) throw new Error("Fant ikke nettsideinnsendingen.");
+    if (!websiteSubmissionIsService(row)) {
+      throw new Error("Denne innsendingen ser ikke ut som service. Bruk Lag lead hvis den skal følges opp som salg.");
+    }
+    const values = websiteSubmissionLeadValues(row);
+    if (!values.name && !values.phone && !values.email && !values.address && !values.street) {
+      throw new Error("Nettsideinnsendingen mangler nok kontaktinfo til å lage serviceordre.");
+    }
+    const { customer, created, match } = await customerForWebsiteSubmissionOrder(row);
+    const type = websiteSubmissionOrderType(row);
+    const note = websiteSubmissionOrderNote(row);
+    const order = await saveOrderRecord("", {
+      customerId: customerKey(customer),
+      title: `${orderTypeLabel(type)} - ${cleanDisplayName(customer)}`,
+      type,
+      status: "unscheduled",
+      billingStatus: "not_ready",
+      source: "website_submission",
+      note,
+      created_at: new Date().toISOString(),
+    });
+    const updatedPatch = {
+      processing_status: "processed",
+      created_customer_id: customer.id || customerKey(customer),
+    };
+    if (order.jobId || order.job_id) updatedPatch.created_job_id = order.jobId || order.job_id;
+    const updated = await store.updateWebsiteSubmission(id, updatedPatch);
+    mergeWebsiteSubmission(id, updatedPatch, updated);
+    await saveServiceEvent(customer, {
+      event_date: isoDate(new Date()),
+      event_type: created ? "Serviceordre fra nettside" : "Serviceordre fra nettside på eksisterende kundekort",
+      note: [
+        `${orderTypeLabel(type)} opprettet fra nettsideinnsending.`,
+        match?.customer ? `Koblet til eksisterende kunde: ${cleanDisplayName(match.customer)}.` : "",
+        note,
+      ].filter(Boolean).join("\n"),
+    });
+    selectedCustomerId = customerKey(customer);
+    selectedOrderId = order.id;
+    currentOrderFilter = "unscheduled";
+    currentOrderSearch = "";
+    if (el.orderStatusFilter) el.orderStatusFilter.value = currentOrderFilter;
+    if (el.orderSearch) el.orderSearch.value = "";
+    setView("orders");
+    setSyncStatus("Serviceordre opprettet fra nettsideinnsending.", "ok");
   }
 
   async function updateWebsiteSubmissionStatus(id, status) {
@@ -8686,6 +8872,12 @@
     renderLeads();
   });
   el.websiteSubmissionInbox?.addEventListener("click", (event) => {
+    const createServiceOrder = event.target.closest("[data-create-website-service-order]");
+    if (createServiceOrder) {
+      createServiceOrderFromWebsiteSubmission(createServiceOrder.dataset.createWebsiteServiceOrder)
+        .catch((error) => setSyncStatus(error.message || "Klarte ikke lage serviceordre fra nettsideinnsending.", "error"));
+      return;
+    }
     const createLead = event.target.closest("[data-create-website-lead]");
     if (createLead) {
       createLeadFromWebsiteSubmission(createLead.dataset.createWebsiteLead)

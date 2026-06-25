@@ -728,7 +728,11 @@
       const { data, error } = await query;
       if (error) throw error;
       const saved = orderFromDb(data);
-      await syncJobForOrder(supabase, data.id, saved);
+      const job = await syncJobForOrder(supabase, data.id, saved);
+      if (job?.id) {
+        saved.jobId = job.id;
+        saved.job_id = job.id;
+      }
       return saved;
     },
     async deleteOrder(id) {
