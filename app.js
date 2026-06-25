@@ -6847,6 +6847,10 @@
       doneButton.type = "button";
       doneButton.dataset.doneBooking = row.id;
       doneButton.textContent = done ? "Utført" : "Marker ferdig";
+      if (done && !isAdmin()) {
+        doneButton.disabled = true;
+        doneButton.title = "Jobben er markert utført. Kontakt admin hvis dette må angres.";
+      }
       card.querySelector(".job-actions").appendChild(doneButton);
       if (!done && !needsMove) {
         const moveButton = document.createElement("button");
@@ -7557,7 +7561,8 @@
       ${row.booking.note ? `<p>${escapeHtml(row.booking.note)}</p>` : ""}
     `;
     el.completionDoneDate.value = row.booking.date || isoDate(new Date());
-    el.completionNextAction.innerHTML = completionOptions(type)
+    const nextOptions = isAdmin() ? completionOptions(type) : [["none", "Ingen neste steg nå"]];
+    el.completionNextAction.innerHTML = nextOptions
       .map(([value, label]) => `<option value="${value}">${escapeHtml(label)}</option>`)
       .join("");
     el.completionInterval.value = "2";
@@ -7571,6 +7576,12 @@
 
   function setupCompletionInstallationField(row) {
     if (!el.completionInstallationLabel || !el.completionInstallation) return;
+    if (!isAdmin()) {
+      el.completionInstallation.value = "";
+      el.completionInstallation.innerHTML = "";
+      el.completionInstallationLabel.classList.add("hidden");
+      return;
+    }
     const type = bookingDisplayType(row);
     const relevant = ["service", "installasjon"].includes(type);
     const installations = relevant ? installationsForCustomer(row.customer) : [];
@@ -7603,7 +7614,7 @@
   function setupCompletionPaymentFields(row) {
     if (!el.completionPaymentDoneLabel || !el.completionPaymentDone) return;
     const type = bookingDisplayType(row);
-    const show = completionCanHavePayment(type);
+    const show = isAdmin() && completionCanHavePayment(type);
     el.completionPaymentDone.checked = false;
     el.completionPaymentDoneLabel.classList.toggle("hidden", !show);
     el.completionPaymentHint?.classList.toggle("hidden", !show);
@@ -7711,16 +7722,19 @@
     return updated;
   }
 
-  async function setBookingDone(id, done) {
+  async function setBookingDone(id, done, options = {}) {
     if (store.isConfigured) {
-      await store.markBookingDone(id, done);
+      await store.markBookingDone(id, done, options);
     } else {
       requireLocalDemoStorage();
       if (done) doneJobs.add(id);
       else doneJobs.delete(id);
       localStorage.setItem(storage.doneJobs, JSON.stringify([...doneJobs]));
     }
-    if (bookings[id]) bookings[id].status = done ? "done" : "booked";
+    if (bookings[id]) {
+      bookings[id].status = done ? "done" : "booked";
+      bookings[id].done_at = done ? options.completedAt || new Date().toISOString() : null;
+    }
     if (!done) {
       const order = linkedOrderForBooking(id);
       if (order) {
@@ -7980,6 +7994,20 @@
       userNote,
     ].filter(Boolean);
 
+    if (store.isConfigured && !isAdmin()) {
+      await setBookingDone(completingBookingId, true, {
+        completedAt: doneDate,
+        note: eventLines.join("\n"),
+      });
+      el.completionDialog.close();
+      completingBookingId = "";
+      completionFollowupBooking = null;
+      renderTechnician();
+      renderPlanning();
+      setSyncStatus("Jobb markert utført. Kundekort, servicefrist og fakturering behandles av admin.", "ok");
+      return;
+    }
+
     if (type === "service") {
       customer.last_service_date = doneDate;
       customer.service_dates = appendServiceDate(customer, doneDate);
@@ -8034,7 +8062,7 @@
       note: eventLines.join("\n"),
     });
     await saveBookingRecord(completingBookingId, completedBooking);
-    await setBookingDone(completingBookingId, true);
+    await setBookingDone(completingBookingId, true, { completedAt: doneDate });
     await ensureOrderForBooking(completingBookingId, completedBooking, {
       status: "completed",
       billingStatus,

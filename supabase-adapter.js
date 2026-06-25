@@ -820,20 +820,21 @@
       if (error) throw error;
       await cancelAppointmentsForBooking(supabase, id);
     },
-    async markBookingDone(id, done) {
+    async markBookingDone(id, done, options = {}) {
       const supabase = await requireClient();
+      const completedAt = options.completedAt || new Date().toISOString();
       if (done) {
         const { error } = await supabase.rpc("complete_job", {
           p_booking_id: id,
-          p_note: null,
-          p_completed_at: new Date().toISOString(),
+          p_note: options.note || null,
+          p_completed_at: completedAt,
         });
         if (!error) return;
         if (!/function .*complete_job/i.test(error.message || "")) throw error;
       }
       const { error } = await supabase.from("bookings").update({
         status: done ? "done" : "booked",
-        done_at: done ? new Date().toISOString() : null,
+        done_at: done ? completedAt : null,
       }).eq("id", id);
       if (error) throw error;
       const status = done ? "done" : "planned";
@@ -852,7 +853,7 @@
         if (appointment.job_id) {
           const { error: updateJobError } = await supabase
             .from("jobs")
-            .update({ work_status: done ? "completed" : "planned", completed_at: done ? new Date().toISOString() : null })
+            .update({ work_status: done ? "completed" : "planned", completed_at: done ? completedAt : null })
             .eq("id", appointment.job_id);
           if (updateJobError) throw updateJobError;
         }
