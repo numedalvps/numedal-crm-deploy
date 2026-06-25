@@ -5294,20 +5294,31 @@
   }
 
   function websiteSubmissionDuplicateHints(row, rows = websiteSubmissions || []) {
+    const hints = new Set();
+    for (const match of websiteSubmissionDuplicateRows(row, rows)) {
+      for (const reason of match.reasons) hints.add(reason);
+    }
+    return [...hints];
+  }
+
+  function websiteSubmissionDuplicateRows(row, rows = websiteSubmissions || []) {
     const phone = compactPhone(firstFilled(row?.normalized_phone, websiteSubmissionCustomer(row).phone));
     const email = String(firstFilled(row?.normalized_email, websiteSubmissionCustomer(row).email)).trim().toLowerCase();
     const name = normalizeMatch(websiteSubmissionName(row));
-    const reasons = new Set();
+    const matches = [];
     for (const other of rows) {
       if (!other || other.id === row?.id) continue;
+      if (!["new", "duplicate_possible", "failed"].includes(other.processing_status || "new")) continue;
       const otherPhone = compactPhone(firstFilled(other.normalized_phone, websiteSubmissionCustomer(other).phone));
       const otherEmail = String(firstFilled(other.normalized_email, websiteSubmissionCustomer(other).email)).trim().toLowerCase();
       const otherName = normalizeMatch(websiteSubmissionName(other));
-      if (phone && otherPhone && phone === otherPhone) reasons.add("samme telefon");
-      if (email && otherEmail && email === otherEmail) reasons.add("samme e-post");
-      if (name && otherName && name === otherName) reasons.add("samme navn");
+      const reasons = [];
+      if (phone && otherPhone && phone === otherPhone) reasons.push("samme telefon");
+      if (email && otherEmail && email === otherEmail) reasons.push("samme e-post");
+      if (name && otherName && name === otherName) reasons.push("samme navn");
+      if (reasons.length) matches.push({ row: other, reasons });
     }
-    return [...reasons];
+    return matches;
   }
 
   function plainObject(value) {
@@ -5590,6 +5601,19 @@
     const values = websiteSubmissionLeadValues(row);
     if (!values.name && !values.phone && !values.email && !values.address && !values.street) {
       throw new Error("Nettsideinnsendingen mangler nok kontaktinfo til å lage serviceordre.");
+    }
+    const duplicateRows = websiteSubmissionDuplicateRows(row);
+    if (duplicateRows.length) {
+      const duplicateText = duplicateRows
+        .slice(0, 3)
+        .map((item) => `${websiteSubmissionName(item.row)} (${item.reasons.join(", ")})`)
+        .join("; ");
+      const ok = await askForConfirmation({
+        title: "Mulig duplikat",
+        message: `Fant annen åpen nettsideinnsending som ligner: ${duplicateText}. Fortsett og lag serviceordre for valgt innsending?`,
+        confirmLabel: "Lag serviceordre",
+      });
+      if (!ok) return;
     }
     const { customer, created, match } = await customerForWebsiteSubmissionOrder(row);
     const type = websiteSubmissionOrderType(row);
