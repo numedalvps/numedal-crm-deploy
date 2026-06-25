@@ -3723,11 +3723,13 @@
       .filter((row) => row.order && row.customer)
       .sort((a, b) => {
         const rank = { unscheduled: 0, scheduled: 1, completed: 2, cancelled: 9 };
-        const aBilling = a.order.billingStatus || a.order.billing_status;
-        const bBilling = b.order.billingStatus || b.order.billing_status;
+        const aStatus = orderEffectiveStatus(a.order, a.job);
+        const bStatus = orderEffectiveStatus(b.order, b.job);
+        const aBilling = orderEffectiveBillingStatus(a.order, a.job);
+        const bBilling = orderEffectiveBillingStatus(b.order, b.job);
         const billingRank = (status) => status === "ready" ? -1 : status === "sent" ? 4 : 0;
         return billingRank(aBilling) - billingRank(bBilling)
-          || (rank[a.order.status] ?? 5) - (rank[b.order.status] ?? 5)
+          || (rank[aStatus] ?? 5) - (rank[bStatus] ?? 5)
           || String(a.order.scheduledDate || a.order.scheduled_date || a.order.completedAt || a.order.completed_at || a.order.created_at || "").localeCompare(String(b.order.scheduledDate || b.order.scheduled_date || b.order.completedAt || b.order.completed_at || b.order.created_at || ""))
           || cleanDisplayName(a.customer).localeCompare(cleanDisplayName(b.customer), "nb");
       });
@@ -3774,7 +3776,7 @@
   }
 
   function orderBadgesHtml(order, job = jobForOrder(order)) {
-    return `${orderStatusBadge(order)}${orderBillingBadge(order)}${orderJobBadge(order, job)}`;
+    return `${orderStatusBadge(order, orderEffectiveStatus(order, job))}${orderBillingBadge(order, orderEffectiveBillingStatus(order, job))}${orderJobBadge(order, job)}`;
   }
 
   function orderJobSummary(order, job = jobForOrder(order)) {
@@ -3785,6 +3787,31 @@
       jobBillingStatusLabel(job.billing_status),
     ].filter(Boolean);
     return parts.join(" · ");
+  }
+
+  function orderStatusFromJob(job) {
+    if (!job) return "";
+    if (job.work_status === "draft") return "unscheduled";
+    if (job.work_status === "planned" || job.work_status === "in_progress") return "scheduled";
+    if (job.work_status === "completed") return "completed";
+    if (job.work_status === "cancelled") return "cancelled";
+    return "";
+  }
+
+  function orderEffectiveStatus(order, job = jobForOrder(order)) {
+    return orderStatusFromJob(job) || order?.status || "unscheduled";
+  }
+
+  function orderBillingStatusFromJob(job) {
+    if (!job) return "";
+    if (job.payment_status === "paid" || job.payment_status === "paid_on_site") return "paid";
+    if (job.billing_status === "ready_for_invoice" || job.billing_status === "credit_needed") return "ready";
+    if (job.billing_status === "exported" || job.billing_status === "invoiced") return "sent";
+    return "";
+  }
+
+  function orderEffectiveBillingStatus(order, job = jobForOrder(order)) {
+    return orderBillingStatusFromJob(job) || order?.billingStatus || order?.billing_status || "not_ready";
   }
 
   function serviceWorkType(type) {
@@ -3875,13 +3902,18 @@
     ].filter(Boolean).join(" "));
   }
 
-  function orderStatusBadge(order) {
-    const status = order.status || "unscheduled";
-    return `<span class="order-badge ${escapeHtml(status)}" title="${escapeHtml(orderStatusHelp(status))}">${escapeHtml(orderStatusLabel(status))}</span>`;
+  function orderStatusBadge(order, effectiveStatus = "") {
+    const rawStatus = order?.status || "unscheduled";
+    const status = effectiveStatus || rawStatus;
+    const adjusted = status !== rawStatus;
+    const help = adjusted
+      ? `${orderStatusHelp(status)} Vises etter koblet jobbspeil.`
+      : orderStatusHelp(status);
+    return `<span class="order-badge ${escapeHtml(status)}" title="${escapeHtml(help)}">${escapeHtml(orderStatusLabel(status))}</span>`;
   }
 
-  function orderBillingBadge(order) {
-    const status = order.billingStatus || order.billing_status || "not_ready";
+  function orderBillingBadge(order, effectiveStatus = "") {
+    const status = effectiveStatus || order.billingStatus || order.billing_status || "not_ready";
     if (status === "not_ready") return "";
     return `<span class="order-badge billing ${escapeHtml(status)}" title="Fakturastatus for ordren.">${escapeHtml(billingStatusLabel(status))}</span>`;
   }
@@ -4027,8 +4059,9 @@
       || rows[0];
     if (priorityRow) return bookingWorkflowState(priorityRow, order);
 
-    const status = order.status || "unscheduled";
-    const billing = order.billingStatus || order.billing_status || "not_ready";
+    const linkedJob = jobForOrder(order);
+    const status = orderEffectiveStatus(order, linkedJob);
+    const billing = orderEffectiveBillingStatus(order, linkedJob);
     const billable = billableJobType(order.type || "service");
     const steps = [
       workflowStep("Ordre", "done", "Ordren finnes på kundekortet."),
@@ -5195,6 +5228,7 @@
     for (const row of orderRows()) {
       const time = activityTime(row.order.updated_at || row.order.created_at || row.order.scheduledDate, row.order.scheduledDate);
       const jobText = row.job ? ` · ${jobWorkStatusLabel(row.job.work_status)}` : "";
+      const status = orderEffectiveStatus(row.order, row.job);
       items.push({
         time,
         kind: "order",
@@ -5202,7 +5236,7 @@
         orderId: row.id,
         title: "Ordre",
         customer: row.customer?.name || "Uten navn",
-        text: `${orderStatusLabel(row.order.status || "unscheduled")} · ${orderTypeLabel(row.order.type)} · ${orderDateText(row.order)}${jobText}`,
+        text: `${orderStatusLabel(status)} · ${orderTypeLabel(row.order.type)} · ${orderDateText(row.order)}${jobText}`,
       });
     }
     for (const event of allServiceEvents()) {
@@ -6187,11 +6221,12 @@
     const filter = currentOrderFilter || "all";
     return orderRows()
       .filter((row) => {
-        const billing = row.order.billingStatus || row.order.billing_status || "not_ready";
+        const status = orderEffectiveStatus(row.order, row.job);
+        const billing = orderEffectiveBillingStatus(row.order, row.job);
         if (filter === "all") return true;
         if (filter === "billing_ready") return billing === "ready";
         if (filter === "invoiced") return billing === "sent" || billing === "paid";
-        return row.order.status === filter;
+        return status === filter;
       })
       .filter((row) => !search || orderSearchText(row).includes(search));
   }
@@ -6216,10 +6251,10 @@
     currentOrderSearch = el.orderSearch?.value?.trim() || "";
     currentOrderFilter = el.orderStatusFilter?.value || currentOrderFilter || "all";
     const rows = orderRows();
-    if (el.orderUnscheduledMetric) el.orderUnscheduledMetric.textContent = rows.filter((row) => row.order.status === "unscheduled").length.toLocaleString("nb-NO");
-    if (el.orderScheduledMetric) el.orderScheduledMetric.textContent = rows.filter((row) => row.order.status === "scheduled").length.toLocaleString("nb-NO");
-    if (el.orderBillingMetric) el.orderBillingMetric.textContent = rows.filter((row) => (row.order.billingStatus || row.order.billing_status) === "ready").length.toLocaleString("nb-NO");
-    if (el.orderCompletedMetric) el.orderCompletedMetric.textContent = rows.filter((row) => row.order.status === "completed").length.toLocaleString("nb-NO");
+    if (el.orderUnscheduledMetric) el.orderUnscheduledMetric.textContent = rows.filter((row) => orderEffectiveStatus(row.order, row.job) === "unscheduled").length.toLocaleString("nb-NO");
+    if (el.orderScheduledMetric) el.orderScheduledMetric.textContent = rows.filter((row) => orderEffectiveStatus(row.order, row.job) === "scheduled").length.toLocaleString("nb-NO");
+    if (el.orderBillingMetric) el.orderBillingMetric.textContent = rows.filter((row) => orderEffectiveBillingStatus(row.order, row.job) === "ready").length.toLocaleString("nb-NO");
+    if (el.orderCompletedMetric) el.orderCompletedMetric.textContent = rows.filter((row) => orderEffectiveStatus(row.order, row.job) === "completed").length.toLocaleString("nb-NO");
     const list = filteredOrders();
     const visibleRows = list.slice(0, 250);
     const visibleIds = visibleRows.map((row) => row.id);
@@ -6266,6 +6301,7 @@
       .filter(Boolean);
     const flow = orderWorkflowState(order, linkedBookings);
     const linkedJob = jobForOrder(order);
+    const effectiveBilling = orderEffectiveBillingStatus(order, linkedJob);
     el.orderDetail.innerHTML = `
       <div class="customer-title">
         <div class="title-pills">${orderBadgesHtml(order, linkedJob)}</div>
@@ -6279,13 +6315,13 @@
         <button data-edit-order="${escapeHtml(order.id)}" type="button">Rediger ordre</button>
         <button class="secondary" data-delete-one-order="${escapeHtml(order.id)}" type="button">Slett ordre</button>
         <button data-open-order-customer="${escapeHtml(key)}" type="button">Åpne kundekort</button>
-        ${order.billingStatus === "ready" || order.billing_status === "ready" ? `<button data-mark-order-invoiced="${escapeHtml(order.id)}" type="button">Marker fakturert</button>` : ""}
+        ${effectiveBilling === "ready" ? `<button data-mark-order-invoiced="${escapeHtml(order.id)}" type="button">Marker fakturert</button>` : ""}
       </div>
       <dl class="facts">
         <div><dt>Kunde</dt><dd>${escapeHtml(cleanDisplayName(customer))}</dd></div>
         <div><dt>Type</dt><dd>${escapeHtml(orderTypeLabel(order.type))}</dd></div>
-        <div><dt>Status</dt><dd>${escapeHtml(orderStatusLabel(order.status || "unscheduled"))}</dd></div>
-        <div><dt>Faktura</dt><dd>${escapeHtml(billingStatusLabel(order.billingStatus || order.billing_status))}</dd></div>
+        <div><dt>Status</dt><dd>${escapeHtml(orderStatusLabel(orderEffectiveStatus(order, linkedJob)))}</dd></div>
+        <div><dt>Faktura</dt><dd>${escapeHtml(billingStatusLabel(effectiveBilling))}</dd></div>
         <div><dt>Jobbspeil</dt><dd>${escapeHtml(orderJobSummary(order, linkedJob))}</dd></div>
         <div><dt>Dato</dt><dd>${escapeHtml(orderDateText(order))}</dd></div>
         <div><dt>Telefon</dt><dd class="copy-field">${phoneField(customer.phone)}</dd></div>
@@ -6318,7 +6354,7 @@
             <article>
               <div>
                 <strong>${orderBadgesHtml(order)}${escapeHtml(order.title || orderTypeLabel(order.type))}</strong>
-                <span>${escapeHtml(orderDateText(order))} · ${escapeHtml(billingStatusLabel(order.billingStatus || order.billing_status))} · ${escapeHtml(orderJobSummary(order))}</span>
+                <span>${escapeHtml(orderDateText(order))} · ${escapeHtml(billingStatusLabel(orderEffectiveBillingStatus(order)))} · ${escapeHtml(orderJobSummary(order))}</span>
                 ${workflowInlineHtml(orderWorkflowState(order))}
               </div>
               <button data-open-order="${escapeHtml(order.id)}" type="button">Åpne ordre</button>
