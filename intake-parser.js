@@ -305,10 +305,11 @@
     const gnr = raw.match(/\bgnr\.?\s*(\d+)\s*(?:bnr\.?|\/)\s*(\d+)/i);
     if (gnr) {
       const cityMatch = raw.match(/\bi\s+([A-ZÆØÅ][A-Za-zÆØÅæøå .'-]{2,30})/i);
+      const city = cleanLine(cityMatch?.[1] || "").replace(/\s+gnr\b.*$/i, "");
       return {
         street: field("", "low", null),
         postalCode: field("", "low", null),
-        city: field(cleanLine(cityMatch?.[1] || ""), cityMatch ? "medium" : "low", cityMatch?.[0] || null),
+        city: field(city, city ? "medium" : "low", cityMatch?.[0] || null),
         propertyReference: field(`gnr. ${gnr[1]} bnr. ${gnr[2]}`, "high", gnr[0]),
       };
     }

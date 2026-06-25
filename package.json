@@ -5,6 +5,7 @@
   "description": "Intern CRM-webapp for Numedal Varmepumpeservice.",
   "scripts": {
     "test:intake": "node tests/intake.test.js",
+    "eval:intake": "node tests/intake-eval.js",
     "check": "node --check app.js && node --check supabase-adapter.js && node --check intake-parser.js && node tests/intake.test.js"
   }
 }
