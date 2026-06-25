@@ -5389,6 +5389,7 @@
       lead_status: "followup",
       action: "create_lead",
       parser: "website_submission",
+      raw_submission_id: row?.id || null,
       keepOriginal: true,
       raw: JSON.stringify(payload, null, 2),
     };
@@ -5443,6 +5444,82 @@
     setSyncStatus(status === "read" ? "Nettsideinnsending markert lest." : "Nettsideinnsending markert som spam.", "ok");
   }
 
+  function leadCustomerDraft(entry) {
+    const lead = entry?.lead || {};
+    const customer = entry?.customer || leadCustomerFromRow(lead);
+    const status = leadStatusForEntry(entry);
+    const note = leadNoteForEntry(entry);
+    const source = lead.source || customer.lead_source || "Lead";
+    const sourceDetail = lead.source_detail || customer.source || "";
+    const tags = uniqueTags([
+      "Lead",
+      `Leadstatus: ${leadStatusLabel(status)}`,
+      source === "Nettside" ? "Nettside" : "",
+    ]);
+    return {
+      source,
+      name: cleanDisplayName(customer),
+      phone: customer.phone || lead.phone || "",
+      email: customer.email || lead.email || "",
+      visit_street: customer.visit_street || lead.address || "",
+      visit_zip: customer.visit_zip || lead.postal_code || "",
+      visit_city: customer.visit_city || lead.city || "",
+      location_tag: customer.location_tag || lead.city || "",
+      brand: customer.brand || lead.preferred_brand || "",
+      model_or_note: customer.model_or_note || lead.product_interest || "",
+      tags,
+      local_note: [
+        `${weekdayDate(isoDate(new Date()), { long: true })}: Kundekort opprettet fra lead.`,
+        sourceDetail ? `Kilde: ${sourceDetail}` : "",
+        note,
+      ].filter(Boolean).join("\n"),
+    };
+  }
+
+  async function createCustomerFromLead(entryKey) {
+    if (!store.saveCustomer || !store.updateLead) throw new Error("Opprett kundekort fra lead krever oppdatert Supabase-adapter.");
+    const entry = allLeadEntries().find((item) => leadEntryKey(item) === entryKey);
+    if (!entry?.lead) throw new Error("Fant ikke leaden.");
+    const existingCustomerId = leadCustomerId(entry.lead);
+    if (existingCustomerId && findCustomer(existingCustomerId)) {
+      selectedCustomerId = existingCustomerId;
+      setView("customers");
+      setSyncStatus("Leaden er allerede koblet til kundekort.", "ok");
+      return;
+    }
+    const draft = leadCustomerDraft(entry);
+    if (!draft.name && !draft.phone && !draft.email) throw new Error("Leaden mangler nok kontaktinfo til å opprette kundekort.");
+    const savedCustomer = await store.saveCustomer(draft);
+    const index = customers.findIndex((customer) => customerKey(customer) === customerKey(savedCustomer));
+    if (index >= 0) customers[index] = savedCustomer;
+    else customers.unshift(savedCustomer);
+
+    const updatedLead = await store.updateLead(entry.lead.id, { existing_customer_id: savedCustomer.id });
+    const leadIndex = leads.findIndex((lead) => lead.id === updatedLead.id);
+    if (leadIndex >= 0) leads[leadIndex] = updatedLead;
+    else leads.unshift(updatedLead);
+
+    const linkedSubmission = (websiteSubmissions || []).find((row) => row.id === updatedLead.raw_submission_id || row.created_lead_id === updatedLead.id);
+    const linkedSubmissionId = updatedLead.raw_submission_id || linkedSubmission?.id || "";
+    if (linkedSubmissionId && store.updateWebsiteSubmission) {
+      const updatedSubmission = await store.updateWebsiteSubmission(linkedSubmissionId, { created_customer_id: savedCustomer.id });
+      mergeWebsiteSubmission(linkedSubmissionId, { created_customer_id: savedCustomer.id }, updatedSubmission);
+    }
+
+    await saveServiceEvent(savedCustomer, {
+      event_date: isoDate(new Date()),
+      event_type: "Lead konvertert til kundekort",
+      note: leadNoteForEntry({ ...entry, lead: updatedLead, customer: savedCustomer }) || "Kundekort opprettet fra lead.",
+    });
+    selectedLeadId = `lead:${updatedLead.id}`;
+    selectedCustomerId = customerKey(savedCustomer);
+    currentLeadFilter = "followup";
+    if (el.leadStatusFilter) el.leadStatusFilter.value = currentLeadFilter;
+    renderAll();
+    setView("leads");
+    setSyncStatus("Kundekort opprettet fra lead. Du kan nå sette status, opprette ordre eller booke.", "ok");
+  }
+
   function leadTemplateButtons(customer) {
     const key = customerKey(customer);
     return Object.entries(leadTemplates).map(([id, template]) => (
@@ -5483,10 +5560,11 @@
         ${realCustomer ? `<button data-book-customer="${escapeHtml(key)}" type="button">Book</button>` : ""}
         ${status === "won" && realCustomer ? `<button class="order-primary" data-create-order-from-lead="${escapeHtml(key)}" type="button">Opprett ordre</button>` : ""}
         ${realCustomer ? `<button data-open-lead-customer="${escapeHtml(key)}" type="button">Åpne kundekort</button>` : ""}
+        ${!realCustomer && entry?.lead ? `<button class="order-primary" data-create-customer-from-lead="${escapeHtml(leadEntryKey(entry))}" type="button">Opprett kundekort</button>` : ""}
       </div>
       <section class="detail-section">
         <h3>Oppfølging</h3>
-        ${realCustomer ? leadStatusControlHtml(customer, status) : `<p class="muted">Denne leaden mangler koblet kundekort. Opprett/koble kunde før booking.</p>`}
+        ${realCustomer ? leadStatusControlHtml(customer, status) : `<p class="muted">Denne leaden ligger som henvendelse. Opprett kundekort først når saken er reell og skal følges opp videre.</p>`}
         <div class="lead-status-actions">
           ${realCustomer ? `<button data-lead-set-status="needs_offer" data-lead-status-customer="${escapeHtml(key)}" type="button">Tilbud må sendes</button>
           <button data-lead-set-status="offer_sent" data-lead-status-customer="${escapeHtml(key)}" type="button">Tilbud sendt</button>
@@ -8628,6 +8706,12 @@
     if (createOrder) {
       createOrderFromLead(createOrder.dataset.createOrderFromLead)
         .catch((error) => setSyncStatus(error.message || "Klarte ikke opprette ordre.", "error"));
+      return;
+    }
+    const createCustomer = event.target.closest("[data-create-customer-from-lead]");
+    if (createCustomer) {
+      createCustomerFromLead(createCustomer.dataset.createCustomerFromLead)
+        .catch((error) => setSyncStatus(error.message || "Klarte ikke opprette kundekort fra lead.", "error"));
       return;
     }
     const open = event.target.closest("[data-open-lead-customer]");

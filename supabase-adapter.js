@@ -983,6 +983,7 @@
         source_detail: values?.source_detail || "Kontrollert hurtigregistrering",
         product_interest: [values?.brand, values?.model, values?.type].filter(Boolean).join(" ") || values?.note || null,
         preferred_brand: values?.brand || null,
+        raw_submission_id: isUuid(values?.raw_submission_id) ? values.raw_submission_id : null,
         status: leadStatusToDb(values?.lead_status || "followup"),
         last_contact_at: new Date().toISOString(),
       };
@@ -1003,6 +1004,25 @@
         },
       });
       if (activityError) throw activityError;
+      return data;
+    },
+    async updateLead(id, patch = {}) {
+      const supabase = await requireClient();
+      if (!isUuid(id)) throw new Error("Ugyldig lead-id.");
+      const dbPatch = {};
+      if ("existing_customer_id" in patch) dbPatch.existing_customer_id = isUuid(patch.existing_customer_id) ? patch.existing_customer_id : null;
+      if ("converted_customer_id" in patch) dbPatch.converted_customer_id = isUuid(patch.converted_customer_id) ? patch.converted_customer_id : null;
+      if ("status" in patch) {
+        dbPatch.status = leadStatusToDb(patch.status);
+        if (patch.status === "won") dbPatch.won_at = new Date().toISOString();
+        if (patch.status === "lost") dbPatch.lost_reason = patch.lost_reason || null;
+      }
+      if ("product_interest" in patch) dbPatch.product_interest = patch.product_interest || null;
+      if ("source_detail" in patch) dbPatch.source_detail = patch.source_detail || null;
+      if (!Object.keys(dbPatch).length) throw new Error("Ingen lead-endringer å lagre.");
+      dbPatch.updated_at = new Date().toISOString();
+      const { data, error } = await supabase.from("leads").update(dbPatch).eq("id", id).select("*").single();
+      if (error) throw error;
       return data;
     },
     async updateWebsiteSubmission(id, patch = {}) {
