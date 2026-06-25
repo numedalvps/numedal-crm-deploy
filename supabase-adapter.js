@@ -461,6 +461,7 @@
         start_at: startAt,
         end_at: endAt,
         status: appointmentStatusForBooking(booking.status),
+        move_reason: null,
         source_table: "bookings",
         source_id: booking.id,
       };

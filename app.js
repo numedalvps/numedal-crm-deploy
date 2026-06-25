@@ -211,8 +211,10 @@
     dashboardServiceCount: document.getElementById("dashboardServiceCount"),
     dashboardLeadCount: document.getElementById("dashboardLeadCount"),
     dashboardBookingCount: document.getElementById("dashboardBookingCount"),
+    dashboardMoveCount: document.getElementById("dashboardMoveCount"),
     dashboardBillingCount: document.getElementById("dashboardBillingCount"),
     nextJobs: document.getElementById("nextJobs"),
+    moveQueue: document.getElementById("moveQueue"),
     dueCustomers: document.getElementById("dueCustomers"),
     billingQueue: document.getElementById("billingQueue"),
     dataQualityList: document.getElementById("dataQualityList"),
@@ -4340,6 +4342,13 @@
     return String(note || "").match(regex)?.[0] || "";
   }
 
+  function noteWithoutMoveMarker(note) {
+    return String(note || "")
+      .replace(moveMarkerRegex(), "")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  }
+
   function cleanBookingNote(note) {
     return String(note || "")
       .replace(paymentMarkerRegex(), "")
@@ -4413,6 +4422,12 @@
       });
   }
 
+  function moveQueueRows() {
+    return bookingRows()
+      .filter((row) => bookingNeedsMove(row) && row.booking.status !== "done" && !doneJobs.has(row.id))
+      .sort((a, b) => `${a.booking.date || ""} ${a.booking.time || ""}`.localeCompare(`${b.booking.date || ""} ${b.booking.time || ""}`));
+  }
+
   function setDemoUser(userKey) {
     if (store.isConfigured || !demoEnabled) {
       el.loginMessage.textContent = store.isConfigured
@@ -4455,6 +4470,21 @@
     if (el.statusFilter) el.statusFilter.value = "all";
     if (el.customerSearch) el.customerSearch.value = "";
     setView("customers");
+  }
+
+  function showBookingInPlanning(bookingId) {
+    const row = bookingRows().find((item) => item.id === bookingId);
+    if (!row) {
+      setSyncStatus("Fant ikke bookingen i plan.", "error");
+      return;
+    }
+    const date = new Date(`${row.booking.date}T00:00:00`);
+    if (!Number.isNaN(date.getTime())) {
+      weekStart = startOfWeek(date);
+      planningMonthCursor = date;
+    }
+    setView("planning");
+    setSyncStatus(`${cleanDisplayName(row.customer)} ligger i planen ${formatDate(row.booking.date)}. Bruk Flytt eller dra jobben til ny dato.`, "ok");
   }
 
   function renderApp() {
@@ -4508,6 +4538,7 @@
     const yellowCount = activeCustomers.filter((customer) => statusKind(customer) === "yellow").length;
     const greenCount = activeCustomers.filter((customer) => statusKind(customer) === "green").length;
     const upcomingBookings = bookingRows().filter((row) => row.booking.date >= isoDate(new Date())).length;
+    const moveRows = moveQueueRows();
     const billingRows = billingQueueRows();
     el.redMetric.textContent = redCount.toLocaleString("nb-NO");
     el.yellowMetric.textContent = yellowCount.toLocaleString("nb-NO");
@@ -4516,9 +4547,11 @@
     if (el.dashboardServiceCount) el.dashboardServiceCount.textContent = (redCount + yellowCount).toLocaleString("nb-NO");
     if (el.dashboardLeadCount) el.dashboardLeadCount.textContent = allLeadEntries().filter((entry) => !["won", "lost"].includes(leadStatusForEntry(entry))).length.toLocaleString("nb-NO");
     if (el.dashboardBookingCount) el.dashboardBookingCount.textContent = upcomingBookings.toLocaleString("nb-NO");
+    if (el.dashboardMoveCount) el.dashboardMoveCount.textContent = moveRows.length.toLocaleString("nb-NO");
     if (el.dashboardBillingCount) el.dashboardBillingCount.textContent = billingRows.length.toLocaleString("nb-NO");
 
     renderNextJobs();
+    renderMoveQueue(moveRows);
 
     el.dueCustomers.innerHTML = "";
     const dueList = activeCustomers
@@ -4558,6 +4591,32 @@
         <span>${escapeHtml(label)} · ${formatDate(row.booking.date)} · ${escapeHtml(bookingJobLabel(row))}</span>
       `;
       el.billingQueue.appendChild(button);
+    }
+  }
+
+  function renderMoveQueue(rows = moveQueueRows()) {
+    if (!el.moveQueue) return;
+    el.moveQueue.innerHTML = "";
+    const visible = rows.slice(0, 12);
+    if (!visible.length) {
+      el.moveQueue.innerHTML = `<div class="empty-state">Ingen jobber er markert som må flyttes.</div>`;
+      return;
+    }
+    for (const row of visible) {
+      const card = document.createElement("article");
+      card.className = "compact-action-card move";
+      card.innerHTML = `
+        <div>
+          <strong>${escapeHtml(cleanDisplayName(row.customer))}</strong>
+          <span>${escapeHtml(formatDate(row.booking.date))} kl. ${escapeHtml(bookingTimeText(row.booking))} · ${escapeHtml(row.booking.resource || "")} · ${escapeHtml(bookingJobLabel(row))}</span>
+          <small>${escapeHtml(bookingMoveReason(row) || "Jobben må avtales på nytt.")}</small>
+        </div>
+        <div class="mini-action-row">
+          <button data-edit-move-booking="${escapeHtml(row.id)}" type="button" title="Åpne bookingen og sett ny dato eller nytt tidspunkt.">Flytt</button>
+          <button class="secondary" data-show-move-booking="${escapeHtml(row.id)}" type="button" title="Gå til uken der jobben ligger i plan.">Vis i plan</button>
+        </div>
+      `;
+      el.moveQueue.appendChild(card);
     }
   }
 
@@ -7788,6 +7847,7 @@
       ...row.booking,
       date: targetDate,
       needs_move: false,
+      note: noteWithoutMoveMarker(row.booking.note),
       status: row.booking.status || "booked",
     };
     const conflict = bookingConflict(updated, id);
@@ -8140,6 +8200,11 @@
       weekStart = startOfWeek(new Date());
       planningMonthCursor = new Date();
       setView("planning");
+      return;
+    }
+    if (action === "move") {
+      setView("dashboard");
+      el.moveQueue?.closest(".panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
     if (action === "billing") {
@@ -8598,6 +8663,17 @@
     const button = event.target.closest("[data-billing-customer]");
     if (!button) return;
     openCustomerQuickPanel(button.dataset.billingCustomer, button.dataset.billingBooking || "");
+  });
+  el.moveQueue?.addEventListener("click", (event) => {
+    const editButton = event.target.closest("[data-edit-move-booking]");
+    if (editButton) {
+      openBookingDialog("", editButton.dataset.editMoveBooking);
+      return;
+    }
+    const showButton = event.target.closest("[data-show-move-booking]");
+    if (showButton) {
+      showBookingInPlanning(showButton.dataset.showMoveBooking);
+    }
   });
   el.dataQualityList?.addEventListener("click", (event) => {
     const button = event.target.closest("[data-quality-filter]");

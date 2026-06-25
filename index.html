@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260625-7" />
+    <link rel="stylesheet" href="./styles.css?v=20260625-8" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -78,6 +78,11 @@
               <strong id="dashboardBookingCount">0</strong>
               <small>Kommende jobber i kalender</small>
             </button>
+            <button data-dashboard-action="move" type="button">
+              <span>Må flyttes</span>
+              <strong id="dashboardMoveCount">0</strong>
+              <small>Jobber som må avtales på nytt</small>
+            </button>
             <button data-dashboard-action="billing" type="button">
               <span>Må faktureres</span>
               <strong id="dashboardBillingCount">0</strong>
@@ -121,6 +126,13 @@
                 <button data-view-jump="planning" type="button">Åpne plan</button>
               </div>
               <div id="nextJobs" class="job-list"></div>
+            </section>
+            <section class="panel">
+              <div class="section-head">
+                <h2>Må flyttes</h2>
+                <button data-view-jump="planning" type="button">Åpne plan</button>
+              </div>
+              <div id="moveQueue" class="compact-action-list"></div>
             </section>
             <section class="panel">
               <div class="section-head">
@@ -857,10 +869,10 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260625-7"></script>
-    <script src="./supabase-adapter.js?v=20260625-7"></script>
-    <script src="./intake-parser.js?v=20260625-7"></script>
-    <script src="./app.js?v=20260625-7"></script>
+    <script src="./supabase-config.js?v=20260625-8"></script>
+    <script src="./supabase-adapter.js?v=20260625-8"></script>
+    <script src="./intake-parser.js?v=20260625-8"></script>
+    <script src="./app.js?v=20260625-8"></script>
   </body>
 </html>
 

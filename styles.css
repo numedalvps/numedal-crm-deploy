@@ -429,7 +429,7 @@ small {
 }
 
 .dashboard-focus-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   margin-bottom: 12px;
 }
 
@@ -573,6 +573,7 @@ textarea {
 .lead-list,
 .order-list,
 .compact-list,
+.compact-action-list,
 .job-list,
 .tech-jobs,
 .recent-list {
@@ -1181,6 +1182,39 @@ textarea {
   align-items: center;
   justify-content: flex-end;
   flex-wrap: wrap;
+}
+
+.compact-action-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #fff;
+}
+
+.compact-action-card.move {
+  border-color: #ddd6fe;
+  background: #fbfaff;
+}
+
+.compact-action-card strong,
+.compact-action-card span,
+.compact-action-card small {
+  display: block;
+}
+
+.compact-action-card span,
+.compact-action-card small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.compact-action-card small {
+  color: #5b21b6;
 }
 
 .lead-metrics button,
@@ -3843,6 +3877,14 @@ label {
 
   .route-card-actions {
     grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+
+  .compact-action-card {
+    grid-template-columns: 1fr;
+  }
+
+  .compact-action-card .mini-action-row {
     justify-content: flex-start;
   }
 
