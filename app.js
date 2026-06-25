@@ -1186,6 +1186,20 @@
   async function setLeadStatus(customerId, status) {
     const customer = findCustomer(customerId);
     if (!customer) return;
+    const dbLead = leadForCustomer(customer);
+    if (dbLead?.id && store.updateLead) {
+      const updatedLead = updateLeadInMemory(await store.updateLead(dbLead.id, { status }));
+      await saveLeadStatusActivity(updatedLead, status, customer);
+      await saveServiceEvent(customer, {
+        event_date: isoDate(new Date()),
+        event_type: "Leadstatus",
+        note: `Leadstatus satt til: ${leadStatusLabel(status)}.`,
+      });
+      selectedLeadId = `lead:${updatedLead.id}`;
+      renderAll();
+      setSyncStatus(`Lead satt til: ${leadStatusLabel(status)}.`, "ok");
+      return;
+    }
     const saved = await saveCustomerInline(customer, { tags: nextTagsWithLeadStatus(customer, status) }, "");
     await syncLeadRecord(saved || customer, status, `Leadstatus satt til: ${leadStatusLabel(status)}.`);
     await saveServiceEvent(customer, {
@@ -1205,6 +1219,17 @@
     return lead;
   }
 
+  async function saveLeadStatusActivity(lead, status, customer = null) {
+    await saveActivityRecord({
+      customer_id: (customer ? customerKey(customer) : leadCustomerId(lead)) || null,
+      lead_id: lead.id,
+      activity_type: "status_change",
+      summary: `Lead: ${leadStatusLabel(status)}`,
+      body: `Leadstatus satt til: ${leadStatusLabel(status)}.`,
+      metadata: { source: "lead_detail" },
+    });
+  }
+
   function leadEntryForTarget(target) {
     return allLeadEntries().find((entry) => leadEntryKey(entry) === target || leadEntryCustomerKey(entry) === target) || null;
   }
@@ -1214,14 +1239,7 @@
     const entry = leadEntryForTarget(entryKey);
     if (!entry?.lead?.id) throw new Error("Fant ikke leaden.");
     const updatedLead = updateLeadInMemory(await store.updateLead(entry.lead.id, { status }));
-    await saveActivityRecord({
-      customer_id: leadCustomerId(updatedLead) || null,
-      lead_id: updatedLead.id,
-      activity_type: "status_change",
-      summary: `Lead: ${leadStatusLabel(status)}`,
-      body: `Leadstatus satt til: ${leadStatusLabel(status)}.`,
-      metadata: { source: "lead_detail" },
-    });
+    await saveLeadStatusActivity(updatedLead, status);
     selectedLeadId = `lead:${updatedLead.id}`;
     currentLeadFilter = status || "followup";
     if (el.leadStatusFilter) el.leadStatusFilter.value = currentLeadFilter;
