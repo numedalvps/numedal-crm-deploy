@@ -351,12 +351,17 @@ small {
 }
 
 .action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
   margin: 12px 0 4px;
 }
 
 .lead-contact-actions a,
 .action-row a,
-.action-row button {
+.action-row button,
+.inline-more-actions summary {
   min-height: 40px;
   display: inline-flex;
   align-items: center;
@@ -370,6 +375,46 @@ small {
   font-weight: 800;
   line-height: 1.1;
   text-decoration: none;
+}
+
+.inline-more-actions {
+  position: relative;
+  display: inline-flex;
+}
+
+.inline-more-actions summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.inline-more-actions summary::-webkit-details-marker {
+  display: none;
+}
+
+.inline-more-actions[open] summary {
+  border-color: var(--teal);
+  background: #ecfeff;
+}
+
+.inline-more-actions > div {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 220px;
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.inline-more-actions > div a,
+.inline-more-actions > div button {
+  width: 100%;
+  justify-content: flex-start;
 }
 
 .customer-star {
@@ -1327,6 +1372,37 @@ textarea {
   grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
   gap: 8px;
   margin: 12px 0;
+}
+
+.lead-metrics button.active,
+.order-metrics button.active {
+  border-color: var(--teal);
+  background: #ecfeff;
+  color: #0f766e;
+}
+
+.inbox-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 10px;
+}
+
+.inbox-tabs button {
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 7px 12px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.inbox-tabs button.active {
+  border-color: var(--teal);
+  background: #ccfbf1;
+  color: #0f766e;
 }
 
 .website-submission-inbox {

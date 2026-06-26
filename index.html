@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260627-01" />
+    <link rel="stylesheet" href="./styles.css?v=20260627-02" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -240,15 +240,23 @@
                 </div>
               </div>
               <div class="lead-metrics">
-                <button data-lead-status-shortcut="followup" type="button"><strong id="leadFollowupMetric">0</strong><span>Nye / må kontaktes</span></button>
-                <button data-lead-status-shortcut="needs_offer" type="button"><strong id="leadNeedsOfferMetric">0</strong><span>Tilbud må sendes</span></button>
-                <button data-lead-status-shortcut="offer_sent" type="button"><strong id="leadOfferSentMetric">0</strong><span>Venter svar</span></button>
-                <button data-lead-status-shortcut="lost" type="button"><strong id="leadLostMetric">0</strong><span>Tapt</span></button>
+                <button data-lead-inbox-tab="new" type="button"><strong id="leadFollowupMetric">0</strong><span>Nye</span></button>
+                <button data-lead-inbox-tab="website" type="button"><strong id="leadWebsiteMetric">0</strong><span>Nettside</span></button>
+                <button data-lead-inbox-tab="followup" type="button"><strong id="leadNeedsOfferMetric">0</strong><span>Må følges opp</span></button>
+                <button data-lead-inbox-tab="archive" type="button"><strong id="leadLostMetric">0</strong><span>Arkiv</span></button>
+              </div>
+              <div class="inbox-tabs" role="tablist" aria-label="Innboksfilter">
+                <button class="active" data-lead-inbox-tab="new" type="button">Nye</button>
+                <button data-lead-inbox-tab="email" type="button">E-post</button>
+                <button data-lead-inbox-tab="website" type="button">Nettside</button>
+                <button data-lead-inbox-tab="followup" type="button">Må følges opp</button>
+                <button data-lead-inbox-tab="archive" type="button">Arkiv</button>
               </div>
               <div id="websiteSubmissionInbox" class="website-submission-inbox hidden"></div>
               <div class="search-row">
                 <input id="leadSearch" type="search" placeholder="Søk henvendelse, telefon, sted, produkt" />
                 <select id="leadStatusFilter">
+                  <option value="inbox_tab">Valgt innboksfane</option>
                   <option value="followup">Nye henvendelser - må kontaktes</option>
                   <option value="needs_offer">Tilbud må sendes</option>
                   <option value="offer_sent">Tilbud sendt / venter svar</option>
@@ -1012,10 +1020,10 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260626-10"></script>
-    <script src="./supabase-adapter.js?v=20260626-10"></script>
-    <script src="./intake-parser.js?v=20260626-10"></script>
-    <script src="./app.js?v=20260626-10"></script>
+    <script src="./supabase-config.js?v=20260627-02"></script>
+    <script src="./supabase-adapter.js?v=20260627-02"></script>
+    <script src="./intake-parser.js?v=20260627-02"></script>
+    <script src="./app.js?v=20260627-02"></script>
   </body>
 </html>
 

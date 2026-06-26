@@ -135,7 +135,8 @@
   let selectedCustomerId = "";
   let currentCustomerFilter = "all";
   let currentSearch = "";
-  let currentLeadFilter = "followup";
+  let currentLeadFilter = "inbox_tab";
+  let currentLeadInboxTab = "new";
   let currentLeadSearch = "";
   let selectedLeadId = "";
   let currentOrderFilter = "all";
@@ -266,6 +267,7 @@
     websiteSubmissionInbox: document.getElementById("websiteSubmissionInbox"),
     intakeInbox: document.getElementById("intakeInbox"),
     leadFollowupMetric: document.getElementById("leadFollowupMetric"),
+    leadWebsiteMetric: document.getElementById("leadWebsiteMetric"),
     leadNeedsOfferMetric: document.getElementById("leadNeedsOfferMetric"),
     leadOfferSentMetric: document.getElementById("leadOfferSentMetric"),
     leadLostMetric: document.getElementById("leadLostMetric"),
@@ -3278,6 +3280,44 @@
     return links.join("");
   }
 
+  function customerPrimaryActionsHtml(customer) {
+    const key = customerKey(customer);
+    const actions = [];
+    if (customer.phone) {
+      actions.push(`<a href="tel:${escapeHtml(phoneForLink(customer.phone))}" title="Ring kunden med registrert telefonnummer.">Ring</a>`);
+    } else if (customer.email) {
+      actions.push(`<a href="${escapeHtml(emailUrl(customer))}" target="_blank" rel="noreferrer" title="Åpne Gmail med kundens e-postadresse ferdig utfylt.">E-post</a>`);
+    } else if (mapQuery(customer)) {
+      actions.push(`<a href="${escapeHtml(mapsUrl(customer))}" target="_blank" rel="noreferrer" title="Åpne anleggsadressen i Google Maps.">Kart</a>`);
+    }
+    if (isAdmin() && !customer.is_inactive) {
+      actions.push(`<button class="book-primary" data-book-customer="${escapeHtml(key)}" type="button" title="Book service, befaring, installasjon eller annet arbeid i kalenderen.">Book avtale</button>`);
+      actions.push(`<button class="order-primary" data-new-order-customer="${escapeHtml(key)}" type="button" title="Lag jobb som kan planlegges, utføres og faktureres.">Ny jobb</button>`);
+    }
+    actions.push(customerMoreActionsHtml(customer));
+    return actions.filter(Boolean).join("");
+  }
+
+  function customerMoreActionsHtml(customer) {
+    const key = customerKey(customer);
+    const actions = [];
+    if (customer.email) actions.push(`<a href="${escapeHtml(emailUrl(customer))}" target="_blank" rel="noreferrer" title="Åpne Gmail med kundens e-postadresse ferdig utfylt.">E-post</a>`);
+    if (customer.phone) actions.push(`<a href="${escapeHtml(smsUrl())}" target="_blank" rel="noreferrer" title="Åpne Google Messages for å sende SMS.">SMS</a>`);
+    if (mapQuery(customer)) actions.push(`<a href="${escapeHtml(mapsUrl(customer))}" target="_blank" rel="noreferrer" title="Åpne anleggsadressen i Google Maps.">Kart</a>`);
+    if (isAdmin() && !customer.is_inactive) {
+      actions.push(`<button class="secondary" data-new-lead-existing-customer="${escapeHtml(key)}" type="button" title="Opprett ny lead/tilbudssak på eksisterende kunde, f.eks. ekstra varmepumpe.">Ny lead</button>`);
+      actions.push(`<button class="secondary" data-new-installation-customer="${escapeHtml(key)}" type="button" title="Registrer egen varmepumpe/anlegg med adresse og servicefrist.">Ny varmepumpe/anlegg</button>`);
+    }
+    if (isAdmin()) actions.push(`<button class="secondary" data-edit-customer="${escapeHtml(key)}" type="button" title="Rediger kundedata, adresse, e-post, telefon og betalingsvalg.">Rediger</button>`);
+    if (!actions.length) return "";
+    return `
+      <details class="inline-more-actions">
+        <summary title="Vis flere handlinger for kunden.">Mer</summary>
+        <div>${actions.join("")}</div>
+      </details>
+    `;
+  }
+
   function emailUrl(customer) {
     return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(customer.email || "")}`;
   }
@@ -5140,8 +5180,7 @@
   }
 
   function focusInboxComposer() {
-    currentLeadFilter = "followup";
-    if (el.leadStatusFilter) el.leadStatusFilter.value = currentLeadFilter;
+    setLeadInboxTab("new");
     setView("leads");
     setTimeout(() => {
       el.aiRegistrationPasteZone?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -5179,8 +5218,7 @@
 
   function handleStartAction(action) {
     if (action === "inbox" || action === "followup") {
-      currentLeadFilter = "followup";
-      if (el.leadStatusFilter) el.leadStatusFilter.value = currentLeadFilter;
+      setLeadInboxTab(action === "followup" ? "followup" : "new");
       setView("leads");
       return;
     }
@@ -6538,12 +6576,51 @@
     return matchesSearchText(customer, search) || normalizeMatch(leadText).includes(normalizeMatch(search));
   }
 
+  function leadEntrySourceKind(entry) {
+    const text = normalizeMatch([
+      entry?.lead?.source,
+      entry?.lead?.raw_text,
+      entry?.lead?.note,
+      entry?.customer?.source,
+      entry?.customer?.tags,
+      leadNoteForEntry(entry),
+    ].filter(Boolean).join(" "));
+    if (/nettside|website|webskjema|skjema|contact form|kontakt/i.test(text)) return "website";
+    if (/e-post|e post|epost|email|gmail|mail|innboks/i.test(text)) return "email";
+    return "manual";
+  }
+
+  function leadEntryMatchesInboxTab(entry, tab = currentLeadInboxTab) {
+    const status = leadStatusForEntry(entry);
+    const source = leadEntrySourceKind(entry);
+    if (tab === "email") return source === "email" && !["won", "lost"].includes(status);
+    if (tab === "website") return source === "website" && !["won", "lost"].includes(status);
+    if (tab === "followup") return ["needs_offer", "offer_sent"].includes(status);
+    if (tab === "archive") return ["won", "lost"].includes(status);
+    return status === "followup";
+  }
+
+  function setLeadInboxTab(tab = "new") {
+    currentLeadInboxTab = ["new", "email", "website", "followup", "archive"].includes(tab) ? tab : "new";
+    currentLeadFilter = "inbox_tab";
+    if (el.leadStatusFilter) el.leadStatusFilter.value = "inbox_tab";
+  }
+
+  function syncLeadInboxTabs() {
+    document.querySelectorAll("[data-lead-inbox-tab]").forEach((button) => {
+      const active = currentLeadFilter === "inbox_tab" && button.dataset.leadInboxTab === currentLeadInboxTab;
+      button.classList.toggle("active", active);
+      if (button.closest(".inbox-tabs")) button.setAttribute("aria-selected", active ? "true" : "false");
+    });
+  }
+
   function filteredLeads() {
     const search = currentLeadSearch;
-    const filter = currentLeadFilter === "all" || leadStatuses[currentLeadFilter] ? currentLeadFilter : "followup";
+    const filter = currentLeadFilter === "inbox_tab" || currentLeadFilter === "all" || leadStatuses[currentLeadFilter] ? currentLeadFilter : "inbox_tab";
     return allLeadEntries()
       .filter((entry) => {
         const status = leadStatusForEntry(entry);
+        if (filter === "inbox_tab") return leadEntryMatchesInboxTab(entry);
         if (filter === "all") return true;
         return status === filter;
       })
@@ -6560,27 +6637,29 @@
     renderWebsiteSubmissionInbox();
     renderIntakeInbox();
     const selectedFilter = el.leadStatusFilter?.value || "";
-    currentLeadFilter = selectedFilter || (currentLeadFilter === "all" || leadStatuses[currentLeadFilter] ? currentLeadFilter : "followup");
+    currentLeadFilter = selectedFilter || (currentLeadFilter === "inbox_tab" || currentLeadFilter === "all" || leadStatuses[currentLeadFilter] ? currentLeadFilter : "inbox_tab");
     if (el.leadStatusFilter && !selectedFilter) el.leadStatusFilter.value = currentLeadFilter;
     currentLeadSearch = el.leadSearch?.value?.trim() || "";
     const all = allLeadEntries();
-    el.leadFollowupMetric.textContent = all.filter((entry) => leadStatusForEntry(entry) === "followup").length.toLocaleString("nb-NO");
-    el.leadNeedsOfferMetric.textContent = all.filter((entry) => leadStatusForEntry(entry) === "needs_offer").length.toLocaleString("nb-NO");
-    el.leadOfferSentMetric.textContent = all.filter((entry) => leadStatusForEntry(entry) === "offer_sent").length.toLocaleString("nb-NO");
-    el.leadLostMetric.textContent = all.filter((entry) => leadStatusForEntry(entry) === "lost").length.toLocaleString("nb-NO");
+    if (el.leadFollowupMetric) el.leadFollowupMetric.textContent = all.filter((entry) => leadEntryMatchesInboxTab(entry, "new")).length.toLocaleString("nb-NO");
+    if (el.leadWebsiteMetric) el.leadWebsiteMetric.textContent = (openWebsiteSubmissionRows().length + all.filter((entry) => leadEntryMatchesInboxTab(entry, "website")).length).toLocaleString("nb-NO");
+    if (el.leadNeedsOfferMetric) el.leadNeedsOfferMetric.textContent = all.filter((entry) => leadEntryMatchesInboxTab(entry, "followup")).length.toLocaleString("nb-NO");
+    if (el.leadOfferSentMetric) el.leadOfferSentMetric.textContent = all.filter((entry) => leadStatusForEntry(entry) === "offer_sent").length.toLocaleString("nb-NO");
+    if (el.leadLostMetric) el.leadLostMetric.textContent = all.filter((entry) => leadEntryMatchesInboxTab(entry, "archive")).length.toLocaleString("nb-NO");
+    syncLeadInboxTabs();
     let list = filteredLeads();
-    if (!list.length && !currentLeadSearch && currentLeadFilter === "followup" && all.length) {
-      const fallbackFilter = ["needs_offer", "offer_sent", "won", "lost"].find((status) => all.some((entry) => leadStatusForEntry(entry) === status));
-      if (fallbackFilter) {
-        currentLeadFilter = fallbackFilter;
-        if (el.leadStatusFilter) el.leadStatusFilter.value = currentLeadFilter;
+    if (!list.length && !currentLeadSearch && currentLeadFilter === "inbox_tab" && currentLeadInboxTab === "new" && all.length) {
+      const fallbackTab = ["followup", "website", "email", "archive"].find((tab) => all.some((entry) => leadEntryMatchesInboxTab(entry, tab)));
+      if (fallbackTab) {
+        setLeadInboxTab(fallbackTab);
+        syncLeadInboxTabs();
         list = filteredLeads();
       }
     }
     if (!selectedLeadId || !selectedLeadEntry(list)) selectedLeadId = leadEntryKey(list[0]) || "";
     el.leadList.innerHTML = "";
     if (!list.length) {
-      el.leadList.innerHTML = `<div class="empty-state">Ingen henvendelser i dette filteret.</div>`;
+      el.leadList.innerHTML = `<div class="empty-state">Ingen henvendelser i dette filteret. Bruk + Ny eller lim inn melding i Innboks.</div>`;
     }
     for (const entry of list.slice(0, 250)) {
       const customer = entry.customer;
@@ -6981,8 +7060,7 @@
     });
     mergeWebsiteSubmission(id, { processing_status: "processed", created_lead_id: savedLead.id }, updated);
     selectedLeadId = `lead:${savedLead.id}`;
-    currentLeadFilter = "followup";
-    if (el.leadStatusFilter) el.leadStatusFilter.value = currentLeadFilter;
+    setLeadInboxTab("website");
     renderLeads();
     setSyncStatus("Lead opprettet fra nettsideinnsending.", "ok");
   }
@@ -7258,8 +7336,7 @@
     });
     selectedLeadId = `lead:${updatedLead.id}`;
     selectedCustomerId = customerKey(savedCustomer);
-    currentLeadFilter = "followup";
-    if (el.leadStatusFilter) el.leadStatusFilter.value = currentLeadFilter;
+    setLeadInboxTab("new");
     renderAll();
     setView("leads");
     setSyncStatus("Kundekort opprettet fra lead. Du kan nå sette status, opprette jobb eller booke avtale.", "ok");
@@ -8552,8 +8629,7 @@
         <p>${escapeHtml(addressFor(customer) || "Adresse mangler")}</p>
       </div>
       <div class="action-row">
-        ${customerActionLinks(customer)}
-        ${isAdmin() ? `${!customer.is_inactive ? `<button class="secondary" data-new-lead-existing-customer="${escapeHtml(key)}" type="button" title="Opprett ny lead/tilbudssak på eksisterende kunde, f.eks. ekstra varmepumpe.">Ny lead</button><button data-new-installation-customer="${escapeHtml(key)}" type="button" title="Registrer egen varmepumpe/anlegg med adresse og servicefrist.">Ny varmepumpe/anlegg</button><button class="order-primary" data-new-order-customer="${escapeHtml(key)}" type="button" title="Lag servicejobb, installasjonsjobb eller annet arbeid direkte fra kundekortet.">Ny jobb</button><button class="book-primary" data-book-customer="${escapeHtml(key)}" type="button">Book avtale</button>` : ""}<button data-edit-customer="${escapeHtml(key)}" type="button">Rediger</button>` : ""}
+        ${customerPrimaryActionsHtml(customer)}
       </div>
       ${booking ? workflowHtml(bookingWorkflowState(booking), { title: "Aktiv jobbstatus", compact: true }) : ""}
       ${lookupMissingDataSection(customer)}
@@ -9056,7 +9132,7 @@
         <h3>${isAdmin() ? starToggleHtml(customer) : customerStarHtml(customer, { showEmpty: true })}${customerCashBadgeHtml(customer)}${escapeHtml(cleanDisplayName(customer))}</h3>
         <p>${escapeHtml(addressFor(customer) || "Adresse mangler")}</p>
       </div>
-      <div class="action-row">${customerActionLinks(customer)}${isAdmin() && !customer.is_inactive ? `<button class="secondary" data-new-lead-existing-customer="${escapeHtml(key)}" type="button">Ny lead</button><button data-new-installation-customer="${escapeHtml(key)}" type="button">Ny varmepumpe/anlegg</button><button class="order-primary" data-new-order-customer="${escapeHtml(key)}" type="button">Ny jobb</button><button class="book-primary" data-book-customer="${escapeHtml(key)}" type="button">Book avtale</button>` : ""}</div>
+      <div class="action-row">${customerPrimaryActionsHtml(customer)}</div>
       ${lookupMissingDataSection(customer, true)}
       ${isLikelyHomeAddress(customer) ? `<section class="quick-block attention"><strong>Mulig hjemmeadresse</strong><p>Tagg/område tyder på hytte/anlegg, men adressen kan være hjemmeadresse. Kontroller koordinater for rute.</p></section>` : ""}
       ${isAdmin() ? `<div class="customer-controls compact">${insulationToggleHtml(customer)}</div>` : ""}
@@ -10736,8 +10812,7 @@
       return;
     }
     if (action === "leads") {
-      currentLeadFilter = "followup";
-      if (el.leadStatusFilter) el.leadStatusFilter.value = currentLeadFilter;
+      setLeadInboxTab("new");
       setView("leads");
       return;
     }
@@ -10771,6 +10846,11 @@
     currentLeadFilter = button.dataset.leadStatusShortcut || "followup";
     if (el.leadStatusFilter) el.leadStatusFilter.value = currentLeadFilter;
     setView("leads");
+  }));
+  document.querySelectorAll("[data-lead-inbox-tab]").forEach((button) => button.addEventListener("click", () => {
+    setLeadInboxTab(button.dataset.leadInboxTab);
+    setView("leads");
+    renderLeads();
   }));
   document.querySelectorAll("[data-order-filter-shortcut]").forEach((button) => button.addEventListener("click", () => {
     currentOrderFilter = button.dataset.orderFilterShortcut || "all";
@@ -11018,7 +11098,8 @@
     renderLeads();
   });
   el.leadStatusFilter?.addEventListener("change", () => {
-    currentLeadFilter = el.leadStatusFilter.value;
+    if (el.leadStatusFilter.value === "inbox_tab") setLeadInboxTab(currentLeadInboxTab);
+    else currentLeadFilter = el.leadStatusFilter.value;
     renderLeads();
   });
   el.orderSearch?.addEventListener("input", () => {
