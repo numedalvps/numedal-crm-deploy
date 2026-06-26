@@ -1231,7 +1231,24 @@
       const { data, error } = await supabase.functions.invoke("send-offer-email", {
         body: payload || {},
       });
-      if (error) throw error;
+      if (error) {
+        let message = error.message || "Klarte ikke sende tilbud.";
+        const response = error.context;
+        if (response && typeof response.clone === "function") {
+          try {
+            const body = await response.clone().json();
+            if (body?.error) message = body.error;
+          } catch (_jsonError) {
+            try {
+              const text = await response.clone().text();
+              if (text) message = text.slice(0, 1000);
+            } catch (_textError) {
+              // Keep the original Supabase Functions error message.
+            }
+          }
+        }
+        throw new Error(message);
+      }
       if (data?.error) throw new Error(data.error);
       return data;
     },
