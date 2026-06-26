@@ -1085,7 +1085,7 @@ textarea {
 .lead-metrics,
 .order-metrics {
   display: grid;
-  grid-template-columns: repeat(4, minmax(110px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
   gap: 8px;
   margin: 12px 0;
 }
@@ -1114,9 +1114,9 @@ textarea {
 
 .website-submission-list article {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 3px;
-  align-items: center;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  align-items: stretch;
   border: 1px solid #dbeafe;
   border-radius: 8px;
   padding: 8px 10px;
@@ -1130,9 +1130,26 @@ textarea {
 
 .website-submission-list span,
 .website-submission-list small {
+  min-width: 0;
   color: var(--muted);
   font-size: 12px;
   font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.website-submission-list strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.website-submission-list .mini-action-row {
+  justify-content: flex-start;
+}
+
+.website-submission-list .mini-action-row button {
+  flex: 1 1 124px;
+  min-width: 0;
+  white-space: normal;
 }
 
 .website-workflow-hint {
@@ -1228,13 +1245,15 @@ textarea {
 }
 
 .website-duplicate-hint {
-  display: inline-flex;
+  display: inline-block;
   width: fit-content;
+  max-width: 100%;
   border: 1px solid #fdba74;
   border-radius: 999px;
   padding: 3px 8px;
   background: #fff7ed;
   color: #9a3412;
+  overflow-wrap: anywhere;
 }
 
 .compact-action-card {

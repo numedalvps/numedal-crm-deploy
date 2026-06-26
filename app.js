@@ -3815,6 +3815,54 @@
     return orderBillingStatusFromJob(job) || order?.billingStatus || order?.billing_status || "not_ready";
   }
 
+  function jobWorkStatusFromOrder(order) {
+    if ((order?.status || "") === "completed") return "completed";
+    if ((order?.status || "") === "cancelled") return "cancelled";
+    if ((order?.status || "") === "scheduled") return "planned";
+    return "draft";
+  }
+
+  function jobBillingStatusFromOrder(order) {
+    const billing = order?.billingStatus || order?.billing_status || "not_ready";
+    if (billing === "ready") return "ready_for_invoice";
+    if (billing === "sent") return "invoiced";
+    return "not_ready";
+  }
+
+  function jobPaymentStatusFromOrder(order) {
+    const billing = order?.billingStatus || order?.billing_status || "not_ready";
+    if (billing === "paid") return "paid_on_site";
+    if (billing === "sent") return "unpaid";
+    return "unknown";
+  }
+
+  function upsertLocalJobMirrorForOrder(order) {
+    if (!store.isConfigured || !order?.id) return;
+    const existingIndex = (jobs || []).findIndex((job) => (
+      String(job.id || "") === String(order.jobId || order.job_id || "")
+      || (job?.source_table === "orders" && normalizeOrderId(job.source_id) === normalizeOrderId(order.id))
+    ));
+    if (existingIndex < 0 && !(order.jobId || order.job_id)) return;
+    const existing = existingIndex >= 0 ? jobs[existingIndex] : {};
+    const next = {
+      ...existing,
+      id: existing.id || order.jobId || order.job_id,
+      customer_id: order.customerId || order.customer_id || existing.customer_id || null,
+      title: order.title || existing.title || "Jobb",
+      job_type: order.type || existing.job_type || "service",
+      work_status: jobWorkStatusFromOrder(order),
+      billing_status: jobBillingStatusFromOrder(order),
+      payment_status: jobPaymentStatusFromOrder(order),
+      description: order.note || existing.description || null,
+      source_table: "orders",
+      source_id: order.id,
+      completed_at: order.completedAt || order.completed_at || existing.completed_at || null,
+      updated_at: order.updated_at || new Date().toISOString(),
+    };
+    if (existingIndex >= 0) jobs[existingIndex] = next;
+    else jobs.unshift(next);
+  }
+
   function orderMissingJobMirror(row) {
     const order = row?.order || row || {};
     return store.isConfigured && (order.status || "") !== "cancelled" && !row?.job && !jobForOrder(order);
@@ -4225,11 +4273,13 @@
     if (store.isConfigured && store.saveOrder && !options.localOnly) {
       const saved = await store.saveOrder(nextId, record);
       orders[saved.id] = saved;
+      upsertLocalJobMirrorForOrder(saved);
       if (nextId !== saved.id) delete orders[nextId];
       return saved;
     }
     if (store.isConfigured && options.localOnly) {
       orders[nextId] = record;
+      upsertLocalJobMirrorForOrder(record);
       return record;
     }
     requireLocalDemoStorage();
