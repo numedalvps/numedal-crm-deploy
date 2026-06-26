@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260626-03" />
+    <link rel="stylesheet" href="./styles.css?v=20260626-04" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -16,6 +16,7 @@
           <label>E-post<input id="loginEmail" type="email" autocomplete="username" /></label>
           <label>Passord<input id="loginPassword" type="password" autocomplete="current-password" /></label>
           <button id="loginSubmitButton" type="submit">Logg inn</button>
+          <button id="forgotPasswordButton" class="secondary" type="button">Glemt passord?</button>
           <p id="loginMessage" class="login-message"></p>
         </form>
         <p class="demo-label hidden">Lokal utviklingsdemo</p>
@@ -38,6 +39,7 @@
           <button data-view="planning" type="button">Plan</button>
           <button data-view="routeplanner" type="button">Planlegg servicedag</button>
           <button data-view="technician" type="button">Min dag</button>
+          <button data-view="settings" type="button">Innstillinger</button>
         </nav>
         <div class="user-card">
           <strong id="currentUserName"></strong>
@@ -561,8 +563,53 @@
             <div id="technicianJobs" class="tech-jobs"></div>
           </section>
         </section>
+
+        <section id="settingsView" class="view hidden">
+          <section class="panel settings-panel">
+            <div class="section-head">
+              <div>
+                <h2>Innstillinger</h2>
+                <p>Brukere, roller og innlogging.</p>
+              </div>
+              <button id="refreshProfilesButton" class="secondary" type="button">Oppdater</button>
+            </div>
+            <div id="settingsAccessSummary" class="settings-summary"></div>
+            <div class="settings-grid">
+              <article>
+                <h3>Tilganger</h3>
+                <p>Admin kan bruke hele CRM-et. Tekniker ser egen dagsplan og egne tildelte jobber.</p>
+              </article>
+              <article>
+                <h3>Ny bruker</h3>
+                <p>Opprett først brukeren i Supabase Auth. Legg deretter inn eller endre CRM-profilen her med riktig rolle.</p>
+              </article>
+              <article>
+                <h3>Glemt passord</h3>
+                <p>Brukeren trykker Glemt passord på innloggingen. Supabase sender e-post med lenke for nytt passord.</p>
+              </article>
+            </div>
+            <div id="profileList" class="profile-list"></div>
+          </section>
+        </section>
       </main>
     </div>
+
+    <dialog id="passwordResetDialog" class="modal compact-modal">
+      <form id="passwordResetForm" method="dialog">
+        <div class="modal-head">
+          <h2>Nytt passord</h2>
+          <button id="closePasswordResetDialog" type="button" aria-label="Lukk">×</button>
+        </div>
+        <div id="passwordResetMessage" class="dialog-message hidden"></div>
+        <label>Nytt passord<input id="passwordResetNew" type="password" autocomplete="new-password" minlength="10" required /></label>
+        <label>Gjenta passord<input id="passwordResetConfirm" type="password" autocomplete="new-password" minlength="10" required /></label>
+        <p class="form-hint">Bruk minst 10 tegn.</p>
+        <div class="modal-actions">
+          <button class="secondary" id="cancelPasswordResetButton" type="button">Avbryt</button>
+          <button type="submit">Lagre nytt passord</button>
+        </div>
+      </form>
+    </dialog>
 
     <dialog id="customerDialog" class="modal">
       <form id="customerForm" method="dialog">
@@ -871,10 +918,10 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260626-03"></script>
-    <script src="./supabase-adapter.js?v=20260626-03"></script>
-    <script src="./intake-parser.js?v=20260626-03"></script>
-    <script src="./app.js?v=20260626-03"></script>
+    <script src="./supabase-config.js?v=20260626-04"></script>
+    <script src="./supabase-adapter.js?v=20260626-04"></script>
+    <script src="./intake-parser.js?v=20260626-04"></script>
+    <script src="./app.js?v=20260626-04"></script>
   </body>
 </html>
 

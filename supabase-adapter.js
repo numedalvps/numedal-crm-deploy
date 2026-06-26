@@ -635,6 +635,28 @@
       if (!client) return;
       await client.auth.signOut();
     },
+    onAuthStateChange(callback) {
+      if (!client || !callback) return { data: { subscription: { unsubscribe() {} } } };
+      return client.auth.onAuthStateChange(callback);
+    },
+    async resetPassword(email, redirectTo) {
+      const supabase = await requireClient();
+      const { data, error } = await withTimeout(
+        supabase.auth.resetPasswordForEmail(email, { redirectTo }),
+        "Supabase svarer ikke på passordreset. Prøv igjen eller kontakt administrator.",
+      );
+      if (error) throw error;
+      return data;
+    },
+    async updatePassword(password) {
+      const supabase = await requireClient();
+      const { data, error } = await withTimeout(
+        supabase.auth.updateUser({ password }),
+        "Supabase svarer ikke på passordoppdatering. Prøv igjen eller kontakt administrator.",
+      );
+      if (error) throw error;
+      return data;
+    },
     async profile() {
       const supabase = await requireClient();
       const { data: userData, error: userError } = await withTimeout(
@@ -670,6 +692,7 @@
         { data: appointmentRows, error: appointmentError },
         { data: accessNoteRows, error: accessNoteError },
         { data: websiteSubmissionRows, error: websiteSubmissionError },
+        { data: profileRows, error: profileError },
         intakeResult,
       ] = await Promise.all([
         fetchAllRows(() => supabase.from("customers").select("*").order("name")),
@@ -684,6 +707,7 @@
         supabase.from("appointments").select("*").neq("status", "cancelled").order("start_at", { ascending: true }).limit(2000),
         supabase.from("access_notes").select("*").eq("active", true).order("updated_at", { ascending: false }).limit(2000),
         supabase.from("website_submissions").select("*").order("received_at", { ascending: false }).limit(200),
+        supabase.from("profiles").select("*").order("display_name"),
         supabase.from("intake_items").select("*").in("status", ["draft", "needs_review", "ready", "failed"]).order("created_at", { ascending: false }).limit(100),
       ]);
       if (customerError) throw customerError;
@@ -698,6 +722,7 @@
       if (appointmentError) throw appointmentError;
       if (accessNoteError) throw accessNoteError;
       if (websiteSubmissionError) throw websiteSubmissionError;
+      if (profileError) throw profileError;
       if (intakeResult.error && !isOptionalIntakeError(intakeResult.error)) throw intakeResult.error;
       return {
         customers: (customerRows || []).map(customerFromDb),
@@ -716,8 +741,24 @@
         appointments: appointmentRows || [],
         accessNotes: accessNoteRows || [],
         websiteSubmissions: websiteSubmissionRows || [],
+        profiles: profileRows || [],
         intakeItems: intakeResult.error ? [] : intakeResult.data || [],
       };
+    },
+    async saveProfile(id, patch) {
+      const supabase = await requireClient();
+      if (!isUuid(id)) throw new Error("Ugyldig brukerprofil.");
+      const dbPatch = {};
+      if ("display_name" in patch) dbPatch.display_name = String(patch.display_name || "").trim();
+      if ("full_name" in patch) dbPatch.full_name = String(patch.full_name || "").trim() || null;
+      if ("phone" in patch) dbPatch.phone = String(patch.phone || "").trim() || null;
+      if ("role" in patch) dbPatch.role = patch.role === "admin" ? "admin" : "technician";
+      if ("active" in patch) dbPatch.active = Boolean(patch.active);
+      dbPatch.updated_at = new Date().toISOString();
+      if (!dbPatch.display_name && "display_name" in dbPatch) throw new Error("Navn kan ikke være tomt.");
+      const { data, error } = await supabase.from("profiles").update(dbPatch).eq("id", id).select("*").single();
+      if (error) throw error;
+      return data;
     },
     async saveOrder(id, order) {
       const supabase = await requireClient();

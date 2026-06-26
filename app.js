@@ -158,6 +158,7 @@
   let appointments = [];
   let websiteSubmissions = [];
   let intakeItems = [];
+  let profiles = [];
   let invoicesByCustomer = new Map();
   let serviceEventsByCustomer = new Map();
   let installationsByCustomer = new Map();
@@ -185,6 +186,7 @@
   let aiRegistrationDraft = null;
   let aiRegistrationSelectedCustomerId = "";
   let aiRegistrationAttachments = [];
+  let passwordRecoveryActive = false;
 
   const el = {
     loginView: document.getElementById("loginView"),
@@ -194,6 +196,14 @@
     loginPassword: document.getElementById("loginPassword"),
     loginMessage: document.getElementById("loginMessage"),
     loginIntro: document.getElementById("loginIntro"),
+    forgotPasswordButton: document.getElementById("forgotPasswordButton"),
+    passwordResetDialog: document.getElementById("passwordResetDialog"),
+    passwordResetForm: document.getElementById("passwordResetForm"),
+    passwordResetMessage: document.getElementById("passwordResetMessage"),
+    passwordResetNew: document.getElementById("passwordResetNew"),
+    passwordResetConfirm: document.getElementById("passwordResetConfirm"),
+    closePasswordResetDialog: document.getElementById("closePasswordResetDialog"),
+    cancelPasswordResetButton: document.getElementById("cancelPasswordResetButton"),
     currentUserName: document.getElementById("currentUserName"),
     currentUserRole: document.getElementById("currentUserRole"),
     dataModePill: document.getElementById("dataModePill"),
@@ -339,6 +349,9 @@
     technicianHeading: document.getElementById("technicianHeading"),
     technicianRouteButton: document.getElementById("technicianRouteButton"),
     technicianJobs: document.getElementById("technicianJobs"),
+    settingsAccessSummary: document.getElementById("settingsAccessSummary"),
+    refreshProfilesButton: document.getElementById("refreshProfilesButton"),
+    profileList: document.getElementById("profileList"),
     customerDialog: document.getElementById("customerDialog"),
     customerForm: document.getElementById("customerForm"),
     customerDialogTitle: document.getElementById("customerDialogTitle"),
@@ -3426,6 +3439,13 @@
     deletedCustomers = new Set(JSON.parse(localStorage.getItem(storage.deleted) || "[]"));
     doneJobs = new Set(JSON.parse(localStorage.getItem(storage.doneJobs) || "[]"));
     insulationCalcLines = JSON.parse(localStorage.getItem(storage.insulationCalc) || "[]");
+    profiles = Object.values(users).map((user) => ({
+      id: user.key,
+      display_name: user.name,
+      full_name: user.name,
+      role: user.key === "admin" ? "admin" : "technician",
+      active: true,
+    }));
     customers = rawData.customers
       .filter((customer) => !deletedCustomers.has(customer.lime_id))
       .filter((customer) => !hiddenDuplicateLimeIds.has(String(customer.lime_id || customer.legacy_lime_id || "")))
@@ -3450,6 +3470,7 @@
       appointments = [];
       websiteSubmissions = [];
       intakeItems = [];
+      profiles = [];
       buildInvoices([]);
       buildServiceEvents([]);
       buildInstallations([]);
@@ -3481,6 +3502,7 @@
     appointments = loaded.appointments || [];
     websiteSubmissions = loaded.websiteSubmissions || [];
     intakeItems = loaded.intakeItems || [];
+    profiles = loaded.profiles || [];
     buildInvoices(loaded.invoices || []);
     buildServiceEvents(loaded.serviceEvents || []);
     buildInstallations(loaded.installations || []);
@@ -4765,6 +4787,7 @@
       planning: ["Plan", "Felles planningboard for Gunnar og Hubert."],
       routeplanner: ["Planlegg servicedag", "Lag kjørbar rute av kunder som har svart ja."],
       technician: ["Min dag", "Jobbene dine på mobil."],
+      settings: ["Innstillinger", "Brukere, roller og innlogging."],
     };
     el.viewTitle.textContent = titles[view]?.[0] || "CRM";
     el.viewSubtitle.textContent = titles[view]?.[1] || "";
@@ -4797,6 +4820,62 @@
     setSyncStatus(`${cleanDisplayName(row.customer)} ligger i planen ${formatDate(row.booking.date)}. Bruk Flytt eller dra jobben til ny dato.`, "ok");
   }
 
+  function showPasswordResetMessage(message, tone = "error") {
+    if (!el.passwordResetMessage) return;
+    el.passwordResetMessage.textContent = message || "";
+    el.passwordResetMessage.className = `dialog-message ${tone || ""}`.trim();
+    el.passwordResetMessage.classList.toggle("hidden", !message);
+  }
+
+  function openPasswordResetDialog() {
+    if (!el.passwordResetDialog) return;
+    passwordRecoveryActive = true;
+    el.passwordResetNew.value = "";
+    el.passwordResetConfirm.value = "";
+    showPasswordResetMessage("", "error");
+    if (!el.passwordResetDialog.open) el.passwordResetDialog.showModal();
+    setTimeout(() => el.passwordResetNew?.focus(), 0);
+  }
+
+  async function requestPasswordReset() {
+    if (!store.isConfigured || !store.resetPassword) {
+      el.loginMessage.textContent = "Passordreset krever Supabase-innlogging.";
+      return;
+    }
+    const email = el.loginEmail.value.trim();
+    if (!email) {
+      el.loginMessage.textContent = "Skriv inn e-postadressen først.";
+      el.loginEmail.focus();
+      return;
+    }
+    const redirectTo = `${window.location.origin}${window.location.pathname}`;
+    const previousText = el.forgotPasswordButton.textContent;
+    el.forgotPasswordButton.disabled = true;
+    el.forgotPasswordButton.textContent = "Sender...";
+    try {
+      await store.resetPassword(email, redirectTo);
+      el.loginMessage.textContent = "Hvis e-posten finnes i CRM, kommer det en lenke for nytt passord.";
+    } catch (error) {
+      el.loginMessage.textContent = error.message || "Klarte ikke sende passordlenke.";
+    } finally {
+      el.forgotPasswordButton.disabled = false;
+      el.forgotPasswordButton.textContent = previousText;
+    }
+  }
+
+  async function savePasswordReset() {
+    if (!store.updatePassword) throw new Error("Passordendring krever Supabase.");
+    const password = el.passwordResetNew.value;
+    const confirm = el.passwordResetConfirm.value;
+    if (password.length < 10) throw new Error("Passordet må ha minst 10 tegn.");
+    if (password !== confirm) throw new Error("Passordene er ikke like.");
+    await store.updatePassword(password);
+    passwordRecoveryActive = false;
+    el.passwordResetDialog.close();
+    if (window.history?.replaceState) window.history.replaceState(null, "", `${window.location.origin}${window.location.pathname}`);
+    await refreshData("Passord oppdatert.");
+  }
+
   function renderApp() {
     installHelpText();
     const missingProductionDatabase = !store.isConfigured && !demoEnabled;
@@ -4825,6 +4904,8 @@
     el.dataModePill.classList.toggle("online", store.isConfigured);
     el.importSeedButton.classList.toggle("hidden", !(store.isConfigured && browserImportEnabled && isAdmin() && (rawData.customers || []).length));
     const technician = currentUser.role === "Tekniker";
+    document.querySelector('[data-view="settings"]')?.classList.toggle("hidden", technician);
+    if (technician && currentView === "settings") currentView = "technician";
     el.newCustomerButton.classList.toggle("hidden", technician);
     el.newBookingButton.classList.toggle("hidden", technician);
     setView(currentView || currentUser.view);
@@ -4840,6 +4921,7 @@
     renderPlanning();
     renderRoutePlanner();
     renderTechnician();
+    renderSettings();
   }
 
   function renderDashboard() {
@@ -4904,6 +4986,97 @@
       `;
       el.billingQueue.appendChild(button);
     }
+  }
+
+  function profileRoleLabel(role) {
+    return role === "admin" ? "Admin" : "Tekniker";
+  }
+
+  function renderSettings() {
+    if (!el.settingsAccessSummary || !el.profileList) return;
+    const admin = isAdmin();
+    const activeProfiles = (profiles || []).filter((profile) => profile.active !== false);
+    const adminCount = activeProfiles.filter((profile) => profile.role === "admin").length;
+    const technicianCount = activeProfiles.filter((profile) => profile.role === "technician").length;
+    el.settingsAccessSummary.innerHTML = `
+      <article>
+        <strong>${adminCount.toLocaleString("nb-NO")}</strong>
+        <span>Aktive admin</span>
+      </article>
+      <article>
+        <strong>${technicianCount.toLocaleString("nb-NO")}</strong>
+        <span>Aktive teknikere</span>
+      </article>
+      <article>
+        <strong>${store.isConfigured ? "Supabase" : "Demo"}</strong>
+        <span>${store.isConfigured ? "Innlogging og roller styres mot databasen" : "Lokal demo viser bare testbrukere"}</span>
+      </article>
+    `;
+    if (!admin) {
+      el.profileList.innerHTML = `<div class="empty-state">Bare admin kan endre brukerroller.</div>`;
+      return;
+    }
+    const rows = [...(profiles || [])].sort((a, b) => (
+      (a.active === false) - (b.active === false)
+      || String(a.display_name || a.full_name || "").localeCompare(String(b.display_name || b.full_name || ""), "nb")
+    ));
+    if (!rows.length) {
+      el.profileList.innerHTML = `<div class="empty-state">Ingen CRM-profiler funnet.</div>`;
+      return;
+    }
+    el.profileList.innerHTML = rows.map((profile) => {
+      const id = String(profile.id || "");
+      const name = profile.full_name || profile.display_name || "Uten navn";
+      const self = currentUser?.id && String(currentUser.id) === id;
+      const canEdit = store.isConfigured && store.saveProfile && !self;
+      const disabled = canEdit ? "" : "disabled";
+      const active = profile.active !== false;
+      return `
+        <article class="${active ? "" : "inactive"}" data-profile-row="${escapeHtml(id)}">
+          <div>
+            <strong>${escapeHtml(name)}${self ? ` <span class="profile-self">Deg</span>` : ""}</strong>
+            <span>${escapeHtml(profileRoleLabel(profile.role))}${active ? "" : " · Inaktiv"}</span>
+          </div>
+          <label>Navn<input data-profile-name="${escapeHtml(id)}" value="${escapeHtml(name)}" ${disabled} /></label>
+          <label>Telefon<input data-profile-phone="${escapeHtml(id)}" value="${escapeHtml(profile.phone || "")}" ${disabled} /></label>
+          <label>Rolle
+            <select data-profile-role="${escapeHtml(id)}" ${disabled}>
+              <option value="technician" ${profile.role === "technician" ? "selected" : ""}>Tekniker</option>
+              <option value="admin" ${profile.role === "admin" ? "selected" : ""}>Admin</option>
+            </select>
+          </label>
+          <label class="check-row profile-active"><input data-profile-active="${escapeHtml(id)}" type="checkbox" ${active ? "checked" : ""} ${disabled} /> Aktiv</label>
+          <button data-save-profile="${escapeHtml(id)}" type="button" ${canEdit ? "" : "disabled"}>${self ? "Egen profil" : "Lagre"}</button>
+        </article>
+      `;
+    }).join("");
+  }
+
+  async function saveProfileFromSettings(profileId) {
+    if (!isAdmin()) throw new Error("Bare admin kan endre brukerroller.");
+    if (!store.saveProfile) throw new Error("Brukerroller krever Supabase.");
+    if (currentUser?.id && String(currentUser.id) === String(profileId)) {
+      throw new Error("Egen rolle/aktiv-status må endres av en annen admin.");
+    }
+    const row = el.profileList?.querySelector(`[data-profile-row="${CSS.escape(profileId)}"]`);
+    if (!row) throw new Error("Fant ikke profilen som skulle lagres.");
+    const name = row.querySelector(`[data-profile-name="${CSS.escape(profileId)}"]`)?.value?.trim() || "";
+    const phone = row.querySelector(`[data-profile-phone="${CSS.escape(profileId)}"]`)?.value?.trim() || "";
+    const role = row.querySelector(`[data-profile-role="${CSS.escape(profileId)}"]`)?.value === "admin" ? "admin" : "technician";
+    const active = Boolean(row.querySelector(`[data-profile-active="${CSS.escape(profileId)}"]`)?.checked);
+    if (!name) throw new Error("Navn kan ikke være tomt.");
+    const saved = await store.saveProfile(profileId, {
+      display_name: name,
+      full_name: name,
+      phone,
+      role,
+      active,
+    });
+    const index = profiles.findIndex((profile) => String(profile.id) === String(saved.id));
+    if (index >= 0) profiles[index] = saved;
+    else profiles.push(saved);
+    renderSettings();
+    setSyncStatus("Brukerprofil oppdatert.", "ok");
   }
 
   function renderMoveQueue(rows = moveQueueRows()) {
@@ -9136,6 +9309,19 @@
     }
   });
 
+  el.forgotPasswordButton?.addEventListener("click", requestPasswordReset);
+  el.closePasswordResetDialog?.addEventListener("click", () => el.passwordResetDialog.close());
+  el.cancelPasswordResetButton?.addEventListener("click", () => el.passwordResetDialog.close());
+  el.passwordResetForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    showPasswordResetMessage("", "error");
+    try {
+      await savePasswordReset();
+    } catch (error) {
+      showPasswordResetMessage(error.message || "Klarte ikke lagre nytt passord.", "error");
+    }
+  });
+
   el.logoutButton.addEventListener("click", async () => {
     if (store.isConfigured) await store.signOut();
     currentUser = null;
@@ -9180,6 +9366,14 @@
 
   window.addEventListener("numedal-import-progress", (event) => {
     setSyncStatus(event.detail || "Importerer...", "");
+  });
+
+  el.refreshProfilesButton?.addEventListener("click", () => refreshData("Brukerlisten er oppdatert."));
+  el.profileList?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-save-profile]");
+    if (!button) return;
+    saveProfileFromSettings(button.dataset.saveProfile)
+      .catch((error) => setSyncStatus(error.message || "Klarte ikke lagre brukerprofil.", "error"));
   });
 
   el.aiRegistrationParseButton?.addEventListener("click", parseAiRegistrationInput);
@@ -10172,6 +10366,10 @@
     } catch (error) {
       setSyncStatus(error.message || "Klarte ikke oppdatere jobb.", "error");
     }
+  });
+
+  store.onAuthStateChange?.((event) => {
+    if (event === "PASSWORD_RECOVERY") openPasswordResetDialog();
   });
 
   refreshData();
