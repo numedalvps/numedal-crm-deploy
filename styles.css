@@ -4052,6 +4052,9 @@ label {
   .search-row,
   .order-bulk-actions,
   .order-list-row,
+  .intake-inbox-list article,
+  .customer-order-list article,
+  .order-booking-list article,
   .ai-attachment-list article,
   .ai-draft-summary,
   .planning-head,
@@ -4077,6 +4080,12 @@ label {
 
   .ai-draft-summary > strong,
   .ai-attachment-list button {
+    justify-self: start;
+  }
+
+  .intake-inbox-list .mini-action-row,
+  .customer-order-list article > button,
+  .order-booking-list article > button {
     justify-self: start;
   }
 
