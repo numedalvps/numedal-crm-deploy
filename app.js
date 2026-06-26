@@ -6557,9 +6557,10 @@
       </section>
       <section class="detail-section lead-template-section">
         <h3>E-postmaler</h3>
-        <p>Kopierer emne og tekst. Sending kobles på senere når Gmail/Workspace er klart.</p>
+        <p>Kopier maltekst eller bruk den som tilbudsutkast.</p>
         <div class="lead-template-buttons">${leadTemplateButtons(customer)}</div>
       </section>
+      ${isAdmin() ? leadOfferComposerHtml(entry) : ""}
       <dl class="facts">
         <div><dt>Telefon</dt><dd class="copy-field">${phoneField(customer.phone)}</dd></div>
         <div><dt>E-post</dt><dd class="copy-field">${emailField(customer.email)}</dd></div>
@@ -7223,6 +7224,178 @@
     const template = leadTemplates[templateId];
     if (!template) return "";
     return `Emne: ${template.subject}\n\n${template.body(customer)}`;
+  }
+
+  function isUuid(value) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
+  }
+
+  function isEmailAddress(value) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+  }
+
+  function defaultLeadOfferTemplateId(entry) {
+    const text = normalizeMatch([
+      leadNoteForEntry(entry),
+      entry?.lead?.source,
+      entry?.lead?.source_detail,
+      entry?.lead?.product_interest,
+      entry?.customer?.tags,
+      entry?.customer?.model_or_note,
+    ].filter(Boolean).join(" "));
+    const status = leadStatusForEntry(entry);
+    if (status === "offer_sent") return "followup_offer";
+    if (/\b(stovsuger|utleie|vac|leie)\b/.test(text)) return "vac_rental_offer";
+    if (/\b(isobygg|blaseisolering|isolering|supafil)\b/.test(text)) return "insulation_offer";
+    if (/\b(gulvmodell|floor|fujitsu)\b/.test(text)) return "fujitsu_floor";
+    if (/\b(norgespumpa|sort)\b/.test(text)) return "norgespumpa_black";
+    return status === "followup" ? "heatpump_info_request" : "heatpump_standard_offer";
+  }
+
+  function offerSenderOptions(selected = "post@numedalvps.no") {
+    const senders = [
+      ["post@numedalvps.no", "post@numedalvps.no"],
+      ["gunnar@numedalvps.no", "gunnar@numedalvps.no"],
+    ];
+    return senders.map(([value, label]) => (
+      `<option value="${escapeHtml(value)}" ${selected === value ? "selected" : ""}>${escapeHtml(label)}</option>`
+    )).join("");
+  }
+
+  function offerTemplateOptions(selected) {
+    return Object.entries(leadTemplates).map(([id, template]) => (
+      `<option value="${escapeHtml(id)}" ${id === selected ? "selected" : ""}>${escapeHtml(template.title)}</option>`
+    )).join("");
+  }
+
+  function leadOfferComposerHtml(entry) {
+    const customer = entry?.customer || {};
+    const target = leadEntryKey(entry);
+    const templateId = defaultLeadOfferTemplateId(entry);
+    const template = leadTemplates[templateId] || leadTemplates.heatpump_standard_offer;
+    const body = template.body(customer);
+    const disabled = store.sendOfferEmail ? "" : "disabled";
+    return `
+      <section class="detail-section lead-offer-section">
+        <h3>Tilbud</h3>
+        <div class="lead-offer-grid">
+          <label>Avsender
+            <select data-offer-from="${escapeHtml(target)}">
+              ${offerSenderOptions("post@numedalvps.no")}
+            </select>
+          </label>
+          <label>Mottaker
+            <input data-offer-to="${escapeHtml(target)}" type="email" value="${escapeHtml(customer.email || "")}" placeholder="kunde@eksempel.no" />
+          </label>
+          <label>Mal
+            <select data-offer-template-select="${escapeHtml(target)}">
+              ${offerTemplateOptions(templateId)}
+            </select>
+          </label>
+          <label>Emne
+            <input data-offer-subject="${escapeHtml(target)}" value="${escapeHtml(template.subject)}" />
+          </label>
+        </div>
+        <textarea data-offer-text="${escapeHtml(target)}" rows="12">${escapeHtml(body)}</textarea>
+        <div class="lead-offer-actions">
+          <button class="secondary" data-fill-offer-template="${escapeHtml(target)}" type="button">Bruk mal</button>
+          <button class="secondary" data-copy-offer-draft="${escapeHtml(target)}" type="button">Kopier tilbud</button>
+          <button class="order-primary" data-send-offer-email="${escapeHtml(target)}" type="button" ${disabled}>Send tilbud</button>
+        </div>
+      </section>
+    `;
+  }
+
+  function leadOfferFields(target) {
+    const safe = CSS.escape(target);
+    return {
+      from: el.leadDetail.querySelector(`[data-offer-from="${safe}"]`),
+      to: el.leadDetail.querySelector(`[data-offer-to="${safe}"]`),
+      template: el.leadDetail.querySelector(`[data-offer-template-select="${safe}"]`),
+      subject: el.leadDetail.querySelector(`[data-offer-subject="${safe}"]`),
+      text: el.leadDetail.querySelector(`[data-offer-text="${safe}"]`),
+    };
+  }
+
+  function fillLeadOfferTemplate(target, templateId = "") {
+    const entry = leadEntryForTarget(target);
+    const customer = entry?.customer || {};
+    const fields = leadOfferFields(target);
+    const id = templateId || fields.template?.value || defaultLeadOfferTemplateId(entry);
+    const template = leadTemplates[id];
+    if (!template) return;
+    if (fields.template) fields.template.value = id;
+    if (fields.subject) fields.subject.value = template.subject;
+    if (fields.text) fields.text.value = template.body(customer);
+  }
+
+  function leadOfferPayload(target) {
+    const entry = leadEntryForTarget(target);
+    if (!entry) throw new Error("Fant ikke leaden.");
+    const fields = leadOfferFields(target);
+    const customer = entry.customer || {};
+    const to = String(fields.to?.value || "").trim();
+    const subject = String(fields.subject?.value || "").trim();
+    const text = String(fields.text?.value || "").trim();
+    if (!isEmailAddress(to)) throw new Error("Mottaker mangler eller har ugyldig e-postadresse.");
+    if (!subject) throw new Error("Emne mangler.");
+    if (!text) throw new Error("Tilbudstekst mangler.");
+    const customerId = customerKey(customer);
+    return {
+      from: fields.from?.value || "post@numedalvps.no",
+      to,
+      replyTo: fields.from?.value || "post@numedalvps.no",
+      subject,
+      text,
+      customer_id: isUuid(customerId) ? customerId : null,
+      lead_id: isUuid(entry.lead?.id) ? entry.lead.id : null,
+      template_id: fields.template?.value || "",
+      source: "lead_detail",
+    };
+  }
+
+  async function copyLeadOfferDraft(target) {
+    const payload = leadOfferPayload(target);
+    await copyTextToClipboard(`Emne: ${payload.subject}\n\n${payload.text}`);
+    setSyncStatus("Tilbud kopiert.", "ok");
+  }
+
+  async function sendLeadOfferEmail(target) {
+    if (!store.sendOfferEmail) throw new Error("Tilbudsutsending krever oppdatert serverfunksjon.");
+    const payload = leadOfferPayload(target);
+    const ok = await askForConfirmation({
+      title: "Send tilbud",
+      message: `Sende tilbud fra ${payload.from} til ${payload.to}?`,
+      confirmLabel: "Send tilbud",
+    });
+    if (!ok) return;
+    setSyncStatus("Sender tilbud...", "");
+    const result = await store.sendOfferEmail(payload);
+    if (!result?.ok) throw new Error(result?.error || "Klarte ikke sende tilbud.");
+
+    const entry = leadEntryForTarget(target);
+    if (entry?.lead?.id) {
+      updateLeadInMemory({
+        ...entry.lead,
+        status: "quote_sent",
+        last_contact_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+      selectedLeadId = `lead:${entry.lead.id}`;
+    } else if (entry?.customer) {
+      const key = customerKey(entry.customer);
+      const customer = findCustomer(key);
+      if (customer) {
+        const saved = await saveCustomerInline(customer, { tags: nextTagsWithLeadStatus(customer, "offer_sent") }, "");
+        await syncLeadRecord(saved || customer, "offer_sent", `Tilbud sendt: ${payload.subject}`);
+      }
+      selectedLeadId = target;
+    }
+    currentLeadFilter = "offer_sent";
+    if (el.leadStatusFilter) el.leadStatusFilter.value = currentLeadFilter;
+    renderAll();
+    setView("leads");
+    setSyncStatus("Tilbud sendt og lead satt til venter svar.", "ok");
   }
 
   function routeServiceDateLabel() {
@@ -9970,12 +10143,35 @@
       .catch((error) => setSyncStatus(error.message || "Klarte ikke endre leadstatus.", "error"));
   });
   el.leadDetail?.addEventListener("change", (event) => {
+    const offerTemplate = event.target.closest("[data-offer-template-select]");
+    if (offerTemplate) {
+      fillLeadOfferTemplate(offerTemplate.dataset.offerTemplateSelect, offerTemplate.value);
+      return;
+    }
     const select = event.target.closest("[data-lead-status-customer]");
     if (!select) return;
     setLeadStatusTarget(select.dataset.leadStatusCustomer, select.value)
       .catch((error) => setSyncStatus(error.message || "Klarte ikke endre leadstatus.", "error"));
   });
   el.leadDetail?.addEventListener("click", (event) => {
+    const fillOffer = event.target.closest("[data-fill-offer-template]");
+    if (fillOffer) {
+      fillLeadOfferTemplate(fillOffer.dataset.fillOfferTemplate);
+      setSyncStatus("Tilbudsmal fylt inn.", "ok");
+      return;
+    }
+    const copyOffer = event.target.closest("[data-copy-offer-draft]");
+    if (copyOffer) {
+      copyLeadOfferDraft(copyOffer.dataset.copyOfferDraft)
+        .catch((error) => setSyncStatus(error.message || "Klarte ikke kopiere tilbud.", "error"));
+      return;
+    }
+    const sendOffer = event.target.closest("[data-send-offer-email]");
+    if (sendOffer) {
+      sendLeadOfferEmail(sendOffer.dataset.sendOfferEmail)
+        .catch((error) => setSyncStatus(error.message || "Klarte ikke sende tilbud.", "error"));
+      return;
+    }
     const statusButton = event.target.closest("[data-lead-set-status]");
     if (statusButton) {
       setLeadStatusTarget(statusButton.dataset.leadStatusCustomer, statusButton.dataset.leadSetStatus)

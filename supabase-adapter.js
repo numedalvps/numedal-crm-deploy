@@ -1197,6 +1197,15 @@
       if (data?.error) throw new Error(data.error);
       return data?.analysis || data;
     },
+    async sendOfferEmail(payload) {
+      const supabase = await requireClient();
+      const { data, error } = await supabase.functions.invoke("send-offer-email", {
+        body: payload || {},
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
     async saveIntakeDraft(values) {
       const supabase = await requireClient();
       const raw = String(values?.raw || values?.text || "").trim();

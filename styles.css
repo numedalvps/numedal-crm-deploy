@@ -1945,6 +1945,36 @@ textarea {
   color: var(--muted);
 }
 
+.lead-offer-section {
+  display: grid;
+  gap: 10px;
+}
+
+.lead-offer-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.lead-offer-grid label {
+  min-width: 0;
+}
+
+.lead-offer-section textarea {
+  min-height: 240px;
+  resize: vertical;
+}
+
+.lead-offer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.lead-offer-actions button {
+  min-height: 36px;
+}
+
 .dot {
   width: 11px;
   height: 11px;
@@ -4134,6 +4164,7 @@ label {
   .metric-grid,
   .lead-metrics,
   .order-metrics,
+  .lead-offer-grid,
   .insulation-offer-customer,
   .rental-input-grid,
   .rental-image-grid,
