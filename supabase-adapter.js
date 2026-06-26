@@ -201,7 +201,7 @@
   }
 
   function installationToDb(installation, customerId) {
-    return {
+    const row = {
       customer_id: customerId,
       label: installation.label || "Anlegg",
       brand: installation.brand || null,
@@ -211,6 +211,32 @@
       last_service_at: normalizeDate(installation.last_service_at),
       next_service_due: normalizeDate(installation.next_service_due),
       notes: installation.notes || null,
+    };
+    if (isUuid(installation.location_id || installation.locationId)) row.location_id = installation.location_id || installation.locationId;
+    if ("indoor_unit_model" in installation || "indoorUnitModel" in installation) row.indoor_unit_model = installation.indoor_unit_model || installation.indoorUnitModel || null;
+    if ("outdoor_unit_model" in installation || "outdoorUnitModel" in installation) row.outdoor_unit_model = installation.outdoor_unit_model || installation.outdoorUnitModel || null;
+    if ("indoor_serial_number" in installation || "indoorSerialNumber" in installation) row.indoor_serial_number = installation.indoor_serial_number || installation.indoorSerialNumber || null;
+    if ("outdoor_serial_number" in installation || "outdoorSerialNumber" in installation) row.outdoor_serial_number = installation.outdoor_serial_number || installation.outdoorSerialNumber || null;
+    if ("service_interval_months" in installation || "serviceIntervalMonths" in installation) {
+      const months = Number(installation.service_interval_months || installation.serviceIntervalMonths || 0);
+      row.service_interval_months = Number.isFinite(months) && months >= 0 ? months : 24;
+    }
+    if ("active" in installation) row.active = installation.active !== false;
+    row.updated_at = new Date().toISOString();
+    return row;
+  }
+
+  function locationToDb(location, customerId) {
+    return {
+      customer_id: customerId,
+      location_name: location.location_name || location.locationName || "Anlegg",
+      address: location.address || null,
+      postal_code: location.postal_code || location.postalCode || null,
+      city: location.city || null,
+      location_type: location.location_type || location.locationType || "unknown",
+      directions: location.directions || null,
+      is_primary: Boolean(location.is_primary || location.isPrimary),
+      updated_at: new Date().toISOString(),
     };
   }
 
@@ -685,6 +711,7 @@
         { data: invoiceRows, error: invoiceError },
         { data: serviceEventRows, error: serviceEventError },
         { data: installationRows, error: installationError },
+        { data: locationRows, error: locationError },
         orderResult,
         { data: leadRows, error: leadError },
         { data: activityRows, error: activityError },
@@ -700,6 +727,7 @@
         fetchAllRows(() => supabase.from("invoice_metadata").select("*").order("invoice_date", { ascending: false }), 1000, 10000),
         fetchAllRows(() => supabase.from("service_events").select("*").order("event_date", { ascending: false }), 1000, 20000),
         fetchAllRows(() => supabase.from("installations").select("*").order("created_at")),
+        fetchAllRows(() => supabase.from("customer_locations").select("*").order("created_at")),
         orderRequest,
         supabase.from("leads").select("*").order("updated_at", { ascending: false }).limit(2000),
         supabase.from("activities").select("*").order("occurred_at", { ascending: false }).limit(2000),
@@ -715,6 +743,7 @@
       if (invoiceError) throw invoiceError;
       if (serviceEventError) throw serviceEventError;
       if (installationError) throw installationError;
+      if (locationError) throw locationError;
       if (orderResult.error && !isOptionalOrdersError(orderResult.error)) throw orderResult.error;
       if (leadError) throw leadError;
       if (activityError) throw activityError;
@@ -735,6 +764,7 @@
         })),
         serviceEvents: serviceEventRows || [],
         installations: installationRows || [],
+        customerLocations: locationRows || [],
         leads: leadRows || [],
         activities: activityRows || [],
         jobs: jobRows || [],
@@ -848,13 +878,51 @@
       }
       return { id: data.id, booking: bookingFromDb(data) };
     },
+    async saveCustomerLocation(customerId, location) {
+      const supabase = await requireClient();
+      if (!isUuid(customerId)) throw new Error("Ugyldig kunde for anleggsadresse.");
+      const dbLocation = locationToDb(location, customerId);
+      const id = location?.id || "";
+      const query = isUuid(id)
+        ? supabase.from("customer_locations").update(dbLocation).eq("id", id).select("*").single()
+        : supabase.from("customer_locations").insert(dbLocation).select("*").single();
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+    async saveInstallation(customerId, installation) {
+      const supabase = await requireClient();
+      if (!isUuid(customerId)) throw new Error("Ugyldig kunde for varmepumpe/anlegg.");
+      const dbInstallation = installationToDb(installation, customerId);
+      const id = installation?.id || "";
+      const query = isUuid(id)
+        ? supabase.from("installations").update(dbInstallation).eq("id", id).select("*").single()
+        : supabase.from("installations").insert(dbInstallation).select("*").single();
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
     async saveInstallationPatch(id, patch) {
       const supabase = await requireClient();
       const dbPatch = {};
+      if ("location_id" in patch || "locationId" in patch) {
+        const locationId = patch.location_id || patch.locationId;
+        dbPatch.location_id = isUuid(locationId) ? locationId : null;
+      }
+      if ("label" in patch) dbPatch.label = patch.label || "Anlegg";
+      if ("brand" in patch) dbPatch.brand = patch.brand || null;
+      if ("model" in patch) dbPatch.model = patch.model || null;
+      if ("serial_number" in patch || "serialNumber" in patch) dbPatch.serial_number = patch.serial_number || patch.serialNumber || null;
       if ("installed_at" in patch) dbPatch.installed_at = normalizeDate(patch.installed_at);
       if ("last_service_at" in patch) dbPatch.last_service_at = normalizeDate(patch.last_service_at);
       if ("next_service_due" in patch) dbPatch.next_service_due = normalizeDate(patch.next_service_due);
+      if ("service_interval_months" in patch || "serviceIntervalMonths" in patch) {
+        const months = Number(patch.service_interval_months || patch.serviceIntervalMonths || 0);
+        dbPatch.service_interval_months = Number.isFinite(months) && months >= 0 ? months : 24;
+      }
+      if ("active" in patch) dbPatch.active = patch.active !== false;
       if ("notes" in patch) dbPatch.notes = patch.notes || null;
+      dbPatch.updated_at = new Date().toISOString();
       if (!Object.keys(dbPatch).length) return { id };
       const { data, error } = await supabase
         .from("installations")
@@ -1040,6 +1108,7 @@
       const { data, error } = await supabase.from("leads").insert(dbLead).select("*").single();
       if (error) throw error;
       const { error: activityError } = await supabase.from("activities").insert({
+        customer_id: isUuid(values?.customer_id) ? values.customer_id : null,
         lead_id: data.id,
         activity_type: "intake",
         summary: "Lead opprettet fra hurtigregistrering",

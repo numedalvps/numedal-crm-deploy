@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260626-04" />
+    <link rel="stylesheet" href="./styles.css?v=20260626-05" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -653,6 +653,48 @@
       </form>
     </dialog>
 
+    <dialog id="installationDialog" class="modal">
+      <form id="installationForm" method="dialog">
+        <div class="modal-head">
+          <h2 id="installationDialogTitle">Varmepumpe / anlegg</h2>
+          <button id="closeInstallationDialog" type="button" aria-label="Lukk">×</button>
+        </div>
+        <div id="installationDialogMessage" class="dialog-message hidden"></div>
+        <div class="form-grid">
+          <label>Kunde<input id="installationCustomerName" disabled /></label>
+          <label>Navn på anlegg<input id="installationLabel" placeholder="F.eks. Hovedhus, Hytte, Stue, Kjeller" required /></label>
+          <label>Eksisterende anleggsadresse
+            <select id="installationLocationSelect"></select>
+          </label>
+          <label>Serviceintervall
+            <select id="installationServiceInterval">
+              <option value="12">1 år</option>
+              <option value="24" selected>2 år</option>
+              <option value="36">3 år</option>
+              <option value="0">Manuelt / ikke fast</option>
+            </select>
+          </label>
+          <label class="installation-location-field">Adressenavn<input id="installationLocationName" placeholder="F.eks. Hjemme, Hytte Blefjell" /></label>
+          <label class="installation-location-field">Anleggsadresse<input id="installationAddress" /></label>
+          <label class="installation-location-field">Postnr<input id="installationZip" /></label>
+          <label class="installation-location-field">Sted<input id="installationCity" /></label>
+          <label>Merke<input id="installationBrand" /></label>
+          <label>Modell<input id="installationModel" /></label>
+          <label>Serienummer<input id="installationSerial" /></label>
+          <label>Installert<input id="installationInstalledAt" type="date" /></label>
+          <label>Siste service<input id="installationLastServiceAt" type="date" /></label>
+          <label>Neste service<input id="installationNextServiceDue" type="date" /></label>
+          <label class="check-row form-wide"><input id="installationActive" type="checkbox" checked /> Aktiv varmepumpe/anlegg</label>
+        </div>
+        <label>Notat<textarea id="installationNotes" rows="3" placeholder="Plassering, innedel/utedel, historikk eller særlige hensyn."></textarea></label>
+        <p class="form-hint">Bruk eget anlegg for hytte, ekstra pumpe hjemme eller pumper med ulik servicefrist.</p>
+        <div class="modal-actions">
+          <button class="secondary" id="cancelInstallationDialog" type="button">Avbryt</button>
+          <button type="submit">Lagre anlegg</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog id="orderDialog" class="modal">
       <form id="orderForm" method="dialog">
         <div class="modal-head">
@@ -918,10 +960,10 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260626-04"></script>
-    <script src="./supabase-adapter.js?v=20260626-04"></script>
-    <script src="./intake-parser.js?v=20260626-04"></script>
-    <script src="./app.js?v=20260626-04"></script>
+    <script src="./supabase-config.js?v=20260626-05"></script>
+    <script src="./supabase-adapter.js?v=20260626-05"></script>
+    <script src="./intake-parser.js?v=20260626-05"></script>
+    <script src="./app.js?v=20260626-05"></script>
   </body>
 </html>
 

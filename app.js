@@ -159,6 +159,8 @@
   let websiteSubmissions = [];
   let intakeItems = [];
   let profiles = [];
+  let customerLocationsByCustomer = new Map();
+  let customerLocationById = new Map();
   let invoicesByCustomer = new Map();
   let serviceEventsByCustomer = new Map();
   let installationsByCustomer = new Map();
@@ -187,6 +189,8 @@
   let aiRegistrationSelectedCustomerId = "";
   let aiRegistrationAttachments = [];
   let passwordRecoveryActive = false;
+  let editingInstallationCustomerId = "";
+  let editingInstallationId = "";
 
   const el = {
     loginView: document.getElementById("loginView"),
@@ -384,6 +388,28 @@
     formTags: document.getElementById("formTags"),
     formTagCatalog: document.getElementById("formTagCatalog"),
     formNote: document.getElementById("formNote"),
+    installationDialog: document.getElementById("installationDialog"),
+    installationForm: document.getElementById("installationForm"),
+    installationDialogTitle: document.getElementById("installationDialogTitle"),
+    installationDialogMessage: document.getElementById("installationDialogMessage"),
+    closeInstallationDialog: document.getElementById("closeInstallationDialog"),
+    cancelInstallationDialog: document.getElementById("cancelInstallationDialog"),
+    installationCustomerName: document.getElementById("installationCustomerName"),
+    installationLabel: document.getElementById("installationLabel"),
+    installationLocationSelect: document.getElementById("installationLocationSelect"),
+    installationLocationName: document.getElementById("installationLocationName"),
+    installationAddress: document.getElementById("installationAddress"),
+    installationZip: document.getElementById("installationZip"),
+    installationCity: document.getElementById("installationCity"),
+    installationServiceInterval: document.getElementById("installationServiceInterval"),
+    installationBrand: document.getElementById("installationBrand"),
+    installationModel: document.getElementById("installationModel"),
+    installationSerial: document.getElementById("installationSerial"),
+    installationInstalledAt: document.getElementById("installationInstalledAt"),
+    installationLastServiceAt: document.getElementById("installationLastServiceAt"),
+    installationNextServiceDue: document.getElementById("installationNextServiceDue"),
+    installationActive: document.getElementById("installationActive"),
+    installationNotes: document.getElementById("installationNotes"),
     orderDialog: document.getElementById("orderDialog"),
     orderForm: document.getElementById("orderForm"),
     orderDialogTitle: document.getElementById("orderDialogTitle"),
@@ -3211,10 +3237,66 @@
     return installationsByCustomer.get(key) || installationsByCustomer.get(customer?.lime_id) || [];
   }
 
+  function customerLocationsForCustomer(customer) {
+    const key = customerKey(customer);
+    return customerLocationsByCustomer.get(key) || [];
+  }
+
+  function fallbackCustomerLocation(customer) {
+    if (!customer) return null;
+    return {
+      id: "",
+      customer_id: customerKey(customer),
+      location_name: "Kundeadresse",
+      address: customer.visit_street || "",
+      postal_code: customer.visit_zip || "",
+      city: customer.visit_city || customer.location_tag || "",
+      is_primary: true,
+      isFallback: true,
+    };
+  }
+
+  function primaryLocationForCustomer(customer) {
+    const locations = customerLocationsForCustomer(customer);
+    return locations.find((location) => location.is_primary) || locations[0] || fallbackCustomerLocation(customer);
+  }
+
+  function locationAddressText(location) {
+    if (!location) return "";
+    return [
+      location.address,
+      [location.postal_code, location.city].filter(Boolean).join(" "),
+    ].filter(Boolean).join(", ");
+  }
+
+  function locationOptionLabel(location) {
+    const address = locationAddressText(location);
+    return [location.location_name || "Anlegg", address].filter(Boolean).join(" - ");
+  }
+
+  function locationForInstallation(installation, customer) {
+    const id = installation?.location_id || installation?.locationId || "";
+    return (id && customerLocationById.get(String(id))) || primaryLocationForCustomer(customer);
+  }
+
+  function installationServiceIntervalMonths(installation) {
+    const months = Number(installation?.service_interval_months || installation?.serviceIntervalMonths || 0);
+    return Number.isFinite(months) && months > 0 ? months : 0;
+  }
+
+  function installationServiceIntervalLabel(installation) {
+    const months = installationServiceIntervalMonths(installation);
+    if (!months) return "Manuelt intervall";
+    if (months % 12 === 0) return `${months / 12} år`;
+    return `${months} mnd`;
+  }
+
   function nextServiceDueForCustomer(customer) {
     const dates = [
       customer?.next_service_due,
-      ...installationsForCustomer(customer).map((installation) => installation.next_service_due),
+      ...installationsForCustomer(customer)
+        .filter((installation) => installation.active !== false)
+        .map((installation) => installation.next_service_due),
     ].filter(Boolean).sort();
     return dates[0] || "";
   }
@@ -3226,6 +3308,7 @@
         installation.kind,
         installation.brand,
         installation.model,
+        locationAddressText(locationForInstallation(installation, customer)),
         installation.notes,
       ].filter(Boolean).join(" "))
       .join(" ");
@@ -3446,6 +3529,7 @@
       role: user.key === "admin" ? "admin" : "technician",
       active: true,
     }));
+    buildCustomerLocations([]);
     customers = rawData.customers
       .filter((customer) => !deletedCustomers.has(customer.lime_id))
       .filter((customer) => !hiddenDuplicateLimeIds.has(String(customer.lime_id || customer.legacy_lime_id || "")))
@@ -3471,6 +3555,7 @@
       websiteSubmissions = [];
       intakeItems = [];
       profiles = [];
+      buildCustomerLocations([]);
       buildInvoices([]);
       buildServiceEvents([]);
       buildInstallations([]);
@@ -3503,6 +3588,7 @@
     websiteSubmissions = loaded.websiteSubmissions || [];
     intakeItems = loaded.intakeItems || [];
     profiles = loaded.profiles || [];
+    buildCustomerLocations(loaded.customerLocations || []);
     buildInvoices(loaded.invoices || []);
     buildServiceEvents(loaded.serviceEvents || []);
     buildInstallations(loaded.installations || []);
@@ -3567,6 +3653,25 @@
   function installationLabelRank(installation) {
     const match = String(installation.label || "").match(/\d+/);
     return match ? Number(match[0]) : 999;
+  }
+
+  function buildCustomerLocations(locations) {
+    customerLocationsByCustomer = new Map();
+    customerLocationById = new Map();
+    for (const location of locations || []) {
+      if (!location?.id) continue;
+      customerLocationById.set(String(location.id), location);
+      if (!location.customer_id) continue;
+      const list = customerLocationsByCustomer.get(location.customer_id) || [];
+      list.push(location);
+      customerLocationsByCustomer.set(location.customer_id, list);
+    }
+    for (const list of customerLocationsByCustomer.values()) {
+      list.sort((a, b) => {
+        if (Boolean(a.is_primary) !== Boolean(b.is_primary)) return a.is_primary ? -1 : 1;
+        return String(a.location_name || "").localeCompare(String(b.location_name || ""), "nb");
+      });
+    }
   }
 
   function buildAccessNotes(notes) {
@@ -6601,16 +6706,24 @@
       <section class="detail-section">
         <h3>Ordre / jobber</h3>
         <div class="customer-order-list">
-          ${rows.map((order) => `
-            <article>
-              <div>
-                <strong>${orderBadgesHtml(order)}${escapeHtml(order.title || orderTypeLabel(order.type))}</strong>
-                <span>${escapeHtml(orderDateText(order))} · ${escapeHtml(billingStatusLabel(orderEffectiveBillingStatus(order)))} · ${escapeHtml(orderJobSummary(order))}</span>
-                ${workflowInlineHtml(orderWorkflowState(order))}
-              </div>
-              <button data-open-order="${escapeHtml(order.id)}" type="button">Åpne ordre</button>
-            </article>
-          `).join("")}
+          ${rows.map((order) => {
+            const linkedBookings = bookingRows().filter((row) => bookingIdsForOrder(order).includes(row.id) || row.booking.orderId === order.id);
+            const linkedJob = jobForOrder(order);
+            const bookingLine = linkedBookings.length
+              ? linkedBookings.map((row) => `${formatDate(row.booking.date)} ${bookingTimeText(row.booking)} ${row.booking.resource || ""}`.trim()).join(" · ")
+              : "Ikke booket";
+            return `
+              <article>
+                <div>
+                  <strong>${orderBadgesHtml(order, linkedJob)}${escapeHtml(order.title || orderTypeLabel(order.type))}</strong>
+                  <span>${escapeHtml(orderDateText(order))} · ${escapeHtml(billingStatusLabel(orderEffectiveBillingStatus(order, linkedJob)))} · ${escapeHtml(orderJobSummary(order, linkedJob))}</span>
+                  <small>${escapeHtml(bookingLine)}</small>
+                  ${workflowInlineHtml(orderWorkflowState(order, linkedBookings))}
+                </div>
+                <button data-open-order="${escapeHtml(order.id)}" type="button">Åpne ordre</button>
+              </article>
+            `;
+          }).join("")}
         </div>
       </section>
     `;
@@ -7265,27 +7378,40 @@
       });
     }
     const visible = rows.length ? rows : fallback;
+    const key = customerKey(customer);
+    const actions = isAdmin() && !customer?.is_inactive ? `
+      <div class="section-actions">
+        <button data-new-installation-customer="${escapeHtml(key)}" type="button">Ny varmepumpe/anlegg</button>
+        <button class="secondary" data-new-lead-existing-customer="${escapeHtml(key)}" type="button">Ny lead på kunden</button>
+      </div>
+    ` : "";
     if (!visible.length) {
-      return `<section class="detail-section"><h3>Varmepumper / anlegg</h3><div class="empty-state">Ingen varmepumpeinfo funnet fra Lime-deals ennå.</div></section>`;
+      return `<section class="detail-section"><div class="section-title-row"><h3>Varmepumper / anlegg</h3>${actions}</div><div class="empty-state">Ingen varmepumpe/anlegg registrert ennå. Legg inn egen pumpe for hytte, ekstra pumpe hjemme eller ulik servicefrist.</div></section>`;
     }
     return `
       <section class="detail-section">
-        <h3>Varmepumper / anlegg</h3>
+        <div class="section-title-row"><h3>Varmepumper / anlegg</h3>${actions}</div>
         <div class="installation-list">
           ${visible.map((installation) => {
             const dueKind = statusKindForDueDate(installation.next_service_due);
             const title = [installation.brand, installation.model].filter(Boolean).join(" · ") || "Modell ikke tolket";
             const dates = installationDateFacts(installation);
             const note = String(installation.notes || "").replace(/\n?Kilde:.*$/is, "").trim();
+            const location = locationForInstallation(installation, customer);
+            const address = locationAddressText(location);
+            const realInstallation = Boolean(installation.id);
             return `
-              <article class="installation-card ${dueKind}">
+              <article class="installation-card ${dueKind} ${installation.active === false ? "inactive" : ""}">
                 <div>
                   <strong>${escapeHtml(installation.label || "Anlegg")}</strong>
-                  <span>${escapeHtml(installationKindLabel(installation.kind))}</span>
+                  <span>${escapeHtml(installation.active === false ? "Inaktiv" : installationKindLabel(installation.kind))}</span>
                 </div>
                 <p>${escapeHtml(title)}</p>
+                ${address ? `<small>${escapeHtml(location.location_name || "Anleggsadresse")}: ${escapeHtml(address)}</small>` : `<small>Anleggsadresse ikke registrert</small>`}
                 ${dates.length ? `<small>${escapeHtml(dates.join(" · "))}</small>` : `<small>Datoer mangler</small>`}
-                ${note ? `<details><summary>Vis Lime-info</summary><p>${escapeHtml(note).replaceAll("\n", "<br>")}</p></details>` : ""}
+                <small>Serviceintervall: ${escapeHtml(installationServiceIntervalLabel(installation))}</small>
+                ${note ? `<details><summary>Vis notat</summary><p>${escapeHtml(note).replaceAll("\n", "<br>")}</p></details>` : ""}
+                ${isAdmin() && realInstallation ? `<button class="secondary" data-edit-installation="${escapeHtml(installation.id)}" data-installation-customer="${escapeHtml(key)}" type="button">Rediger anlegg</button>` : ""}
               </article>
             `;
           }).join("")}
@@ -7318,7 +7444,7 @@
       </div>
       <div class="action-row">
         ${customerActionLinks(customer)}
-        ${isAdmin() ? `${!customer.is_inactive ? `<button class="order-primary" data-new-order-customer="${escapeHtml(key)}" type="button" title="Lag serviceordre, installasjonsordre eller annet arbeid direkte fra kundekortet.">Ny ordre</button><button class="book-primary" data-book-customer="${escapeHtml(key)}" type="button">Book</button>` : ""}<button data-edit-customer="${escapeHtml(key)}" type="button">Rediger</button>` : ""}
+        ${isAdmin() ? `${!customer.is_inactive ? `<button class="secondary" data-new-lead-existing-customer="${escapeHtml(key)}" type="button" title="Opprett ny lead/tilbudssak på eksisterende kunde, f.eks. ekstra varmepumpe.">Ny lead</button><button data-new-installation-customer="${escapeHtml(key)}" type="button" title="Registrer egen varmepumpe/anlegg med adresse og servicefrist.">Ny varmepumpe/anlegg</button><button class="order-primary" data-new-order-customer="${escapeHtml(key)}" type="button" title="Lag serviceordre, installasjonsordre eller annet arbeid direkte fra kundekortet.">Ny ordre</button><button class="book-primary" data-book-customer="${escapeHtml(key)}" type="button">Book</button>` : ""}<button data-edit-customer="${escapeHtml(key)}" type="button">Rediger</button>` : ""}
       </div>
       ${booking ? workflowHtml(bookingWorkflowState(booking), { title: "Aktiv jobbstatus", compact: true }) : ""}
       ${lookupMissingDataSection(customer)}
@@ -7821,7 +7947,7 @@
         <h3>${isAdmin() ? starToggleHtml(customer) : customerStarHtml(customer, { showEmpty: true })}${customerCashBadgeHtml(customer)}${escapeHtml(cleanDisplayName(customer))}</h3>
         <p>${escapeHtml(addressFor(customer) || "Adresse mangler")}</p>
       </div>
-      <div class="action-row">${customerActionLinks(customer)}${isAdmin() && !customer.is_inactive ? `<button class="order-primary" data-new-order-customer="${escapeHtml(key)}" type="button">Ny ordre</button><button class="book-primary" data-book-customer="${escapeHtml(key)}" type="button">Book</button>` : ""}</div>
+      <div class="action-row">${customerActionLinks(customer)}${isAdmin() && !customer.is_inactive ? `<button class="secondary" data-new-lead-existing-customer="${escapeHtml(key)}" type="button">Ny lead</button><button data-new-installation-customer="${escapeHtml(key)}" type="button">Ny varmepumpe/anlegg</button><button class="order-primary" data-new-order-customer="${escapeHtml(key)}" type="button">Ny ordre</button><button class="book-primary" data-book-customer="${escapeHtml(key)}" type="button">Book</button>` : ""}</div>
       ${lookupMissingDataSection(customer, true)}
       ${isLikelyHomeAddress(customer) ? `<section class="quick-block attention"><strong>Mulig hjemmeadresse</strong><p>Tagg/område tyder på hytte/anlegg, men adressen kan være hjemmeadresse. Kontroller koordinater for rute.</p></section>` : ""}
       ${isAdmin() ? `<div class="customer-controls compact">${insulationToggleHtml(customer)}</div>` : ""}
@@ -7841,7 +7967,7 @@
       ${customer.local_note ? `<section class="quick-block"><strong>Notat</strong><p>${escapeHtml(customer.local_note)}</p></section>` : ""}
       <div class="quick-actions">
         <button data-jump-customer="${escapeHtml(key)}" type="button">Åpne kundekort</button>
-        ${isAdmin() && !customer.is_inactive ? `<button class="secondary" data-new-order-customer="${escapeHtml(key)}" type="button">Ny ordre</button>` : ""}
+        ${isAdmin() && !customer.is_inactive ? `<button class="secondary" data-new-lead-existing-customer="${escapeHtml(key)}" type="button">Ny lead</button><button class="secondary" data-new-installation-customer="${escapeHtml(key)}" type="button">Ny varmepumpe/anlegg</button><button class="secondary" data-new-order-customer="${escapeHtml(key)}" type="button">Ny ordre</button>` : ""}
         ${isAdmin() ? `<button class="secondary" data-edit-customer="${escapeHtml(key)}" type="button">Rediger kunde</button>` : ""}
         ${bookingId && isAdmin() ? `<button class="secondary" data-edit-booking="${escapeHtml(bookingId)}" type="button">Endre booking</button>` : ""}
       </div>
@@ -7963,6 +8089,232 @@
       tags,
       local_note: el.formNote.value.trim(),
     };
+  }
+
+  function showInstallationDialogMessage(message, tone = "error") {
+    if (!el.installationDialogMessage) return;
+    el.installationDialogMessage.textContent = message || "";
+    el.installationDialogMessage.className = `dialog-message ${tone || ""}`.trim();
+    el.installationDialogMessage.classList.toggle("hidden", !message);
+  }
+
+  function addMonthsIsoDate(value, months) {
+    if (!value || !months) return "";
+    const date = new Date(`${value}T00:00:00`);
+    if (Number.isNaN(date.getTime())) return "";
+    const originalDay = date.getDate();
+    date.setMonth(date.getMonth() + Number(months));
+    if (date.getDate() < originalDay) date.setDate(0);
+    return isoDate(date);
+  }
+
+  function syncInstallationNextServiceSuggestion(force = false) {
+    const months = Number(el.installationServiceInterval?.value || 0);
+    if (!months || !el.installationLastServiceAt?.value) return;
+    if (!force && el.installationNextServiceDue?.value) return;
+    el.installationNextServiceDue.value = addMonthsIsoDate(el.installationLastServiceAt.value, months);
+  }
+
+  function syncInstallationLocationFields() {
+    const isNew = el.installationLocationSelect?.value === "__new__";
+    document.querySelectorAll(".installation-location-field input").forEach((input) => {
+      input.disabled = !isNew;
+    });
+    if (!isNew) {
+      const location = customerLocationById.get(String(el.installationLocationSelect.value));
+      if (location) fillInstallationLocationFields(location);
+    }
+  }
+
+  function fillInstallationLocationFields(location) {
+    el.installationLocationName.value = location?.location_name || "";
+    el.installationAddress.value = location?.address || "";
+    el.installationZip.value = location?.postal_code || "";
+    el.installationCity.value = location?.city || "";
+  }
+
+  function renderInstallationLocationOptions(customer, selectedId = "", forceNew = false) {
+    const locations = customerLocationsForCustomer(customer);
+    const fallback = fallbackCustomerLocation(customer);
+    const options = locations.map((location) => (
+      `<option value="${escapeHtml(location.id)}">${escapeHtml(locationOptionLabel(location))}</option>`
+    ));
+    options.push(`<option value="__new__">Ny anleggsadresse</option>`);
+    el.installationLocationSelect.innerHTML = options.join("");
+    const value = forceNew || (!locations.length && !selectedId) ? "__new__" : (selectedId || locations[0]?.id || "__new__");
+    el.installationLocationSelect.value = value;
+    if (value === "__new__") fillInstallationLocationFields(locations.length ? {} : fallback);
+    else fillInstallationLocationFields(customerLocationById.get(String(value)));
+    syncInstallationLocationFields();
+  }
+
+  function openInstallationDialog(customerId, installationId = "") {
+    const customer = findCustomer(customerId);
+    if (!customer) return;
+    const installation = installationId
+      ? installationsForCustomer(customer).find((item) => String(item.id || "") === String(installationId))
+      : null;
+    editingInstallationCustomerId = customerKey(customer);
+    editingInstallationId = installation?.id || "";
+    showInstallationDialogMessage("", "error");
+    el.installationDialogTitle.textContent = installation ? "Rediger varmepumpe / anlegg" : "Ny varmepumpe / anlegg";
+    el.installationCustomerName.value = cleanDisplayName(customer);
+    el.installationLabel.value = installation?.label || `Anlegg ${installationsForCustomer(customer).length + 1}`;
+    el.installationBrand.value = installation?.brand || "";
+    el.installationModel.value = installation?.model || "";
+    el.installationSerial.value = installation?.serial_number || "";
+    el.installationInstalledAt.value = installation?.installed_at || "";
+    el.installationLastServiceAt.value = installation?.last_service_at || "";
+    el.installationNextServiceDue.value = installation?.next_service_due || "";
+    el.installationServiceInterval.value = String(installationServiceIntervalMonths(installation) || 24);
+    el.installationActive.checked = installation?.active !== false;
+    el.installationNotes.value = installation?.notes || "";
+    renderInstallationLocationOptions(customer, installation?.location_id || "", !installation && !customerLocationsForCustomer(customer).length);
+    if (!el.installationDialog.open) el.installationDialog.showModal();
+    setTimeout(() => el.installationLabel?.focus(), 0);
+  }
+
+  function installationFormValues() {
+    const months = Number(el.installationServiceInterval.value || 0);
+    const nextService = el.installationNextServiceDue.value
+      || addMonthsIsoDate(el.installationLastServiceAt.value, months);
+    return {
+      id: editingInstallationId,
+      label: el.installationLabel.value.trim() || "Anlegg",
+      brand: el.installationBrand.value.trim(),
+      model: el.installationModel.value.trim(),
+      serial_number: el.installationSerial.value.trim(),
+      installed_at: el.installationInstalledAt.value,
+      last_service_at: el.installationLastServiceAt.value,
+      next_service_due: nextService,
+      service_interval_months: Number.isFinite(months) && months > 0 ? months : 0,
+      active: Boolean(el.installationActive.checked),
+      notes: el.installationNotes.value.trim(),
+    };
+  }
+
+  function locationFormValues(customer) {
+    const name = el.installationLocationName.value.trim() || "Anlegg";
+    return {
+      customer_id: customerKey(customer),
+      location_name: name,
+      address: el.installationAddress.value.trim(),
+      postal_code: el.installationZip.value.trim(),
+      city: el.installationCity.value.trim(),
+      location_type: name.toLowerCase().includes("hytte") ? "cabin" : "unknown",
+      is_primary: !customerLocationsForCustomer(customer).length,
+    };
+  }
+
+  function upsertCustomerLocationInMemory(location) {
+    if (!location?.id) return location;
+    customerLocationById.set(String(location.id), location);
+    const key = location.customer_id;
+    if (!key) return location;
+    const list = customerLocationsByCustomer.get(key) || [];
+    const index = list.findIndex((item) => String(item.id) === String(location.id));
+    if (index >= 0) list[index] = location;
+    else list.push(location);
+    customerLocationsByCustomer.set(key, list);
+    return location;
+  }
+
+  function upsertInstallationInMemory(customer, installation) {
+    if (!installation) return installation;
+    const key = customerKey(customer);
+    const id = installation.id || `installation-${Date.now()}`;
+    const row = { ...installation, id, customer_id: installation.customer_id || key };
+    const list = installationsByCustomer.get(key) || [];
+    const index = list.findIndex((item) => String(item.id || "") === String(id));
+    if (index >= 0) list[index] = row;
+    else list.push(row);
+    installationsByCustomer.set(key, list);
+    if (customer?.lime_id && customer.lime_id !== key) installationsByCustomer.set(customer.lime_id, list);
+    return row;
+  }
+
+  async function saveInstallationFromDialog() {
+    const customer = findCustomer(editingInstallationCustomerId);
+    if (!customer) throw new Error("Fant ikke kunden for anlegget.");
+    const values = installationFormValues();
+    let locationId = el.installationLocationSelect.value;
+    if (locationId === "__new__") {
+      const locationValues = locationFormValues(customer);
+      if (store.isConfigured) {
+        if (!store.saveCustomerLocation) throw new Error("Lagring av anleggsadresse krever oppdatert Supabase-adapter.");
+        const savedLocation = await store.saveCustomerLocation(customerKey(customer), locationValues);
+        upsertCustomerLocationInMemory(savedLocation);
+        locationId = savedLocation.id;
+      } else {
+        const localLocation = { ...locationValues, id: `location-${Date.now()}` };
+        upsertCustomerLocationInMemory(localLocation);
+        locationId = localLocation.id;
+      }
+    }
+    values.location_id = locationId && locationId !== "__new__" ? locationId : null;
+    let savedInstallation;
+    if (store.isConfigured) {
+      if (!store.saveInstallation) throw new Error("Lagring av varmepumpe/anlegg krever oppdatert Supabase-adapter.");
+      savedInstallation = await store.saveInstallation(customerKey(customer), values);
+    } else {
+      requireLocalDemoStorage();
+      savedInstallation = { ...values, id: values.id || `installation-${Date.now()}`, customer_id: customerKey(customer) };
+    }
+    upsertInstallationInMemory(customer, savedInstallation);
+    el.installationDialog.close();
+    renderAll();
+    setSyncStatus("Varmepumpe/anlegg lagret på kundekortet.", "ok");
+  }
+
+  async function createLeadForExistingCustomer(customerId) {
+    const customer = findCustomer(customerId);
+    if (!customer) throw new Error("Fant ikke kunden.");
+    const note = [
+      "Eksisterende kunde ønsker tilbud/oppfølging på ny varmepumpe eller ekstra anlegg.",
+      `Kunde har ${installationsForCustomer(customer).length || "ukjent antall"} registrert(e) anlegg fra før.`,
+      "Kontroller om adressen er hjemme, hytte eller samme adresse som eksisterende anlegg.",
+    ].join("\n");
+    let savedLead;
+    if (store.isConfigured) {
+      if (!store.saveLeadDraft) throw new Error("Ny lead på eksisterende kunde krever oppdatert Supabase-adapter.");
+      savedLead = await store.saveLeadDraft({
+        action: "create_lead",
+        customer_id: customerKey(customer),
+        name: cleanDisplayName(customer),
+        phone: customer.phone || "",
+        email: customer.email || "",
+        street: customer.visit_street || "",
+        zip: customer.visit_zip || "",
+        city: customer.visit_city || customer.location_tag || "",
+        source: "Kundekort",
+        source_detail: "Ny varmepumpe på eksisterende kunde",
+        type: "installasjon",
+        note,
+        lead_status: "needs_offer",
+      });
+    } else {
+      requireLocalDemoStorage();
+      savedLead = {
+        id: `lead-${Date.now()}`,
+        existing_customer_id: customerKey(customer),
+        first_name: cleanDisplayName(customer),
+        phone: customer.phone || "",
+        email: customer.email || "",
+        address: customer.visit_street || "",
+        postal_code: customer.visit_zip || "",
+        city: customer.visit_city || customer.location_tag || "",
+        source: "Kundekort",
+        source_detail: "Ny varmepumpe på eksisterende kunde",
+        product_interest: "Ny varmepumpe / ekstra anlegg",
+        status: "quote_needed",
+      };
+    }
+    updateLeadInMemory(savedLead);
+    selectedLeadId = `lead:${savedLead.id}`;
+    currentLeadFilter = "needs_offer";
+    if (el.leadStatusFilter) el.leadStatusFilter.value = currentLeadFilter;
+    setView("leads");
+    setSyncStatus("Ny lead opprettet på eksisterende kunde.", "ok");
   }
 
   function openBookingDialog(customerId, bookingId, options = {}) {
@@ -9574,6 +9926,22 @@
       openCustomerDialog(edit.dataset.editCustomer);
       return;
     }
+    const newLead = event.target.closest("[data-new-lead-existing-customer]");
+    if (newLead) {
+      createLeadForExistingCustomer(newLead.dataset.newLeadExistingCustomer)
+        .catch((error) => setSyncStatus(error.message || "Klarte ikke opprette lead på kunden.", "error"));
+      return;
+    }
+    const newInstallation = event.target.closest("[data-new-installation-customer]");
+    if (newInstallation) {
+      openInstallationDialog(newInstallation.dataset.newInstallationCustomer);
+      return;
+    }
+    const editInstallation = event.target.closest("[data-edit-installation]");
+    if (editInstallation) {
+      openInstallationDialog(editInstallation.dataset.installationCustomer, editInstallation.dataset.editInstallation);
+      return;
+    }
     const newOrder = event.target.closest("[data-new-order-customer]");
     if (newOrder) {
       openOrderDialog(newOrder.dataset.newOrderCustomer);
@@ -9849,6 +10217,25 @@
       openOrderDialog(newOrder.dataset.newOrderCustomer);
       return;
     }
+    const newLead = event.target.closest("[data-new-lead-existing-customer]");
+    if (newLead) {
+      el.customerQuickDialog.close();
+      createLeadForExistingCustomer(newLead.dataset.newLeadExistingCustomer)
+        .catch((error) => setSyncStatus(error.message || "Klarte ikke opprette lead på kunden.", "error"));
+      return;
+    }
+    const newInstallation = event.target.closest("[data-new-installation-customer]");
+    if (newInstallation) {
+      el.customerQuickDialog.close();
+      openInstallationDialog(newInstallation.dataset.newInstallationCustomer);
+      return;
+    }
+    const editInstallation = event.target.closest("[data-edit-installation]");
+    if (editInstallation) {
+      el.customerQuickDialog.close();
+      openInstallationDialog(editInstallation.dataset.installationCustomer, editInstallation.dataset.editInstallation);
+      return;
+    }
     const jump = event.target.closest("[data-jump-customer]");
     if (jump) {
       el.customerQuickDialog.close();
@@ -9915,6 +10302,20 @@
     const without = tags.filter((tag) => normalizeMatch(tag) !== normalized);
     if (checkbox.checked) without.push(checkbox.value);
     setFormTags(without);
+  });
+  el.closeInstallationDialog?.addEventListener("click", () => el.installationDialog.close());
+  el.cancelInstallationDialog?.addEventListener("click", () => el.installationDialog.close());
+  el.installationLocationSelect?.addEventListener("change", syncInstallationLocationFields);
+  el.installationLastServiceAt?.addEventListener("change", () => syncInstallationNextServiceSuggestion(false));
+  el.installationServiceInterval?.addEventListener("change", () => syncInstallationNextServiceSuggestion(true));
+  el.installationForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    showInstallationDialogMessage("", "error");
+    try {
+      await saveInstallationFromDialog();
+    } catch (error) {
+      showInstallationDialogMessage(error.message || "Klarte ikke lagre varmepumpe/anlegg.", "error");
+    }
   });
   el.customerForm.addEventListener("submit", async (event) => {
     event.preventDefault();
