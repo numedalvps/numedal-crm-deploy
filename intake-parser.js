@@ -210,6 +210,14 @@
     return cleanLine(match?.[1] || "");
   }
 
+  function cleanNameCandidate(value) {
+    return cleanLine(String(value || "")
+      .replace(/\b(?:telefon|tlf|mobil|mob|mailadresse|mail|e-post|adresse|postnr|sted)\b.*$/i, "")
+      .replace(/^(?:ny\s+)?(?:henvendelse|forespørsel|foresporsel|melding|lead)\s+(?:fra\s+)?/i, "")
+      .replace(/^(?:fra\s+)?(?:nettside|webskjema|web|kontaktskjema|skjema|facebook|e-post|mail|sms)\s*[:\-]\s*/i, "")
+      .split(/[;,]/)[0]);
+  }
+
   function extractName(text, emails) {
     const raw = String(text || "");
     const first = labelValue(raw, ["Navn", "Fornavn"]);
@@ -225,7 +233,7 @@
     for (const pattern of explicitPatterns) {
       const match = raw.match(pattern);
       if (match?.[1]) {
-        const name = cleanLine(match[1].replace(/\b(?:telefon|tlf|mobil|mail|e-post|adresse)\b.*$/i, ""));
+        const name = cleanNameCandidate(match[1]);
         if (name && !/\d|@/.test(name) && !isOwnName(name)) return field(name, "high", match[0]);
       }
     }
@@ -240,7 +248,7 @@
 
     const signatureMatch = raw.match(/(?:mvh\.?|med vennlig hilsen|hilsen(?:\s+(?:fra|frs))?)\s*:?\s*([A-ZÆØÅ][^\n\r]{2,70})/i);
     if (signatureMatch?.[1]) {
-      const name = cleanLine(signatureMatch[1].replace(/\b(?:tlf|telefon|mobil|mob|e-post|mail)\b.*$/i, ""));
+      const name = cleanNameCandidate(signatureMatch[1]);
       if (name && !/\d|@/.test(name) && !isOwnName(name)) return field(name, "medium", signatureMatch[0]);
     }
 

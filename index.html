@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260626-09" />
+    <link rel="stylesheet" href="./styles.css?v=20260626-10" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -32,13 +32,13 @@
         <img class="logo" src="./numedal-logo.png" alt="Numedal Varmepumpeservice" />
         <nav>
           <button class="active" data-view="dashboard" type="button">Oversikt</button>
-          <button data-view="customers" type="button">Kunder</button>
           <button data-view="leads" type="button">Leads</button>
+          <button data-view="customers" type="button">Kunder</button>
           <button data-view="orders" type="button">Ordre</button>
-          <button data-view="insulation" type="button">Blåseisolering</button>
           <button data-view="planning" type="button">Plan</button>
           <button data-view="routeplanner" type="button">Planlegg servicedag</button>
           <button data-view="technician" type="button">Min dag</button>
+          <button data-view="insulation" type="button">Blåseisolering</button>
           <button data-view="settings" type="button">Innstillinger</button>
         </nav>
         <div class="user-card">
@@ -64,6 +64,12 @@
         <p id="syncStatus" class="sync-status"></p>
 
         <section id="dashboardView" class="view">
+          <section class="panel global-search-panel">
+            <label>Søk i CRM
+              <input id="globalSearchInput" type="search" placeholder="Søk navn, telefon, adresse, lead, ordre, booking eller faktura" autocomplete="off" />
+            </label>
+            <div id="globalSearchResults" class="global-search-results"></div>
+          </section>
           <div class="dashboard-focus-grid">
             <button data-dashboard-action="service" type="button">
               <span>Service</span>
@@ -589,6 +595,7 @@
               </article>
             </div>
             <div id="offerTemplateSettings" class="offer-template-settings"></div>
+            <div id="tagSettings" class="tag-settings"></div>
             <div id="profileList" class="profile-list"></div>
           </section>
         </section>
@@ -961,10 +968,10 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260626-09"></script>
-    <script src="./supabase-adapter.js?v=20260626-09"></script>
-    <script src="./intake-parser.js?v=20260626-09"></script>
-    <script src="./app.js?v=20260626-09"></script>
+    <script src="./supabase-config.js?v=20260626-10"></script>
+    <script src="./supabase-adapter.js?v=20260626-10"></script>
+    <script src="./intake-parser.js?v=20260626-10"></script>
+    <script src="./app.js?v=20260626-10"></script>
   </body>
 </html>
 

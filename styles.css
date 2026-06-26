@@ -435,6 +435,81 @@ small {
   margin-bottom: 12px;
 }
 
+.global-search-panel {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.global-search-panel label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.global-search-panel input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 16px;
+}
+
+.global-search-results {
+  display: grid;
+  gap: 8px;
+}
+
+.global-search-count {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.global-search-results button {
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr);
+  gap: 4px 10px;
+  align-items: center;
+  min-height: 56px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fff;
+  color: var(--ink);
+  text-align: left;
+}
+
+.global-search-results button:hover {
+  border-color: var(--teal);
+  background: #f0fdfa;
+}
+
+.global-search-results span {
+  grid-row: span 2;
+  align-self: stretch;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: #e7f4f2;
+  color: var(--teal-dark);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.global-search-results strong,
+.global-search-results small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.global-search-results small {
+  color: var(--muted);
+  font-weight: 700;
+}
+
 .dashboard-focus-grid button {
   min-height: 118px;
   display: grid;
@@ -1987,6 +2062,27 @@ textarea {
   align-items: flex-start;
 }
 
+.lead-quick-note {
+  display: grid;
+  gap: 10px;
+}
+
+.lead-quick-note .section-title-row {
+  align-items: flex-start;
+}
+
+.lead-quick-note .section-title-row p {
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.lead-quick-note textarea {
+  width: 100%;
+  min-height: 88px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
 .embedded-customer-card {
   border-color: #dbeafe;
   background: #f8fbff;
@@ -2522,6 +2618,10 @@ textarea {
   background: #f8fafc;
 }
 
+.empty-state.compact {
+  padding: 10px 12px;
+}
+
 .settings-panel {
   display: grid;
   gap: 16px;
@@ -2587,6 +2687,42 @@ textarea {
 
 .settings-grid h3 {
   margin: 0 0 6px;
+}
+
+.tag-settings-list {
+  display: grid;
+  gap: 10px;
+}
+
+.tag-settings-list article {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) minmax(180px, 1.3fr) auto;
+  gap: 10px;
+  align-items: end;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #fff;
+}
+
+.tag-settings-list article > div:first-child {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.tag-settings-list strong,
+.tag-settings-list span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.tag-settings-list span {
+  color: var(--muted);
+}
+
+.tag-settings-list input {
+  min-width: 0;
 }
 
 .profile-list {
@@ -4293,6 +4429,8 @@ label {
   .rental-input-grid,
   .rental-image-grid,
   .profile-list article,
+  .tag-settings-list article,
+  .global-search-results button,
   .ai-draft-grid,
   .insulation-input-grid,
   .insulation-input-grid.compact,
@@ -4315,6 +4453,13 @@ label {
 
   .compact-action-card .mini-action-row {
     justify-content: flex-start;
+  }
+
+  .global-search-results span {
+    grid-row: auto;
+    place-items: start;
+    width: fit-content;
+    padding: 6px 8px;
   }
 
   .route-overflow-actions {

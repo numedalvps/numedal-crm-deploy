@@ -193,6 +193,8 @@
   let passwordRecoveryActive = false;
   let editingInstallationCustomerId = "";
   let editingInstallationId = "";
+  let globalSearchQuery = "";
+  const globalSearchResultCache = new Map();
 
   const el = {
     loginView: document.getElementById("loginView"),
@@ -224,6 +226,8 @@
     yellowMetric: document.getElementById("yellowMetric"),
     greenMetric: document.getElementById("greenMetric"),
     bookedMetric: document.getElementById("bookedMetric"),
+    globalSearchInput: document.getElementById("globalSearchInput"),
+    globalSearchResults: document.getElementById("globalSearchResults"),
     dashboardServiceCount: document.getElementById("dashboardServiceCount"),
     dashboardLeadCount: document.getElementById("dashboardLeadCount"),
     dashboardBookingCount: document.getElementById("dashboardBookingCount"),
@@ -357,6 +361,7 @@
     technicianJobs: document.getElementById("technicianJobs"),
     settingsAccessSummary: document.getElementById("settingsAccessSummary"),
     offerTemplateSettings: document.getElementById("offerTemplateSettings"),
+    tagSettings: document.getElementById("tagSettings"),
     refreshProfilesButton: document.getElementById("refreshProfilesButton"),
     profileList: document.getElementById("profileList"),
     customerDialog: document.getElementById("customerDialog"),
@@ -1414,11 +1419,15 @@
     const entry = leadEntryForTarget(entryKey);
     if (!entry?.lead?.id) throw new Error("Fant ikke leaden.");
     let updatedLead = null;
+    const realCustomer = entry.customer ? findCustomer(leadEntryCustomerKey(entry)) : null;
     if (store.isConfigured && store.updateLead) {
       updatedLead = updateLeadInMemory(await store.updateLead(entry.lead.id, { status }));
-      await saveLeadStatusActivity(updatedLead, status);
+      await saveLeadStatusActivity(updatedLead, status, realCustomer);
     } else {
       updatedLead = updateLeadInMemory(saveLocalLeadPatch(entry.lead.id, { status }));
+    }
+    if (realCustomer) {
+      await saveCustomerInline(realCustomer, { tags: nextTagsWithLeadStatus(realCustomer, status) }, "");
     }
     selectedLeadId = `lead:${updatedLead.id}`;
     currentLeadFilter = status || "followup";
@@ -1543,6 +1552,14 @@
       .trim();
   }
 
+  function cleanAiNameCandidate(value) {
+    return cleanAiLine(String(value || "")
+      .replace(/\b(?:mob|telefon|tlf|adresse|mailadresse|mail|e-post|postnr|sted)\b.*$/i, "")
+      .replace(/^(?:ny\s+)?(?:henvendelse|forespørsel|foresporsel|melding|lead)\s+(?:fra\s+)?/i, "")
+      .replace(/^(?:fra\s+)?(?:nettside|webskjema|web|kontaktskjema|skjema|facebook|e-post|mail|sms)\s*[:\-]\s*/i, "")
+      .split(/[;,]/)[0]);
+  }
+
   function intakeEngine() {
     return window.NumedalIntake || null;
   }
@@ -1583,7 +1600,7 @@
       /henvendelse\s+fra\s+([^\n\r]+)/i,
       /(?:med vennlig hilsen|mvh\.?|hilsen(?:\s+(?:fra|frs))?)\s*:?\s*([A-ZÆØÅ][^\n\r]{2,70})/i,
     ]);
-    if (explicit) return cleanAiLine(explicit.replace(/\b(mob|telefon|adresse|mailadresse|e-post)\b.*$/i, ""));
+    if (explicit) return cleanAiNameCandidate(explicit);
     const lines = String(text || "")
       .split(/\r?\n/)
       .map(cleanAiLine)
@@ -5196,6 +5213,7 @@
     if (el.dashboardMoveCount) el.dashboardMoveCount.textContent = moveRows.length.toLocaleString("nb-NO");
     if (el.dashboardBillingCount) el.dashboardBillingCount.textContent = billingRows.length.toLocaleString("nb-NO");
 
+    renderGlobalSearch();
     renderNextJobs();
     renderMoveQueue(moveRows);
 
@@ -5214,6 +5232,205 @@
     renderDataQuality();
     renderRecentActivity();
     renderIntakeInbox();
+  }
+
+  function globalSearchMatches(text, query) {
+    const terms = normalizeMatch(query).split(" ").filter(Boolean);
+    if (!terms.length) return false;
+    const haystack = normalizeMatch(text);
+    const digits = String(text || "").replace(/\D/g, "");
+    return terms.every((term) => {
+      const termDigits = term.replace(/\D/g, "");
+      return haystack.includes(term) || (termDigits && digits.includes(termDigits));
+    });
+  }
+
+  function invoiceSearchRows() {
+    const rows = [];
+    const seen = new Set();
+    for (const [key, list] of invoicesByCustomer.entries()) {
+      const customer = findCustomer(key) || customers.find((item) => item.lime_id === key || item.legacy_lime_id === key);
+      if (!customer) continue;
+      for (const invoice of list || []) {
+        const stable = [
+          invoice.id,
+          invoice.invoice_number,
+          invoice.file_name,
+          invoice.file_url,
+          invoice.date || invoice.invoice_date,
+          customerKey(customer),
+        ].filter(Boolean).join("|");
+        if (seen.has(stable)) continue;
+        seen.add(stable);
+        rows.push({ invoice, customer });
+      }
+    }
+    return rows;
+  }
+
+  function globalSearchRows(query = globalSearchQuery) {
+    if (!String(query || "").trim()) return [];
+    const results = [];
+    for (const customer of customers || []) {
+      if (customer?.is_inactive) continue;
+      const text = customerHaystack(customer);
+      if (!globalSearchMatches(text, query)) continue;
+      results.push({
+        id: `customer:${customerKey(customer)}`,
+        kind: "Kunde",
+        title: cleanDisplayName(customer),
+        meta: [customer.phone, customer.email, addressFor(customer) || customer.location_tag, customer.tags].filter(Boolean).join(" · "),
+        customerId: customerKey(customer),
+        searchText: text,
+      });
+    }
+    for (const entry of allLeadEntries()) {
+      const customer = entry.customer;
+      const text = [
+        customerHaystack(customer),
+        entry.lead?.source,
+        entry.lead?.source_detail,
+        entry.lead?.product_interest,
+        leadStatusLabel(leadStatusForEntry(entry)),
+        leadNoteForEntry(entry),
+      ].filter(Boolean).join(" ");
+      if (!globalSearchMatches(text, query)) continue;
+      results.push({
+        id: `lead:${leadEntryKey(entry)}`,
+        kind: "Lead",
+        title: cleanDisplayName(customer),
+        meta: [leadStatusLabel(leadStatusForEntry(entry)), customer.phone, addressFor(customer) || customer.visit_city].filter(Boolean).join(" · "),
+        leadKey: leadEntryKey(entry),
+        searchText: text,
+      });
+    }
+    for (const row of orderRows()) {
+      const text = orderSearchText(row);
+      if (!globalSearchMatches(text, query)) continue;
+      results.push({
+        id: `order:${row.id}`,
+        kind: "Ordre",
+        title: row.order.title || defaultOrderTitle(row.customer, row.order.type),
+        meta: [cleanDisplayName(row.customer), orderStatusLabel(orderEffectiveStatus(row.order, row.job)), billingStatusLabel(orderEffectiveBillingStatus(row.order, row.job))].filter(Boolean).join(" · "),
+        orderId: row.id,
+        searchText: text,
+      });
+    }
+    for (const row of bookingRows()) {
+      const text = [
+        cleanDisplayName(row.customer),
+        customerHaystack(row.customer),
+        row.booking.type,
+        row.booking.status,
+        row.booking.note,
+        row.booking.resource,
+        row.booking.date,
+        bookingJobLabel(row),
+      ].filter(Boolean).join(" ");
+      if (!globalSearchMatches(text, query)) continue;
+      results.push({
+        id: `booking:${row.id}`,
+        kind: "Booking",
+        title: cleanDisplayName(row.customer),
+        meta: [formatDate(row.booking.date), bookingTimeText(row.booking), row.booking.resource, bookingJobLabel(row)].filter(Boolean).join(" · "),
+        bookingId: row.id,
+        customerId: customerKey(row.customer),
+        searchText: text,
+      });
+    }
+    for (const { invoice, customer } of invoiceSearchRows()) {
+      const text = [
+        invoice.invoice_number,
+        invoice.file_name,
+        invoice.description,
+        invoice.amount,
+        invoice.date || invoice.invoice_date,
+        customerHaystack(customer),
+      ].filter(Boolean).join(" ");
+      if (!globalSearchMatches(text, query)) continue;
+      results.push({
+        id: `invoice:${customerKey(customer)}:${invoice.id || invoice.invoice_number || invoice.file_name || results.length}`,
+        kind: "Faktura",
+        title: invoice.invoice_number ? `Faktura ${invoice.invoice_number}` : invoice.file_name || "Faktura",
+        meta: [cleanDisplayName(customer), formatDate(invoice.date || invoice.invoice_date), invoice.amount ? formatMoney(invoice.amount) : ""].filter(Boolean).join(" · "),
+        customerId: customerKey(customer),
+        searchText: text,
+      });
+    }
+    const rank = { Lead: 0, Kunde: 1, Ordre: 2, Booking: 3, Faktura: 4 };
+    return results
+      .sort((a, b) => (rank[a.kind] ?? 9) - (rank[b.kind] ?? 9) || String(a.title || "").localeCompare(String(b.title || ""), "nb"))
+      .slice(0, 18);
+  }
+
+  function renderGlobalSearch() {
+    if (!el.globalSearchResults) return;
+    const query = globalSearchQuery || el.globalSearchInput?.value?.trim() || "";
+    globalSearchResultCache.clear();
+    if (!query) {
+      el.globalSearchResults.innerHTML = `<div class="empty-state compact">Søk etter navn, telefon, adresse, lead, ordre, booking eller faktura.</div>`;
+      return;
+    }
+    if (normalizeMatch(query).length < 2) {
+      el.globalSearchResults.innerHTML = `<div class="empty-state compact">Skriv minst to tegn.</div>`;
+      return;
+    }
+    const rows = globalSearchRows(query);
+    if (!rows.length) {
+      el.globalSearchResults.innerHTML = `<div class="empty-state compact">Ingen treff på "${escapeHtml(query)}".</div>`;
+      return;
+    }
+    el.globalSearchResults.innerHTML = `
+      <div class="global-search-count">${rows.length.toLocaleString("nb-NO")} treff</div>
+      ${rows.map((row) => {
+        globalSearchResultCache.set(row.id, row);
+        return `
+          <button data-global-search-result="${escapeHtml(row.id)}" type="button" title="Åpne ${escapeHtml(row.kind.toLowerCase())}">
+            <span>${escapeHtml(row.kind)}</span>
+            <strong>${escapeHtml(row.title || "Uten navn")}</strong>
+            <small>${escapeHtml(row.meta || "Ingen ekstra info")}</small>
+          </button>
+        `;
+      }).join("")}
+    `;
+  }
+
+  function openGlobalSearchResult(id) {
+    const row = globalSearchResultCache.get(id);
+    if (!row) return;
+    if (row.kind === "Kunde" || row.kind === "Faktura") {
+      openCustomerCard(row.customerId);
+      return;
+    }
+    if (row.kind === "Lead") {
+      selectedLeadId = row.leadKey;
+      currentLeadFilter = "all";
+      currentLeadSearch = "";
+      if (el.leadStatusFilter) el.leadStatusFilter.value = "all";
+      if (el.leadSearch) el.leadSearch.value = "";
+      setView("leads");
+      return;
+    }
+    if (row.kind === "Ordre") {
+      selectedOrderId = row.orderId;
+      currentOrderFilter = "all";
+      currentOrderSearch = "";
+      if (el.orderStatusFilter) el.orderStatusFilter.value = "all";
+      if (el.orderSearch) el.orderSearch.value = "";
+      setView("orders");
+      return;
+    }
+    if (row.kind === "Booking") {
+      const linked = linkedOrderForBooking(row.bookingId);
+      if (linked?.id) {
+        selectedOrderId = linked.id;
+        currentOrderFilter = "all";
+        if (el.orderStatusFilter) el.orderStatusFilter.value = "all";
+        setView("orders");
+        return;
+      }
+      showBookingInPlanning(row.bookingId);
+    }
   }
 
   function renderBillingQueue() {
@@ -5301,6 +5518,7 @@
       </article>
     `;
     renderOfferTemplateSettings();
+    renderTagSettings();
     if (!admin) {
       el.profileList.innerHTML = `<div class="empty-state">Bare admin kan endre brukerroller.</div>`;
       return;
@@ -5339,6 +5557,28 @@
         </article>
       `;
     }).join("");
+  }
+
+  function customerTagUsageRows() {
+    const usage = new Map();
+    for (const customer of customers || []) {
+      if (!customer || customer.is_inactive) continue;
+      for (const tag of splitTags(customer.tags)) {
+        if (/^lead(status)?\s*:/i.test(tag) || normalizeMatch(tag) === "lead") continue;
+        const key = normalizeMatch(tag);
+        if (!key) continue;
+        const row = usage.get(key) || { tag, count: 0 };
+        row.count += 1;
+        if (tag.length < row.tag.length) row.tag = tag;
+        usage.set(key, row);
+      }
+    }
+    return [...usage.values()].sort((a, b) => a.tag.localeCompare(b.tag, "nb-NO"));
+  }
+
+  function customersWithTag(tag) {
+    const wanted = normalizeMatch(tag);
+    return (customers || []).filter((customer) => splitTags(customer.tags).some((item) => normalizeMatch(item) === wanted));
   }
 
   async function saveProfileFromSettings(profileId) {
@@ -5393,6 +5633,105 @@
     if (body) body.value = defaultGeneralOfferBody();
     if (prices) prices.value = defaultOfferPriceTermsText();
     setSyncStatus("Standard tilbudstekst er fylt inn. Trykk Lagre for å bruke den videre.", "ok");
+  }
+
+  function renderTagSettings() {
+    if (!el.tagSettings) return;
+    if (!isAdmin()) {
+      el.tagSettings.innerHTML = "";
+      return;
+    }
+    const rows = customerTagUsageRows();
+    const canSave = Boolean(store.isConfigured ? store.saveCustomer : demoEnabled);
+    el.tagSettings.innerHTML = `
+      <section class="settings-section">
+        <div class="section-head compact">
+          <div>
+            <h3>Tagger</h3>
+            <p>Rydd, gi nytt navn eller fjern tagger på alle kundekort samtidig.</p>
+          </div>
+        </div>
+        ${rows.length ? `
+          <div class="tag-settings-list">
+            ${rows.map((row) => `
+              <article data-tag-settings-row="${escapeHtml(row.tag)}">
+                <div>
+                  <strong>${escapeHtml(row.tag)}</strong>
+                  <span>${row.count.toLocaleString("nb-NO")} kundekort</span>
+                </div>
+                <input data-tag-rename-input="${escapeHtml(row.tag)}" value="${escapeHtml(row.tag)}" ${canSave ? "" : "disabled"} />
+                <div class="mini-action-row">
+                  <button data-rename-tag="${escapeHtml(row.tag)}" type="button" ${canSave ? "" : "disabled"} title="Gi taggen nytt navn på alle kundekort som bruker den.">Gi nytt navn</button>
+                  <button class="secondary danger" data-delete-tag="${escapeHtml(row.tag)}" type="button" ${canSave ? "" : "disabled"} title="Fjern taggen fra alle kundekort.">Slett</button>
+                </div>
+              </article>
+            `).join("")}
+          </div>
+        ` : `<div class="empty-state">Ingen egendefinerte tagger å rydde.</div>`}
+      </section>
+    `;
+  }
+
+  async function saveCustomerTagsFromSettings(customer, tags) {
+    if (!customer) return null;
+    const nextTags = uniqueTags(tags);
+    const updated = { ...customer, tags: nextTags };
+    if (store.isConfigured) {
+      const saved = await store.saveCustomer(updated);
+      const index = customers.findIndex((item) => customerKey(item) === customerKey(saved));
+      if (index >= 0) customers[index] = saved;
+      return saved;
+    }
+    requireLocalDemoStorage();
+    Object.assign(customer, updated);
+    const key = customerKey(customer);
+    customerEdits[key] = { ...(customerEdits[key] || {}), tags: nextTags };
+    saveLocalEdits();
+    return customer;
+  }
+
+  async function renameCustomerTagFromSettings(oldTag, newTag) {
+    if (!isAdmin()) throw new Error("Bare admin kan endre tagger.");
+    const cleanOld = String(oldTag || "").trim();
+    const cleanNew = String(newTag || "").trim();
+    if (!cleanOld) throw new Error("Fant ikke taggen som skulle endres.");
+    if (!cleanNew) throw new Error("Ny tagg kan ikke være tom.");
+    if (normalizeMatch(cleanOld) === normalizeMatch(cleanNew)) {
+      setSyncStatus("Taggen er uendret.", "ok");
+      return;
+    }
+    const affected = customersWithTag(cleanOld);
+    for (const customer of affected) {
+      const next = splitTags(customer.tags).map((tag) => normalizeMatch(tag) === normalizeMatch(cleanOld) ? cleanNew : tag);
+      await saveCustomerTagsFromSettings(customer, next);
+    }
+    renderAll();
+    setSyncStatus(`Taggen "${cleanOld}" ble endret til "${cleanNew}" på ${affected.length.toLocaleString("nb-NO")} kundekort.`, "ok");
+  }
+
+  async function deleteCustomerTagFromSettings(tag) {
+    if (!isAdmin()) throw new Error("Bare admin kan slette tagger.");
+    const cleanTag = String(tag || "").trim();
+    if (!cleanTag) return;
+    const affected = customersWithTag(cleanTag);
+    if (!affected.length) {
+      setSyncStatus("Taggen var ikke i bruk.", "ok");
+      renderTagSettings();
+      return;
+    }
+    const ok = await askForConfirmation({
+      title: "Slett tagg",
+      message: `Fjerne taggen "${cleanTag}" fra ${affected.length.toLocaleString("nb-NO")} kundekort? Kundene slettes ikke.`,
+      confirmLabel: "Fjern tagg",
+      tone: "danger",
+    });
+    if (!ok) return;
+    for (const customer of affected) {
+      const next = splitTags(customer.tags).filter((item) => normalizeMatch(item) !== normalizeMatch(cleanTag));
+      await saveCustomerTagsFromSettings(customer, next);
+    }
+    renderAll();
+    setSyncStatus(`Taggen "${cleanTag}" ble fjernet fra ${affected.length.toLocaleString("nb-NO")} kundekort.`, "ok");
   }
 
   function renderMoveQueue(rows = moveQueueRows()) {
@@ -6857,6 +7196,21 @@
     `;
   }
 
+  function leadQuickNoteHtml(leadTarget, note, canEditLead) {
+    return `
+      <section class="detail-section lead-quick-note">
+        <div class="section-title-row">
+          <div>
+            <h3>Samtalenotat</h3>
+            <p>Skriv kort hva kunden sa, hva som mangler, og hva neste avtale er.</p>
+          </div>
+          ${canEditLead ? `<button data-save-lead-note="${escapeHtml(leadTarget)}" type="button" title="Lagre siste samtalenotat på leaden.">Lagre notat</button>` : ""}
+        </div>
+        <textarea data-lead-note-text="${escapeHtml(leadTarget)}" rows="3" placeholder="Eksempel: Snakket med kunde. Ønsker tilbud på to modeller og varmepumpehus. Ring tilbake tirsdag.">${escapeHtml(note || "")}</textarea>
+      </section>
+    `;
+  }
+
   function leadEmbeddedCustomerSections(customer) {
     const key = customerKey(customer);
     const invoices = invoicesByCustomer.get(key) || invoicesByCustomer.get(customer.lime_id) || [];
@@ -6918,6 +7272,7 @@
       ${leadNextActionHtml(entry, customer, realCustomer, status, leadTarget)}
       ${!realCustomer && entry?.lead ? leadCustomerMatchHtml(entry) : ""}
       ${leadContactSectionHtml(entry, customer, realCustomer, status)}
+      ${leadQuickNoteHtml(leadTarget, note, canEditLead)}
       <section class="detail-section">
         <h3>Oppfølging</h3>
         ${canEditLead ? leadStatusControlHtml(customer, status, leadTarget) : `<p class="muted">Denne leaden ligger som henvendelse. Opprett kundekort først når saken er reell og skal følges opp videre.</p>`}
@@ -6929,10 +7284,6 @@
           <button data-lead-set-status="lost" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button" title="Avslutt saken når kunden ikke skal gå videre.">Tapt</button>
           ${realCustomer && !entry?.lead ? `<button class="secondary" data-inactivate-lead="${escapeHtml(key)}" type="button" title="Skjul denne gamle kunde-tag-leaden fra aktiv leadliste.">Sett inaktiv</button>` : ""}` : ""}
         </div>
-        <label class="lead-note-editor">Notat
-          <textarea data-lead-note-text="${escapeHtml(leadTarget)}" rows="4" placeholder="Hva er gjort, hva venter vi på, og hva er neste steg?">${escapeHtml(note)}</textarea>
-        </label>
-        ${canEditLead ? `<button data-save-lead-note="${escapeHtml(leadTarget)}" type="button" title="Lagre oppfølgingsnotat på leaden.">Lagre notat</button>` : ""}
       </section>
       <section class="detail-section lead-template-section">
         <h3>E-postmaler</h3>
@@ -7649,7 +8000,7 @@
     const templateId = defaultLeadOfferTemplateId(entry);
     const template = leadTemplates[templateId] || leadTemplates.heatpump_standard_offer;
     const body = template.body(customer);
-    const disabled = store.sendOfferEmail ? "" : "disabled";
+    const disabled = store.isConfigured && store.sendOfferEmail ? "" : "disabled";
     return `
       <section class="detail-section lead-offer-section">
         <h3>Tilbud</h3>
@@ -10207,6 +10558,15 @@
     if (el.orderStatusFilter) el.orderStatusFilter.value = currentOrderFilter;
     setView("orders");
   }));
+  el.globalSearchInput?.addEventListener("input", () => {
+    globalSearchQuery = el.globalSearchInput.value.trim();
+    renderGlobalSearch();
+  });
+  el.globalSearchResults?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-global-search-result]");
+    if (!button) return;
+    openGlobalSearchResult(button.dataset.globalSearchResult);
+  });
 
   el.loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -10296,6 +10656,22 @@
     }
     const reset = event.target.closest("[data-reset-offer-settings]");
     if (reset) resetOfferSettingsForm();
+  });
+  el.tagSettings?.addEventListener("click", (event) => {
+    const rename = event.target.closest("[data-rename-tag]");
+    if (rename) {
+      const tag = rename.dataset.renameTag || "";
+      const row = rename.closest("[data-tag-settings-row]");
+      const next = row?.querySelector("[data-tag-rename-input]")?.value || "";
+      renameCustomerTagFromSettings(tag, next)
+        .catch((error) => setSyncStatus(error.message || "Klarte ikke endre tagg.", "error"));
+      return;
+    }
+    const remove = event.target.closest("[data-delete-tag]");
+    if (remove) {
+      deleteCustomerTagFromSettings(remove.dataset.deleteTag)
+        .catch((error) => setSyncStatus(error.message || "Klarte ikke slette tagg.", "error"));
+    }
   });
 
   el.aiRegistrationParseButton?.addEventListener("click", parseAiRegistrationInput);
