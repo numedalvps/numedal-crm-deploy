@@ -159,6 +159,7 @@
   let websiteSubmissions = [];
   let intakeItems = [];
   let profiles = [];
+  let crmSettings = {};
   let customerLocationsByCustomer = new Map();
   let customerLocationById = new Map();
   let invoicesByCustomer = new Map();
@@ -354,6 +355,7 @@
     technicianRouteButton: document.getElementById("technicianRouteButton"),
     technicianJobs: document.getElementById("technicianJobs"),
     settingsAccessSummary: document.getElementById("settingsAccessSummary"),
+    offerTemplateSettings: document.getElementById("offerTemplateSettings"),
     refreshProfilesButton: document.getElementById("refreshProfilesButton"),
     profileList: document.getElementById("profileList"),
     customerDialog: document.getElementById("customerDialog"),
@@ -909,6 +911,8 @@
           "",
           "Prisen forutsetter standard montering med normal rørføring/kanal slik vi har snakket om. Eventuelle tillegg som ekstra rør, ekstra kanal, dryppanne, tak, varmepumpehus eller spesielle stativer avklares før montering.",
           "",
+          offerPriceTermsText(),
+          "",
           "Gi gjerne beskjed hvis du ønsker å gå videre, så finner vi en monteringsdato som passer.",
           "",
           "Mvh",
@@ -916,6 +920,15 @@
           "Numedal Varmepumpeservice",
           "93436855",
         ].join("\n");
+      },
+    },
+    general_price_offer: {
+      title: "Generelt pristilbud",
+      get subject() {
+        return offerSettings().generalOfferSubject;
+      },
+      body(customer) {
+        return renderOfferTextTemplate(offerSettings().generalOfferBody, customer);
       },
     },
     fujitsu_floor: {
@@ -1102,6 +1115,94 @@
 
   function customerOfferAddress(customer) {
     return addressFor(customer) || [customer?.visit_zip, customer?.visit_city || customer?.location_tag].filter(Boolean).join(" ");
+  }
+
+  function defaultOfferPriceTermsText() {
+    return [
+      "Standard montering inkluderer:",
+      "- Rør, deksel og kabel inntil 4 meter mellom utedel og innedel",
+      "- Plassering av utedel på vegg inntil 1,5 meter over bakkenivå",
+      "- Boring i trevegg",
+      "",
+      "NB! Montering på trevegg krever annet veggfeste og fjærdempere. Dette avviker fra standard installasjon.",
+      "",
+      "Tilleggsarbeid:",
+      "- Elektrisk strømtilførsel til varmepumpen er ikke inkludert i prisen. Dette må utføres av autorisert installatør.",
+      "- Ekstra rør og strøm/signalkabel per meter utover standard: 612,50,-",
+      "- Ekstra PVC-kanaler per meter utover standard: 300,-",
+      "- Fjærdempere montert: 615,-",
+      "- Spesialbrakett for lav murvegg: 900,-",
+      "- Markstativ: 1 750,-",
+      "- Trollflex montert: 650,-",
+      "- Tilslutningskabel 3 meter: 300,-",
+      "- Tilslutningskabel 7 meter: 450,-",
+      "- Enkel murboring: 1 240,-",
+      "- Kjerneboring: 4 375,-",
+      "- Ståltak: 1 200,-",
+      "- Montering ståltak: 600,-",
+      "- Trehus/varmepumpehus: 3 690,-",
+      "- Montering trehus/varmepumpehus: normalt fra 850,-. Montering kan variere etter vegg og tidsbruk.",
+      "- Demontering av gammel pumpe inkl. gasstømming: 1 990,-",
+      "- Bruddgebyr etter 24 timer før montasje: 1 490,-",
+      "- Dryppanne med varmekabel: 3 990,-",
+      "- Montering av dryppanne med varmekabel: 500,-",
+      "- Meterpris for varmekabel/drensslange over 2 meter: 500,-",
+      "- Timepris montør ekstra tjenester: 1 112,50,-",
+      "- Montering av bakkestativ som kunde selv har kjøpt: 615,-",
+      "- Bomtur: 1 990,-",
+      "- Montering på trevegg inkludert springfjærer og fratrekk for annet feste: 1 800,-",
+    ].join("\n");
+  }
+
+  function defaultGeneralOfferBody() {
+    return [
+      "Hei {fornavn}!",
+      "",
+      "Her er et foreløpig pristilbud basert på informasjonen vi har nå.",
+      "",
+      "Aktuelle varmepumper/modeller:",
+      "- [modell 1]: [pris] ferdig montert",
+      "- [modell 2]: [pris] ferdig montert",
+      "",
+      "Aktuelle tillegg:",
+      "- Varmepumpehus/trehus: [ja/nei/pris]",
+      "- Ekstra rør/kanal/stativ/dryppanne: [legg inn hvis aktuelt]",
+      "",
+      "Anleggsadresse: {adresse}",
+      "",
+      "{prisgrunnlag}",
+      "",
+      "Hvis du ønsker å gå videre, finner vi en monteringsdato som passer.",
+      "",
+      "Mvh",
+      "Gunnar",
+      "Numedal Varmepumpeservice",
+      "93436855",
+    ].join("\n");
+  }
+
+  function offerSettings() {
+    const saved = crmSettings.offer_settings && typeof crmSettings.offer_settings === "object"
+      ? crmSettings.offer_settings
+      : {};
+    return {
+      generalOfferSubject: String(saved.generalOfferSubject || "Pristilbud på varmepumpe og tilleggsarbeid"),
+      generalOfferBody: String(saved.generalOfferBody || defaultGeneralOfferBody()),
+      priceTermsText: String(saved.priceTermsText || defaultOfferPriceTermsText()),
+    };
+  }
+
+  function offerPriceTermsText() {
+    return offerSettings().priceTermsText;
+  }
+
+  function renderOfferTextTemplate(templateText, customer) {
+    const first = firstName(customer) || "";
+    return String(templateText || "")
+      .replaceAll("{fornavn}", first)
+      .replaceAll("{navn}", cleanDisplayName(customer) || "")
+      .replaceAll("{adresse}", customerOfferAddress(customer) || "[adresse]")
+      .replaceAll("{prisgrunnlag}", offerPriceTermsText());
   }
 
   function leadStatusLabel(status) {
@@ -3555,6 +3656,7 @@
       websiteSubmissions = [];
       intakeItems = [];
       profiles = [];
+      crmSettings = {};
       buildCustomerLocations([]);
       buildInvoices([]);
       buildServiceEvents([]);
@@ -3588,6 +3690,7 @@
     websiteSubmissions = loaded.websiteSubmissions || [];
     intakeItems = loaded.intakeItems || [];
     profiles = loaded.profiles || [];
+    crmSettings = loaded.crmSettings || {};
     buildCustomerLocations(loaded.customerLocations || []);
     buildInvoices(loaded.invoices || []);
     buildServiceEvents(loaded.serviceEvents || []);
@@ -5097,6 +5200,42 @@
     return role === "admin" ? "Admin" : "Tekniker";
   }
 
+  function renderOfferTemplateSettings() {
+    if (!el.offerTemplateSettings) return;
+    if (!isAdmin()) {
+      el.offerTemplateSettings.innerHTML = "";
+      return;
+    }
+    const settings = offerSettings();
+    const canSave = Boolean(store.isConfigured && store.saveCrmSetting);
+    const disabled = canSave ? "" : "disabled";
+    el.offerTemplateSettings.innerHTML = `
+      <section class="settings-section">
+        <div class="section-head compact">
+          <div>
+            <h3>Tilbudsmaler og priser</h3>
+            <p>Brukes av malen Generelt pristilbud i lead-fanen.</p>
+          </div>
+          <div class="mini-action-row">
+            <button class="secondary" data-reset-offer-settings type="button">Standardtekst</button>
+            <button data-save-offer-settings type="button" ${disabled}>Lagre</button>
+          </div>
+        </div>
+        ${canSave ? "" : `<p class="form-hint">Lagring av maler krever Supabase og crm_settings-tabellen.</p>`}
+        <label>Emne for generelt pristilbud
+          <input data-offer-settings-subject value="${escapeHtml(settings.generalOfferSubject)}" ${disabled} />
+        </label>
+        <label>Tekstmal
+          <textarea data-offer-settings-body rows="12" ${disabled}>${escapeHtml(settings.generalOfferBody)}</textarea>
+        </label>
+        <label>Prisgrunnlag / standard montering og tillegg
+          <textarea data-offer-settings-prices rows="16" ${disabled}>${escapeHtml(settings.priceTermsText)}</textarea>
+        </label>
+        <p class="form-hint">Plassholdere: {fornavn}, {navn}, {adresse}, {prisgrunnlag}. Produktdatablad/PDF-vedlegg kommer som egen tilbudsmodul senere.</p>
+      </section>
+    `;
+  }
+
   function renderSettings() {
     if (!el.settingsAccessSummary || !el.profileList) return;
     const admin = isAdmin();
@@ -5117,6 +5256,7 @@
         <span>${store.isConfigured ? "Innlogging og roller styres mot databasen" : "Lokal demo viser bare testbrukere"}</span>
       </article>
     `;
+    renderOfferTemplateSettings();
     if (!admin) {
       el.profileList.innerHTML = `<div class="empty-state">Bare admin kan endre brukerroller.</div>`;
       return;
@@ -5182,6 +5322,33 @@
     else profiles.push(saved);
     renderSettings();
     setSyncStatus("Brukerprofil oppdatert.", "ok");
+  }
+
+  async function saveOfferSettingsFromSettings() {
+    if (!isAdmin()) throw new Error("Bare admin kan endre tilbudsmaler.");
+    if (!store.saveCrmSetting) throw new Error("Lagring av tilbudsmaler krever Supabase.");
+    const container = el.offerTemplateSettings;
+    const next = {
+      generalOfferSubject: container?.querySelector("[data-offer-settings-subject]")?.value?.trim() || "Pristilbud på varmepumpe og tilleggsarbeid",
+      generalOfferBody: container?.querySelector("[data-offer-settings-body]")?.value || defaultGeneralOfferBody(),
+      priceTermsText: container?.querySelector("[data-offer-settings-prices]")?.value || defaultOfferPriceTermsText(),
+    };
+    const saved = await store.saveCrmSetting("offer_settings", next);
+    crmSettings.offer_settings = saved?.value || next;
+    renderSettings();
+    renderLeadDetail();
+    setSyncStatus("Tilbudsmaler og prisgrunnlag lagret.", "ok");
+  }
+
+  function resetOfferSettingsForm() {
+    const container = el.offerTemplateSettings;
+    const subject = container?.querySelector("[data-offer-settings-subject]");
+    const body = container?.querySelector("[data-offer-settings-body]");
+    const prices = container?.querySelector("[data-offer-settings-prices]");
+    if (subject) subject.value = "Pristilbud på varmepumpe og tilleggsarbeid";
+    if (body) body.value = defaultGeneralOfferBody();
+    if (prices) prices.value = defaultOfferPriceTermsText();
+    setSyncStatus("Standard tilbudstekst er fylt inn. Trykk Lagre for å bruke den videre.", "ok");
   }
 
   function renderMoveQueue(rows = moveQueueRows()) {
@@ -6494,10 +6661,10 @@
     setSyncStatus("Kundekort opprettet fra lead. Du kan nå sette status, opprette ordre eller booke.", "ok");
   }
 
-  function leadTemplateButtons(customer) {
+  function leadTemplateButtons(customer, target = "") {
     const key = customerKey(customer);
     return Object.entries(leadTemplates).map(([id, template]) => (
-      `<button data-copy-lead-template="${escapeHtml(id)}" data-lead-template-customer="${escapeHtml(key)}" type="button" title="Kopier e-postmalen til utklippstavlen.">${escapeHtml(template.title)}</button>`
+      `<button data-copy-lead-template="${escapeHtml(id)}" data-lead-template-customer="${escapeHtml(key)}" data-lead-template-target="${escapeHtml(target)}" type="button" title="Fyll tilbudsutkastet hvis tilbudsfeltet er synlig, ellers kopier teksten.">${escapeHtml(template.title)}</button>`
     )).join("");
   }
 
@@ -6557,8 +6724,8 @@
       </section>
       <section class="detail-section lead-template-section">
         <h3>E-postmaler</h3>
-        <p>Kopier maltekst eller bruk den som tilbudsutkast.</p>
-        <div class="lead-template-buttons">${leadTemplateButtons(customer)}</div>
+        <p>Trykk på en mal for å fylle tilbudsutkastet under. Hvis tilbudsfeltet ikke finnes, kopieres malen.</p>
+        <div class="lead-template-buttons">${leadTemplateButtons(customer, leadTarget)}</div>
       </section>
       ${isAdmin() ? leadOfferComposerHtml(entry) : ""}
       <dl class="facts">
@@ -7254,11 +7421,11 @@
 
   function offerSenderOptions(selected = "post@numedalvps.no") {
     const senders = [
-      ["post@numedalvps.no", "post@numedalvps.no"],
-      ["gunnar@numedalvps.no", "gunnar@numedalvps.no"],
+      { value: "post@numedalvps.no", label: "post@numedalvps.no", disabled: false },
+      { value: "gunnar@numedalvps.no", label: "gunnar@numedalvps.no (ikke aktivert)", disabled: true },
     ];
-    return senders.map(([value, label]) => (
-      `<option value="${escapeHtml(value)}" ${selected === value ? "selected" : ""}>${escapeHtml(label)}</option>`
+    return senders.map((sender) => (
+      `<option value="${escapeHtml(sender.value)}" ${selected === sender.value ? "selected" : ""} ${sender.disabled ? "disabled" : ""}>${escapeHtml(sender.label)}</option>`
     )).join("");
   }
 
@@ -7372,6 +7539,15 @@
     setSyncStatus("Sender tilbud...", "");
     const result = await store.sendOfferEmail(payload);
     if (!result?.ok) throw new Error(result?.error || "Klarte ikke sende tilbud.");
+    const accepted = Array.isArray(result.accepted)
+      ? result.accepted.map((item) => String(item?.address || item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    const rejected = Array.isArray(result.rejected)
+      ? result.rejected.map((item) => String(item?.address || item || "").trim().toLowerCase()).filter(Boolean)
+      : [];
+    if (!result.sent || !accepted.includes(payload.to.toLowerCase()) || rejected.length) {
+      throw new Error("E-postserveren bekreftet ikke mottakeren. Leaden er ikke markert som sendt.");
+    }
 
     const entry = leadEntryForTarget(target);
     if (entry?.lead?.id) {
@@ -9900,6 +10076,16 @@
     saveProfileFromSettings(button.dataset.saveProfile)
       .catch((error) => setSyncStatus(error.message || "Klarte ikke lagre brukerprofil.", "error"));
   });
+  el.offerTemplateSettings?.addEventListener("click", (event) => {
+    const save = event.target.closest("[data-save-offer-settings]");
+    if (save) {
+      saveOfferSettingsFromSettings()
+        .catch((error) => setSyncStatus(error.message || "Klarte ikke lagre tilbudsmaler.", "error"));
+      return;
+    }
+    const reset = event.target.closest("[data-reset-offer-settings]");
+    if (reset) resetOfferSettingsForm();
+  });
 
   el.aiRegistrationParseButton?.addEventListener("click", parseAiRegistrationInput);
   el.aiRegistrationClearButton?.addEventListener("click", clearAiRegistration);
@@ -10180,6 +10366,13 @@
     }
     const template = event.target.closest("[data-copy-lead-template]");
     if (template) {
+      const target = template.dataset.leadTemplateTarget || "";
+      const fields = target ? leadOfferFields(target) : {};
+      if (fields?.text) {
+        fillLeadOfferTemplate(target, template.dataset.copyLeadTemplate);
+        setSyncStatus("Malen er lagt inn i tilbudsfeltet.", "ok");
+        return;
+      }
       copyLeadTemplate(template.dataset.copyLeadTemplate, template.dataset.leadTemplateCustomer)
         .catch((error) => setSyncStatus(error.message || "Klarte ikke kopiere e-postmal.", "error"));
       return;

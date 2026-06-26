@@ -595,6 +595,17 @@
     );
   }
 
+  function isOptionalSettingsError(error) {
+    return error && (
+      error.code === "42P01"
+      || error.code === "42501"
+      || /relation .* does not exist/i.test(error.message || "")
+      || /Could not find the table/i.test(error.message || "")
+      || /permission denied for table crm_settings/i.test(error.message || "")
+      || /crm_settings/i.test(error.message || "") && /schema cache/i.test(error.message || "")
+    );
+  }
+
   function isBookingOverlapError(error) {
     return error && (
       error.code === "23P01"
@@ -721,6 +732,7 @@
         { data: websiteSubmissionRows, error: websiteSubmissionError },
         { data: profileRows, error: profileError },
         intakeResult,
+        settingsResult,
       ] = await Promise.all([
         fetchAllRows(() => supabase.from("customers").select("*").order("name")),
         fetchAllRows(() => supabase.from("bookings").select("*").neq("status", "cancelled").order("starts_at")),
@@ -737,6 +749,7 @@
         supabase.from("website_submissions").select("*").order("received_at", { ascending: false }).limit(200),
         supabase.from("profiles").select("*").order("display_name"),
         supabase.from("intake_items").select("*").in("status", ["draft", "needs_review", "ready", "failed"]).order("created_at", { ascending: false }).limit(100),
+        supabase.from("crm_settings").select("*"),
       ]);
       if (customerError) throw customerError;
       if (bookingError) throw bookingError;
@@ -753,6 +766,7 @@
       if (websiteSubmissionError) throw websiteSubmissionError;
       if (profileError) throw profileError;
       if (intakeResult.error && !isOptionalIntakeError(intakeResult.error)) throw intakeResult.error;
+      if (settingsResult.error && !isOptionalSettingsError(settingsResult.error)) throw settingsResult.error;
       return {
         customers: (customerRows || []).map(customerFromDb),
         bookings: Object.fromEntries((bookingRows || []).map((row) => [row.id, bookingFromDb(row)])),
@@ -773,7 +787,22 @@
         websiteSubmissions: websiteSubmissionRows || [],
         profiles: profileRows || [],
         intakeItems: intakeResult.error ? [] : intakeResult.data || [],
+        crmSettings: settingsResult.error
+          ? {}
+          : Object.fromEntries((settingsResult.data || []).map((row) => [row.key, row.value])),
       };
+    },
+    async saveCrmSetting(key, value) {
+      const supabase = await requireClient();
+      const cleanKey = String(key || "").trim();
+      if (!/^[a-z0-9_:-]{2,80}$/i.test(cleanKey)) throw new Error("Ugyldig innstillingsnøkkel.");
+      const { data, error } = await supabase
+        .from("crm_settings")
+        .upsert({ key: cleanKey, value, updated_at: new Date().toISOString() }, { onConflict: "key" })
+        .select("*")
+        .single();
+      if (error) throw error;
+      return data;
     },
     async saveProfile(id, patch) {
       const supabase = await requireClient();
