@@ -19,6 +19,7 @@
     orders: "numedalWebOrders",
     insulationCalc: "numedalWebInsulationCalc",
     edits: "numedalWebCustomerEdits",
+    leads: "numedalWebLeads",
     deleted: "numedalWebDeletedCustomers",
     doneJobs: "numedalWebDoneJobs",
   };
@@ -1262,6 +1263,9 @@
   function leadStatusFromDb(status) {
     const normalized = String(status || "").toLowerCase();
     const map = {
+      followup: "followup",
+      needs_offer: "needs_offer",
+      offer_sent: "offer_sent",
       new: "followup",
       contacted: "followup",
       qualified: "followup",
@@ -1302,7 +1306,7 @@
     if (!lead) return "";
     const activity = latestNoteActivityForLead(lead);
     if (String(activity?.activity_type || "").toLowerCase() === "note") return String(activity.body || "").trim();
-    return String(activity?.body || lead.product_interest || lead.source_detail || "").trim();
+    return String(activity?.body || lead.note || lead.product_interest || lead.source_detail || "").trim();
   }
 
   function leadStatusForCustomer(customer) {
@@ -1407,11 +1411,15 @@
   }
 
   async function setLeadRecordStatus(entryKey, status) {
-    if (!store.updateLead) throw new Error("Endring av database-lead krever oppdatert Supabase-adapter.");
     const entry = leadEntryForTarget(entryKey);
     if (!entry?.lead?.id) throw new Error("Fant ikke leaden.");
-    const updatedLead = updateLeadInMemory(await store.updateLead(entry.lead.id, { status }));
-    await saveLeadStatusActivity(updatedLead, status);
+    let updatedLead = null;
+    if (store.isConfigured && store.updateLead) {
+      updatedLead = updateLeadInMemory(await store.updateLead(entry.lead.id, { status }));
+      await saveLeadStatusActivity(updatedLead, status);
+    } else {
+      updatedLead = updateLeadInMemory(saveLocalLeadPatch(entry.lead.id, { status }));
+    }
     selectedLeadId = `lead:${updatedLead.id}`;
     currentLeadFilter = status || "followup";
     if (el.leadStatusFilter) el.leadStatusFilter.value = currentLeadFilter;
@@ -1444,14 +1452,18 @@
     const entry = leadEntryForTarget(entryKey);
     if (!entry?.lead?.id) throw new Error("Fant ikke leaden.");
     const customerId = leadCustomerId(entry.lead) || "";
-    await saveActivityRecord({
-      customer_id: customerId || null,
-      lead_id: entry.lead.id,
-      activity_type: "note",
-      summary: note.trim() ? "Leadnotat" : "Leadnotat ryddet",
-      body: note.trim() || null,
-      metadata: { source: "lead_detail" },
-    });
+    if (store.isConfigured) {
+      await saveActivityRecord({
+        customer_id: customerId || null,
+        lead_id: entry.lead.id,
+        activity_type: "note",
+        summary: note.trim() ? "Leadnotat" : "Leadnotat ryddet",
+        body: note.trim() || null,
+        metadata: { source: "lead_detail" },
+      });
+    } else {
+      saveLocalLeadPatch(entry.lead.id, { note: note.trim() });
+    }
     selectedLeadId = `lead:${entry.lead.id}`;
     renderAll();
     setView("leads");
@@ -2187,6 +2199,7 @@
         updated_at: new Date().toISOString(),
       };
       leads.unshift(localLead);
+      saveLocalLeads();
       selectedLeadId = `lead:${localLead.id}`;
       clearAiRegistration();
       setView("leads");
@@ -3236,9 +3249,9 @@
 
   function customerActionLinks(customer) {
     const links = [];
-    if (customer.phone) links.push(`<a href="tel:${escapeHtml(phoneForLink(customer.phone))}">Ring</a>`);
-    if (customer.email) links.push(`<a href="${escapeHtml(emailUrl(customer))}" target="_blank" rel="noreferrer">E-post</a>`);
-    if (mapQuery(customer)) links.push(`<a href="${escapeHtml(mapsUrl(customer))}" target="_blank" rel="noreferrer">Kart</a>`);
+    if (customer.phone) links.push(`<a href="tel:${escapeHtml(phoneForLink(customer.phone))}" title="Ring kunden med registrert telefonnummer.">Ring</a>`);
+    if (customer.email) links.push(`<a href="${escapeHtml(emailUrl(customer))}" target="_blank" rel="noreferrer" title="Åpne Gmail med kundens e-postadresse ferdig utfylt.">E-post</a>`);
+    if (mapQuery(customer)) links.push(`<a href="${escapeHtml(mapsUrl(customer))}" target="_blank" rel="noreferrer" title="Åpne anleggsadressen i Google Maps.">Kart</a>`);
     return links.join("");
   }
 
@@ -3635,11 +3648,19 @@
       .filter((customer) => !deletedCustomers.has(customer.lime_id))
       .filter((customer) => !hiddenDuplicateLimeIds.has(String(customer.lime_id || customer.legacy_lime_id || "")))
       .map((customer) => ({ ...customer, ...(customerEdits[customer.lime_id] || {}) }));
+    const customerKeys = new Set(customers.map((customer) => customerKey(customer)).filter(Boolean));
+    Object.values(customerEdits)
+      .filter((customer) => customer && customerKey(customer) && !customerKeys.has(customerKey(customer)) && !deletedCustomers.has(customerKey(customer)))
+      .forEach((customer) => {
+        customers.unshift(customer);
+        customerKeys.add(customerKey(customer));
+      });
     applyLimeEnrichmentToCustomers(customers);
     applyKnownCustomerCorrections(customers);
     buildInvoices(rawData.invoices || []);
     buildServiceEvents(localServiceEvents());
     buildInstallations(localInstallations());
+    leads = localLeads();
   }
 
   async function supabaseLoad() {
@@ -3863,6 +3884,29 @@
   function saveLocalEdits() {
     requireLocalDemoStorage();
     localStorage.setItem(storage.edits, JSON.stringify(customerEdits));
+  }
+
+  function localLeads() {
+    try {
+      return JSON.parse(localStorage.getItem(storage.leads) || "[]");
+    } catch {
+      return [];
+    }
+  }
+
+  function saveLocalLeads() {
+    requireLocalDemoStorage();
+    localStorage.setItem(storage.leads, JSON.stringify(leads));
+  }
+
+  function saveLocalLeadPatch(id, patch = {}) {
+    requireLocalDemoStorage();
+    const index = leads.findIndex((lead) => lead.id === id);
+    if (index < 0) throw new Error("Fant ikke leaden.");
+    const updated = { ...leads[index], ...patch, updated_at: new Date().toISOString() };
+    leads[index] = updated;
+    saveLocalLeads();
+    return updated;
   }
 
   function bookingRows() {
@@ -5984,7 +6028,15 @@
     el.leadNeedsOfferMetric.textContent = all.filter((entry) => leadStatusForEntry(entry) === "needs_offer").length.toLocaleString("nb-NO");
     el.leadOfferSentMetric.textContent = all.filter((entry) => leadStatusForEntry(entry) === "offer_sent").length.toLocaleString("nb-NO");
     el.leadLostMetric.textContent = all.filter((entry) => leadStatusForEntry(entry) === "lost").length.toLocaleString("nb-NO");
-    const list = filteredLeads();
+    let list = filteredLeads();
+    if (!list.length && !currentLeadSearch && currentLeadFilter === "followup" && all.length) {
+      const fallbackFilter = ["needs_offer", "offer_sent", "won", "lost"].find((status) => all.some((entry) => leadStatusForEntry(entry) === status));
+      if (fallbackFilter) {
+        currentLeadFilter = fallbackFilter;
+        if (el.leadStatusFilter) el.leadStatusFilter.value = currentLeadFilter;
+        list = filteredLeads();
+      }
+    }
     if (!selectedLeadId || !selectedLeadEntry(list)) selectedLeadId = leadEntryKey(list[0]) || "";
     el.leadList.innerHTML = "";
     if (!list.length) {
@@ -6592,12 +6644,15 @@
   }
 
   async function linkLeadToExistingCustomer(entryKey, customerId) {
-    if (!store.updateLead) throw new Error("Kobling av lead krever oppdatert Supabase-adapter.");
+    if (store.isConfigured && !store.updateLead) throw new Error("Kobling av lead krever oppdatert Supabase-adapter.");
+    if (!store.isConfigured) requireLocalDemoStorage();
     const entry = allLeadEntries().find((item) => leadEntryKey(item) === entryKey);
     if (!entry?.lead) throw new Error("Fant ikke leaden.");
     const customer = findCustomer(customerId);
     if (!customer) throw new Error("Fant ikke kundekortet som skulle kobles.");
-    const updatedLead = await store.updateLead(entry.lead.id, { existing_customer_id: customerKey(customer) });
+    const updatedLead = store.isConfigured
+      ? await store.updateLead(entry.lead.id, { existing_customer_id: customerKey(customer) })
+      : saveLocalLeadPatch(entry.lead.id, { existing_customer_id: customerKey(customer) });
     const leadIndex = leads.findIndex((lead) => lead.id === updatedLead.id);
     if (leadIndex >= 0) leads[leadIndex] = updatedLead;
     else leads.unshift(updatedLead);
@@ -6617,7 +6672,8 @@
   }
 
   async function createCustomerFromLead(entryKey) {
-    if (!store.saveCustomer || !store.updateLead) throw new Error("Opprett kundekort fra lead krever oppdatert Supabase-adapter.");
+    if (store.isConfigured && (!store.saveCustomer || !store.updateLead)) throw new Error("Opprett kundekort fra lead krever oppdatert Supabase-adapter.");
+    if (!store.isConfigured) requireLocalDemoStorage();
     const entry = allLeadEntries().find((item) => leadEntryKey(item) === entryKey);
     if (!entry?.lead) throw new Error("Fant ikke leaden.");
     const existingCustomerId = leadCustomerId(entry.lead);
@@ -6635,12 +6691,20 @@
     }
     const draft = leadCustomerDraft(entry);
     if (!draft.name && !draft.phone && !draft.email) throw new Error("Leaden mangler nok kontaktinfo til å opprette kundekort.");
-    const savedCustomer = await store.saveCustomer(draft);
+    const savedCustomer = store.isConfigured
+      ? await store.saveCustomer(draft)
+      : { ...draft, lime_id: draft.lime_id || `lead-customer-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` };
     const index = customers.findIndex((customer) => customerKey(customer) === customerKey(savedCustomer));
     if (index >= 0) customers[index] = savedCustomer;
     else customers.unshift(savedCustomer);
+    if (!store.isConfigured) {
+      customerEdits[customerKey(savedCustomer)] = savedCustomer;
+      saveLocalEdits();
+    }
 
-    const updatedLead = await store.updateLead(entry.lead.id, { existing_customer_id: savedCustomer.id });
+    const updatedLead = store.isConfigured
+      ? await store.updateLead(entry.lead.id, { existing_customer_id: savedCustomer.id })
+      : saveLocalLeadPatch(entry.lead.id, { existing_customer_id: customerKey(savedCustomer), converted_customer_id: customerKey(savedCustomer) });
     const leadIndex = leads.findIndex((lead) => lead.id === updatedLead.id);
     if (leadIndex >= 0) leads[leadIndex] = updatedLead;
     else leads.unshift(updatedLead);
@@ -6669,10 +6733,163 @@
   }
 
   function leadSourceText(customer) {
-    return [customer.source, customer.lead_source, customer.tags]
+    const tags = splitTags(customer.tags).filter((tag) => !/^leadstatus\s*:/i.test(tag)).join("; ");
+    return [customer.source, customer.lead_source, tags]
       .filter(Boolean)
       .join(" · ")
       .slice(0, 220);
+  }
+
+  function leadSourceDetailText(entry, customer, status) {
+    const parts = [
+      leadSourceText(customer),
+      entry?.lead?.source,
+      entry?.lead?.source_detail,
+      status ? `Leadstatus: ${leadStatusLabel(status)}` : "",
+    ]
+      .filter(Boolean)
+      .flatMap((part) => String(part).split(" · "))
+      .map((part) => part.trim())
+      .filter(Boolean);
+    return [...new Set(parts)].join(" · ").slice(0, 260);
+  }
+
+  function leadNextActionText(status, realCustomer) {
+    if (!realCustomer) {
+      return {
+        heading: "Opprett eller koble kundekort",
+        body: "Før saken kan bli ordre, booking eller faktura må den kobles til et kundekort.",
+      };
+    }
+    if (status === "needs_offer") {
+      return {
+        heading: "Skriv og send tilbud",
+        body: "Bruk tilbudsfeltet under. Når kunden svarer ja, marker leaden som vunnet og opprett ordre.",
+      };
+    }
+    if (status === "offer_sent") {
+      return {
+        heading: "Følg opp tilbudet",
+        body: "Neste naturlige steg er å markere saken som vunnet eller tapt når kunden svarer.",
+      };
+    }
+    if (status === "won") {
+      return {
+        heading: "Opprett ordre og book jobb",
+        body: "Saken er vunnet. Lag ordre før booking, så flyten går videre til utført og fakturert.",
+      };
+    }
+    if (status === "lost") {
+      return {
+        heading: "Ingen aktiv oppfølging",
+        body: "Saken er tapt. Gjenåpne bare hvis kunden tar kontakt igjen.",
+      };
+    }
+    return {
+      heading: "Avklar behovet",
+      body: "Kontakt kunden, sjekk om det er tilbud, befaring, serviceordre eller ny varmepumpe.",
+    };
+  }
+
+  function leadNextActionHtml(entry, customer, realCustomer, status, leadTarget) {
+    const key = customerKey(customer);
+    const text = leadNextActionText(status, realCustomer);
+    const entryKey = leadEntryKey(entry);
+    const actions = [];
+    if (!realCustomer && entry?.lead) {
+      actions.push(`<button class="order-primary" data-create-customer-from-lead="${escapeHtml(entryKey)}" type="button" title="Opprett kundekort fra leaden. Bruk dette når det er en ny kunde og ingen tydelig dublett.">Opprett kundekort</button>`);
+    }
+    if (realCustomer && status === "followup") {
+      actions.push(`<button class="order-primary" data-lead-set-status="needs_offer" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button" title="Flytt leaden til tilbudskøen når du har nok info til å lage tilbud.">Klar for tilbud</button>`);
+      actions.push(`<button class="secondary" data-book-customer="${escapeHtml(key)}" type="button" title="Book befaring, installasjon eller service direkte på kundekortet.">Book</button>`);
+    }
+    if (realCustomer && status === "needs_offer") {
+      actions.push(`<button class="order-primary" data-focus-lead-offer="${escapeHtml(leadTarget)}" type="button" title="Hopp til tilbudsfeltet og bruk en tilbudsmal.">Skriv tilbud</button>`);
+      actions.push(`<button class="secondary" data-lead-set-status="offer_sent" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button" title="Brukes bare når tilbudet faktisk er sendt utenfor CRM eller bekreftet sendt.">Marker sendt</button>`);
+    }
+    if (realCustomer && status === "offer_sent") {
+      actions.push(`<button class="order-primary" data-lead-set-status="won" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button" title="Kunden har takket ja. Neste steg blir ordre og booking.">Vunnet</button>`);
+      actions.push(`<button class="secondary" data-lead-set-status="lost" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button" title="Kunden har takket nei eller saken skal avsluttes.">Tapt</button>`);
+    }
+    if (realCustomer && status === "won") {
+      actions.push(`<button class="order-primary" data-create-order-from-lead="${escapeHtml(key)}" type="button" title="Opprett ordre fra vunnet lead, slik at jobben kan bookes og senere faktureres.">Opprett ordre</button>`);
+      actions.push(`<button class="secondary" data-book-customer="${escapeHtml(key)}" type="button" title="Book jobb hvis ordre allerede finnes eller avtalen er klar.">Book</button>`);
+    }
+    if (status === "lost") {
+      actions.push(`<button class="secondary" data-lead-set-status="followup" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button" title="Gjenåpne leaden hvis kunden tar kontakt igjen.">Gjenåpne</button>`);
+    }
+    if (realCustomer) {
+      actions.push(`<button class="secondary" data-new-lead-existing-customer="${escapeHtml(key)}" type="button" title="Lag en ny lead på samme kunde, for eksempel ekstra varmepumpe på hjemmeadresse eller hytte.">Ny lead</button>`);
+    }
+    return `
+      <section class="lead-next-action ${escapeHtml(status)}">
+        <div>
+          <span>Neste steg</span>
+          <strong>${escapeHtml(text.heading)}</strong>
+          <p>${escapeHtml(text.body)}</p>
+        </div>
+        <div class="lead-next-actions">${actions.join("")}</div>
+      </section>
+    `;
+  }
+
+  function leadContactSectionHtml(entry, customer, realCustomer, status) {
+    const key = customerKey(customer);
+    const sourceText = leadSourceDetailText(entry, customer, status);
+    return `
+      <section class="detail-section lead-contact-panel">
+        <div class="section-title-row">
+          <h3>Kontakt og grunninfo</h3>
+          <div class="section-actions lead-contact-actions">
+            ${customerActionLinks(customer)}
+            ${realCustomer ? `<button class="secondary" data-open-lead-customer="${escapeHtml(key)}" type="button" title="Åpne samme kunde i kundelisten hvis du vil jobbe videre der.">Åpne i kundelisten</button>` : ""}
+          </div>
+        </div>
+        <dl class="facts compact">
+          <div><dt>Telefon</dt><dd class="copy-field">${phoneField(customer.phone)}</dd></div>
+          <div><dt>E-post</dt><dd class="copy-field">${emailField(customer.email)}</dd></div>
+          <div><dt>Adresse</dt><dd>${escapeHtml(addressFor(customer) || customer.location_tag || customer.visit_city || "Ikke registrert")}</dd></div>
+          <div><dt>Kilde/status</dt><dd>${escapeHtml(sourceText || "Ikke registrert")}</dd></div>
+          <div><dt>Merke/modell</dt><dd>${escapeHtml([customer.brand, customer.model_or_note].filter(Boolean).join(" · ") || "Ikke registrert")}</dd></div>
+          <div><dt>Betaling</dt><dd>${customer.pays_cash ? "Cash" : "Faktura"}</dd></div>
+        </dl>
+      </section>
+    `;
+  }
+
+  function leadEmbeddedCustomerSections(customer) {
+    const key = customerKey(customer);
+    const invoices = invoicesByCustomer.get(key) || invoicesByCustomer.get(customer.lime_id) || [];
+    const events = serviceEventsByCustomer.get(key) || serviceEventsByCustomer.get(customer.lime_id) || [];
+    const installations = installationsForCustomer(customer);
+    const booking = bookingRows().find((row) => customerKey(row.customer) === key);
+    return `
+      <section class="detail-section embedded-customer-card">
+        <div class="section-title-row">
+          <div>
+            <h3>Kundekort</h3>
+            <p>Samme kundeinfo vises her, så leaden kan jobbes ferdig uten ekstra åpning.</p>
+          </div>
+          <div class="section-actions">
+            ${isAdmin() && !customer.is_inactive ? `<button class="secondary" data-new-installation-customer="${escapeHtml(key)}" type="button" title="Registrer flere varmepumper/anlegg med egen adresse og serviceintervall.">Ny varmepumpe/anlegg</button><button class="secondary" data-new-order-customer="${escapeHtml(key)}" type="button" title="Lag ordre som kan bookes, utføres og faktureres.">Ny ordre</button><button class="secondary" data-edit-customer="${escapeHtml(key)}" type="button" title="Rediger kundedata, adresse, e-post, telefon og betalingsvalg.">Rediger</button>` : ""}
+          </div>
+        </div>
+        ${booking ? workflowHtml(bookingWorkflowState(booking), { title: "Aktiv jobbstatus", compact: true }) : ""}
+        <dl class="facts compact">
+          <div><dt>Neste service</dt><dd>${formatDate(nextServiceDueForCustomer(customer))}</dd></div>
+          <div><dt>Siste service</dt><dd>${escapeHtml(lastServiceText(customer, events))}</dd></div>
+          <div><dt>Fakturaer</dt><dd>${invoices.length.toLocaleString("nb-NO")} koblet</dd></div>
+          <div><dt>Booking</dt><dd>${booking ? `${formatDate(booking.booking.date)} ${booking.booking.time || ""} · ${escapeHtml(booking.booking.resource || "")}` : "Ikke booket"}</dd></div>
+        </dl>
+      </section>
+      ${lookupMissingDataSection(customer)}
+      ${renderInstallationList(customer, installations)}
+      ${renderCustomerOrders(customer)}
+      ${accessInfo(customer) ? `<section class="detail-section attention"><h3>Adkomst / nøkkel</h3><p>${escapeHtml(accessInfo(customer)).replaceAll("\n", "<br>")}</p></section>` : ""}
+      ${renderServiceHistory(events)}
+      ${renderInvoiceList(invoices, customer)}
+      ${renderNoteSection(customer)}
+    `;
   }
 
   function renderLeadDetail() {
@@ -6698,29 +6915,24 @@
         <strong>${escapeHtml(leadStatusLabel(status))}</strong>
         <span>${escapeHtml(leadStatusHelp(status))}</span>
       </div>
-      <div class="action-row">
-        ${customerActionLinks(customer)}
-        ${realCustomer ? `<button data-book-customer="${escapeHtml(key)}" type="button">Book</button>` : ""}
-        ${status === "won" && realCustomer ? `<button class="order-primary" data-create-order-from-lead="${escapeHtml(key)}" type="button">Opprett ordre</button>` : ""}
-        ${realCustomer ? `<button data-open-lead-customer="${escapeHtml(key)}" type="button">Åpne kundekort</button>` : ""}
-        ${!realCustomer && entry?.lead ? `<button class="order-primary" data-create-customer-from-lead="${escapeHtml(leadEntryKey(entry))}" type="button">Opprett kundekort</button>` : ""}
-      </div>
+      ${leadNextActionHtml(entry, customer, realCustomer, status, leadTarget)}
       ${!realCustomer && entry?.lead ? leadCustomerMatchHtml(entry) : ""}
+      ${leadContactSectionHtml(entry, customer, realCustomer, status)}
       <section class="detail-section">
         <h3>Oppfølging</h3>
         ${canEditLead ? leadStatusControlHtml(customer, status, leadTarget) : `<p class="muted">Denne leaden ligger som henvendelse. Opprett kundekort først når saken er reell og skal følges opp videre.</p>`}
         ${!realCustomer && entry?.lead ? `<p class="muted">Du kan følge opp status og notat her. Opprett kundekort når saken er reell og skal bli kunde, ordre eller booking.</p>` : ""}
         <div class="lead-status-actions">
-          ${canEditLead ? `<button data-lead-set-status="needs_offer" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button">Tilbud må sendes</button>
-          <button data-lead-set-status="offer_sent" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button">Tilbud sendt</button>
-          <button data-lead-set-status="won" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button">Vunnet</button>
-          <button data-lead-set-status="lost" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button">Tapt</button>
-          ${realCustomer && !entry?.lead ? `<button class="secondary" data-inactivate-lead="${escapeHtml(key)}" type="button">Sett inaktiv</button>` : ""}` : ""}
+          ${canEditLead ? `<button data-lead-set-status="needs_offer" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button" title="Legg saken i tilbudskøen.">Tilbud må sendes</button>
+          <button data-lead-set-status="offer_sent" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button" title="Marker manuelt at tilbud er sendt og venter på svar.">Tilbud sendt</button>
+          <button data-lead-set-status="won" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button" title="Kunden har takket ja. Da bør det opprettes ordre.">Vunnet</button>
+          <button data-lead-set-status="lost" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button" title="Avslutt saken når kunden ikke skal gå videre.">Tapt</button>
+          ${realCustomer && !entry?.lead ? `<button class="secondary" data-inactivate-lead="${escapeHtml(key)}" type="button" title="Skjul denne gamle kunde-tag-leaden fra aktiv leadliste.">Sett inaktiv</button>` : ""}` : ""}
         </div>
         <label class="lead-note-editor">Notat
           <textarea data-lead-note-text="${escapeHtml(leadTarget)}" rows="4" placeholder="Hva er gjort, hva venter vi på, og hva er neste steg?">${escapeHtml(note)}</textarea>
         </label>
-        ${canEditLead ? `<button data-save-lead-note="${escapeHtml(leadTarget)}" type="button">Lagre notat</button>` : ""}
+        ${canEditLead ? `<button data-save-lead-note="${escapeHtml(leadTarget)}" type="button" title="Lagre oppfølgingsnotat på leaden.">Lagre notat</button>` : ""}
       </section>
       <section class="detail-section lead-template-section">
         <h3>E-postmaler</h3>
@@ -6728,12 +6940,7 @@
         <div class="lead-template-buttons">${leadTemplateButtons(customer, leadTarget)}</div>
       </section>
       ${isAdmin() ? leadOfferComposerHtml(entry) : ""}
-      <dl class="facts">
-        <div><dt>Telefon</dt><dd class="copy-field">${phoneField(customer.phone)}</dd></div>
-        <div><dt>E-post</dt><dd class="copy-field">${emailField(customer.email)}</dd></div>
-        <div><dt>Kilde/tags</dt><dd>${escapeHtml(leadSourceText(customer) || "Ikke registrert")}</dd></div>
-        <div><dt>Merke/modell</dt><dd>${escapeHtml([customer.brand, customer.model_or_note].filter(Boolean).join(" · ") || "Ikke registrert")}</dd></div>
-      </dl>
+      ${realCustomer ? leadEmbeddedCustomerSections(customer) : ""}
     `;
   }
 
@@ -6825,6 +7032,7 @@
     const flow = orderWorkflowState(order, linkedBookings);
     const linkedJob = jobForOrder(order);
     const effectiveBilling = orderEffectiveBillingStatus(order, linkedJob);
+    const primaryBooking = linkedBookings[0] || null;
     el.orderDetail.innerHTML = `
       <div class="customer-title">
         <div class="title-pills">${orderBadgesHtml(order, linkedJob)}</div>
@@ -6834,12 +7042,12 @@
       ${workflowHtml(flow, { title: "Hvor er ordren?" })}
       <div class="action-row">
         ${customerActionLinks(customer)}
-        <button data-book-order="${escapeHtml(order.id)}" type="button">Book ordre</button>
+        ${primaryBooking ? bookingWorkflowButtons(primaryBooking, { includeEdit: true }) : `<button data-book-order="${escapeHtml(order.id)}" type="button">Book ordre</button>`}
         <button data-edit-order="${escapeHtml(order.id)}" type="button">Rediger ordre</button>
         <button class="secondary" data-delete-one-order="${escapeHtml(order.id)}" type="button">Slett ordre</button>
         <button data-open-order-customer="${escapeHtml(key)}" type="button">Åpne kundekort</button>
         ${orderMissingJobMirror({ order, job: linkedJob }) && store.repairOrderJobMirror && isAdmin() ? `<button data-repair-order-job="${escapeHtml(order.id)}" type="button">Opprett jobbspeil</button>` : ""}
-        ${effectiveBilling === "ready" ? `<button data-mark-order-invoiced="${escapeHtml(order.id)}" type="button">Marker fakturert</button>` : ""}
+        ${!primaryBooking && effectiveBilling === "ready" ? `<button data-mark-order-invoiced="${escapeHtml(order.id)}" type="button">Marker fakturert</button>` : ""}
       </div>
       <dl class="facts">
         <div><dt>Kunde</dt><dd>${escapeHtml(cleanDisplayName(customer))}</dd></div>
@@ -8655,10 +8863,13 @@
         source: "Kundekort",
         source_detail: "Ny varmepumpe på eksisterende kunde",
         product_interest: "Ny varmepumpe / ekstra anlegg",
+        note,
         status: "quote_needed",
+        updated_at: new Date().toISOString(),
       };
     }
     updateLeadInMemory(savedLead);
+    if (!store.isConfigured) saveLocalLeads();
     selectedLeadId = `lead:${savedLead.id}`;
     currentLeadFilter = "needs_offer";
     if (el.leadStatusFilter) el.leadStatusFilter.value = currentLeadFilter;
@@ -10340,6 +10551,15 @@
       .catch((error) => setSyncStatus(error.message || "Klarte ikke endre leadstatus.", "error"));
   });
   el.leadDetail?.addEventListener("click", (event) => {
+    const focusOffer = event.target.closest("[data-focus-lead-offer]");
+    if (focusOffer) {
+      const fields = leadOfferFields(focusOffer.dataset.focusLeadOffer);
+      const target = fields.text || fields.subject;
+      target?.scrollIntoView({ behavior: "smooth", block: "center" });
+      setTimeout(() => target?.focus(), 250);
+      setSyncStatus("Tilbudsfeltet er klart. Velg mal eller skriv tilbudstekst.", "ok");
+      return;
+    }
     const fillOffer = event.target.closest("[data-fill-offer-template]");
     if (fillOffer) {
       fillLeadOfferTemplate(fillOffer.dataset.fillOfferTemplate);
@@ -10403,6 +10623,27 @@
         .catch((error) => setSyncStatus(error.message || "Klarte ikke opprette kundekort fra lead.", "error"));
       return;
     }
+    const newLead = event.target.closest("[data-new-lead-existing-customer]");
+    if (newLead) {
+      createLeadForExistingCustomer(newLead.dataset.newLeadExistingCustomer)
+        .catch((error) => setSyncStatus(error.message || "Klarte ikke opprette ny lead på kunden.", "error"));
+      return;
+    }
+    const newInstallation = event.target.closest("[data-new-installation-customer]");
+    if (newInstallation) {
+      openInstallationDialog(newInstallation.dataset.newInstallationCustomer);
+      return;
+    }
+    const newOrder = event.target.closest("[data-new-order-customer]");
+    if (newOrder) {
+      openOrderDialog(newOrder.dataset.newOrderCustomer);
+      return;
+    }
+    const editCustomer = event.target.closest("[data-edit-customer]");
+    if (editCustomer) {
+      openCustomerDialog(editCustomer.dataset.editCustomer);
+      return;
+    }
     const linkCustomer = event.target.closest("[data-link-lead-customer]");
     if (linkCustomer) {
       linkLeadToExistingCustomer(linkCustomer.dataset.linkLeadCustomer, linkCustomer.dataset.linkExistingCustomer)
@@ -10417,10 +10658,39 @@
     const book = event.target.closest("[data-book-customer]");
     if (book) openBookingDialog(book.dataset.bookCustomer);
   });
-  el.orderDetail?.addEventListener("click", (event) => {
+  el.orderDetail?.addEventListener("click", async (event) => {
     const open = event.target.closest("[data-open-order-customer]");
     if (open) {
       openCustomerCard(open.dataset.openOrderCustomer);
+      return;
+    }
+    const completeBooking = event.target.closest("[data-complete-booking]");
+    if (completeBooking) {
+      const id = completeBooking.dataset.completeBooking;
+      const isDone = bookings[id]?.status === "done" || doneJobs.has(id);
+      if (isDone) {
+        const ok = await askForConfirmation({
+          title: "Angre utført",
+          message: "Angre at denne jobben er utført? Servicehistorikk på kundekortet blir ikke slettet automatisk.",
+          confirmLabel: "Angre utført",
+        });
+        if (!ok) return;
+        await setBookingDone(id, false);
+        renderAll();
+        setSyncStatus("Jobb markert som ikke utført.", "ok");
+      } else {
+        openCompletionDialog(id);
+      }
+      return;
+    }
+    const billingBooking = event.target.closest("[data-billing-booking]");
+    if (billingBooking) {
+      openBillingDialog(billingBooking.dataset.billingBooking);
+      return;
+    }
+    const moveBooking = event.target.closest("[data-move-booking]");
+    if (moveBooking) {
+      openMoveDialog(moveBooking.dataset.moveBooking);
       return;
     }
     const editBooking = event.target.closest("[data-edit-booking]");

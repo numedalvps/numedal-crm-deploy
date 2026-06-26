@@ -65,6 +65,7 @@ button.secondary,
 .planning-head button,
 .job-actions button,
 .job-actions a,
+.lead-contact-actions a,
 .action-row a,
 .action-row button {
   border: 1px solid var(--line);
@@ -264,6 +265,7 @@ small {
   margin: 12px 0 4px;
 }
 
+.lead-contact-actions a,
 .action-row a,
 .action-row button {
   min-height: 40px;
@@ -1910,6 +1912,91 @@ textarea {
   border-color: #fecaca;
 }
 
+.lead-next-action {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  margin: 12px 0;
+  border: 1px solid #bfdbfe;
+  border-left: 5px solid var(--teal);
+  border-radius: 8px;
+  padding: 14px;
+  background: #eff6ff;
+}
+
+.lead-next-action span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.lead-next-action strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 18px;
+}
+
+.lead-next-action p {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+.lead-next-action.needs_offer {
+  border-color: #fcd34d;
+  border-left-color: var(--orange);
+  background: #fffbeb;
+}
+
+.lead-next-action.offer_sent {
+  border-color: #bfdbfe;
+  border-left-color: #2563eb;
+  background: #eff6ff;
+}
+
+.lead-next-action.won {
+  border-color: #86efac;
+  border-left-color: var(--green);
+  background: #f0fdf4;
+}
+
+.lead-next-action.lost {
+  border-color: #fecaca;
+  border-left-color: var(--red);
+  background: #fef2f2;
+}
+
+.lead-next-actions,
+.lead-contact-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.lead-next-actions button,
+.lead-contact-actions a,
+.lead-contact-actions button {
+  min-height: 36px;
+  white-space: nowrap;
+}
+
+.lead-contact-panel .section-title-row {
+  align-items: flex-start;
+}
+
+.embedded-customer-card {
+  border-color: #dbeafe;
+  background: #f8fbff;
+}
+
+.embedded-customer-card .section-title-row p {
+  margin-top: 4px;
+  color: var(--muted);
+}
+
 .lead-status-control {
   display: grid;
   gap: 5px;
@@ -2061,6 +2148,10 @@ textarea {
   margin: 16px 0;
 }
 
+.facts.compact {
+  margin: 10px 0 0;
+}
+
 .facts div {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -2128,6 +2219,7 @@ textarea {
   gap: 8px;
 }
 
+.lead-contact-actions a,
 .section-actions button {
   min-height: 34px;
   padding: 7px 10px;
@@ -4195,6 +4287,7 @@ label {
   .metric-grid,
   .lead-metrics,
   .order-metrics,
+  .lead-next-action,
   .lead-offer-grid,
   .insulation-offer-customer,
   .rental-input-grid,
