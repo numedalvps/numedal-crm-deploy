@@ -3868,6 +3868,25 @@
     return store.isConfigured && (order.status || "") !== "cancelled" && !row?.job && !jobForOrder(order);
   }
 
+  function upsertJobMirror(job) {
+    if (!job?.id) return;
+    const index = (jobs || []).findIndex((item) => String(item.id || "") === String(job.id));
+    if (index >= 0) jobs[index] = job;
+    else jobs.unshift(job);
+  }
+
+  async function repairOrderJobMirror(orderId) {
+    const order = findOrder(orderId);
+    if (!order) throw new Error("Fant ikke ordren som skulle repareres.");
+    if (!store.repairOrderJobMirror) throw new Error("Jobbspeil-reparasjon krever oppdatert Supabase-adapter.");
+    const job = await store.repairOrderJobMirror(order.id, order);
+    if (!job?.id) throw new Error("Supabase opprettet ikke jobbspeil for ordren.");
+    upsertJobMirror(job);
+    orders[order.id] = { ...order, jobId: job.id, job_id: job.id };
+    setSyncStatus("Jobbspeil opprettet for ordren.", "ok");
+    renderAll();
+  }
+
   function serviceWorkType(type) {
     return ["reparasjon", "servicearbeid", "reklamasjon"].includes(String(type || "").toLowerCase());
   }
@@ -6373,6 +6392,7 @@
         <button data-edit-order="${escapeHtml(order.id)}" type="button">Rediger ordre</button>
         <button class="secondary" data-delete-one-order="${escapeHtml(order.id)}" type="button">Slett ordre</button>
         <button data-open-order-customer="${escapeHtml(key)}" type="button">Åpne kundekort</button>
+        ${orderMissingJobMirror({ order, job: linkedJob }) && store.repairOrderJobMirror && isAdmin() ? `<button data-repair-order-job="${escapeHtml(order.id)}" type="button">Opprett jobbspeil</button>` : ""}
         ${effectiveBilling === "ready" ? `<button data-mark-order-invoiced="${escapeHtml(order.id)}" type="button">Marker fakturert</button>` : ""}
       </div>
       <dl class="facts">
@@ -9465,6 +9485,12 @@
     const deleteOrder = event.target.closest("[data-delete-one-order]");
     if (deleteOrder) {
       openDeleteOrdersDialog([deleteOrder.dataset.deleteOneOrder]);
+      return;
+    }
+    const repairJob = event.target.closest("[data-repair-order-job]");
+    if (repairJob) {
+      repairOrderJobMirror(repairJob.dataset.repairOrderJob)
+        .catch((error) => setSyncStatus(error.message || "Klarte ikke opprette jobbspeil.", "error"));
       return;
     }
     const bookOrder = event.target.closest("[data-book-order]");

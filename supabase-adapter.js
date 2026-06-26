@@ -735,6 +735,11 @@
       }
       return saved;
     },
+    async repairOrderJobMirror(id, order) {
+      const supabase = await requireClient();
+      if (!isUuid(id)) throw new Error("Kan ikke opprette jobbspeil for ordre uten database-id.");
+      return syncJobForOrder(supabase, id, { ...order, id });
+    },
     async deleteOrder(id) {
       const supabase = await requireClient();
       await cancelJobForOrder(supabase, id);
