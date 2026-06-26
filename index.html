@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260626-10" />
+    <link rel="stylesheet" href="./styles.css?v=20260627-01" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -30,16 +30,22 @@
     <div id="appView" class="app hidden">
       <aside class="sidebar">
         <img class="logo" src="./numedal-logo.png" alt="Numedal Varmepumpeservice" />
-        <nav>
-          <button class="active" data-view="dashboard" type="button">Oversikt</button>
-          <button data-view="leads" type="button">Leads</button>
+        <nav class="primary-nav" aria-label="Hovedmeny">
+          <button class="active" data-view="dashboard" data-admin-nav type="button">Start</button>
+          <button data-view="leads" data-admin-nav type="button">Innboks</button>
           <button data-view="customers" type="button">Kunder</button>
-          <button data-view="orders" type="button">Ordre</button>
+          <button data-view="orders" data-admin-nav type="button">Jobber</button>
+          <button data-view="technician" data-tech-nav type="button">Min dag</button>
           <button data-view="planning" type="button">Plan</button>
-          <button data-view="routeplanner" type="button">Planlegg servicedag</button>
-          <button data-view="technician" type="button">Min dag</button>
-          <button data-view="insulation" type="button">Blåseisolering</button>
-          <button data-view="settings" type="button">Innstillinger</button>
+          <div class="more-nav-wrap">
+            <button id="moreMenuButton" data-more-toggle type="button" aria-expanded="false">Mer</button>
+            <div id="moreMenu" class="more-menu hidden">
+              <button data-view="routeplanner" data-admin-nav type="button">Servicerute</button>
+              <button data-view="technician" data-admin-nav type="button">Min dag</button>
+              <button data-view="insulation" data-admin-nav type="button">Blåseisolering</button>
+              <button data-view="settings" data-admin-nav type="button">Innstillinger</button>
+            </div>
+          </div>
         </nav>
         <div class="user-card">
           <strong id="currentUserName"></strong>
@@ -57,34 +63,52 @@
           </div>
           <div class="top-actions">
             <button id="importSeedButton" class="secondary hidden" type="button">Importer startdata</button>
-            <button id="newCustomerButton" type="button">Ny kunde</button>
-            <button id="newBookingButton" type="button">Book jobb</button>
+            <div class="top-search">
+              <label class="sr-only" for="globalSearchInput">Søk i CRM</label>
+              <input id="globalSearchInput" type="search" placeholder="Søk kunde, telefon, adresse, jobb eller faktura" autocomplete="off" />
+              <div id="globalSearchResults" class="global-search-results top-search-results"></div>
+            </div>
+            <div class="new-action-wrap">
+              <button id="newActionButton" type="button" aria-expanded="false">+ Ny</button>
+              <div id="newActionMenu" class="new-action-menu hidden">
+                <button data-new-action="customer" type="button">Ny kunde</button>
+                <button data-new-action="lead" type="button">Ny henvendelse</button>
+                <button data-new-action="job" type="button">Ny jobb</button>
+                <button data-new-action="booking" type="button">Book avtale</button>
+                <button data-new-action="service" type="button">Ny service</button>
+                <button data-new-action="install" type="button">Ny installasjon</button>
+                <button data-new-action="paste" type="button">Lim inn melding</button>
+              </div>
+            </div>
           </div>
         </header>
         <p id="syncStatus" class="sync-status"></p>
 
         <section id="dashboardView" class="view">
-          <section class="panel global-search-panel">
-            <label>Søk i CRM
-              <input id="globalSearchInput" type="search" placeholder="Søk navn, telefon, adresse, lead, ordre, booking eller faktura" autocomplete="off" />
-            </label>
-            <div id="globalSearchResults" class="global-search-results"></div>
+          <section class="panel start-worklist-panel">
+            <div class="section-head">
+              <div>
+                <h2>Hva må gjøres nå?</h2>
+                <p>Prioritert arbeidsliste fra henvendelser, plan, fakturering og service.</p>
+              </div>
+            </div>
+            <div id="startWorklist" class="start-worklist"></div>
           </section>
-          <div class="dashboard-focus-grid">
+          <div class="dashboard-focus-grid compact-dashboard-metrics">
             <button data-dashboard-action="service" type="button">
               <span>Service</span>
               <strong id="dashboardServiceCount">0</strong>
               <small>Kunder som bør kontaktes eller bookes</small>
             </button>
             <button data-dashboard-action="leads" type="button">
-              <span>Leads / nettside</span>
+              <span>Innboks</span>
               <strong id="dashboardLeadCount">0</strong>
               <small>Befaringer, tilbud og nye nettsidesaker</small>
             </button>
             <button data-dashboard-action="booking" type="button">
-              <span>Booking</span>
+              <span>Plan</span>
               <strong id="dashboardBookingCount">0</strong>
-              <small>Kommende jobber i kalender</small>
+              <small>Kommende avtaler i kalender</small>
             </button>
             <button data-dashboard-action="move" type="button">
               <span>Må flyttes</span>
@@ -97,36 +121,12 @@
               <small>Utførte jobber som venter</small>
             </button>
           </div>
-          <div class="metric-grid">
+          <div class="metric-grid compact-service-metrics">
             <button data-filter-shortcut="red"><strong id="redMetric">0</strong><span>Service nå</span></button>
             <button data-filter-shortcut="yellow"><strong id="yellowMetric">0</strong><span>Snart service</span></button>
             <button data-filter-shortcut="green"><strong id="greenMetric">0</strong><span>Service ok</span></button>
             <button data-filter-shortcut="booked"><strong id="bookedMetric">0</strong><span>Booket</span></button>
           </div>
-          <section class="panel ai-registration-panel">
-            <div class="section-head">
-              <div>
-                <h2>Hurtigregistrering</h2>
-                <p>Lim inn tekst eller skjermbilde. AI lager et forslag som du kontrollerer før noe lagres.</p>
-              </div>
-              <div class="ai-registration-actions">
-                <button id="aiRegistrationFileButton" class="secondary" type="button">Velg skjermbilde</button>
-                <button id="aiRegistrationCameraButton" class="secondary" type="button">Ta bilde</button>
-                <button id="aiRegistrationParseButton" type="button">Analyser</button>
-                <button id="aiRegistrationClearButton" class="secondary" type="button">Tøm</button>
-              </div>
-            </div>
-            <input id="aiRegistrationFileInput" class="hidden" type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif" multiple />
-            <input id="aiRegistrationCameraInput" class="hidden" type="file" accept="image/*" capture="environment" />
-            <div id="aiRegistrationPasteZone" class="ai-paste-zone" tabindex="0">
-              <strong>Lim inn tekst eller skjermbilde her</strong>
-              <span>Ctrl+V, dra bilde hit, eller bruk knappene over. Bilder vises som vedlegg til senere OCR.</span>
-              <textarea id="aiRegistrationInput" rows="6" placeholder="Lim inn SMS, e-post eller notat her."></textarea>
-              <div id="aiRegistrationAttachments" class="ai-attachment-list hidden"></div>
-            </div>
-            <div id="aiRegistrationDraft" class="ai-registration-draft hidden"></div>
-          </section>
-          <section id="intakeInbox" class="panel intake-inbox-panel hidden"></section>
           <div class="dashboard-grid">
             <section class="panel">
               <div class="section-head">
@@ -207,12 +207,36 @@
         </section>
 
         <section id="leadsView" class="view hidden">
+          <section class="panel ai-registration-panel">
+            <div class="section-head">
+              <div>
+                <h2>Hurtigregistrering / lim inn melding</h2>
+                <p>Lim inn tekst eller skjermbilde. CRM foreslår et utkast som du kontrollerer før noe lagres.</p>
+              </div>
+              <div class="ai-registration-actions">
+                <button id="aiRegistrationFileButton" class="secondary" type="button">Velg skjermbilde</button>
+                <button id="aiRegistrationCameraButton" class="secondary" type="button">Ta bilde</button>
+                <button id="aiRegistrationParseButton" type="button">Analyser</button>
+                <button id="aiRegistrationClearButton" class="secondary" type="button">Tøm</button>
+              </div>
+            </div>
+            <input id="aiRegistrationFileInput" class="hidden" type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif" multiple />
+            <input id="aiRegistrationCameraInput" class="hidden" type="file" accept="image/*" capture="environment" />
+            <div id="aiRegistrationPasteZone" class="ai-paste-zone" tabindex="0">
+              <strong>Lim inn tekst eller skjermbilde her</strong>
+              <span>Ctrl+V, dra bilde hit, eller bruk knappene over. Bilder vises som vedlegg til senere OCR.</span>
+              <textarea id="aiRegistrationInput" rows="6" placeholder="Lim inn SMS, e-post eller notat her."></textarea>
+              <div id="aiRegistrationAttachments" class="ai-attachment-list hidden"></div>
+            </div>
+            <div id="aiRegistrationDraft" class="ai-registration-draft hidden"></div>
+          </section>
+          <section id="intakeInbox" class="panel intake-inbox-panel hidden"></section>
           <div class="leads-layout">
             <section class="panel lead-list-panel">
               <div class="section-head">
                 <div>
-                  <h2>Leads</h2>
-                  <p>Potensielle kunder, tilbud og oppfølging før de blir kunde.</p>
+                  <h2>Innboks</h2>
+                  <p>Nettside, e-post, leads og oppfølging før henvendelsen blir jobb.</p>
                 </div>
               </div>
               <div class="lead-metrics">
@@ -223,9 +247,9 @@
               </div>
               <div id="websiteSubmissionInbox" class="website-submission-inbox hidden"></div>
               <div class="search-row">
-                <input id="leadSearch" type="search" placeholder="Søk lead, telefon, sted, produkt" />
+                <input id="leadSearch" type="search" placeholder="Søk henvendelse, telefon, sted, produkt" />
                 <select id="leadStatusFilter">
-                  <option value="followup">Nye leads - må kontaktes</option>
+                  <option value="followup">Nye henvendelser - må kontaktes</option>
                   <option value="needs_offer">Tilbud må sendes</option>
                   <option value="offer_sent">Tilbud sendt / venter svar</option>
                   <option value="won">Vunnet</option>
@@ -246,38 +270,41 @@
             <section class="panel order-list-panel">
               <div class="section-head">
                 <div>
-                  <h2>Ordre</h2>
-                  <p>Arbeid som er avtalt eller solgt, uavhengig av om det er booket i kalenderen ennå.</p>
+                  <h2>Jobber</h2>
+                  <p>Arbeid som er avtalt eller solgt, uavhengig av om det er planlagt i kalenderen ennå.</p>
                 </div>
               </div>
               <div class="order-metrics">
-                <button data-order-filter-shortcut="unscheduled" type="button"><strong id="orderUnscheduledMetric">0</strong><span>Ikke booket</span></button>
-                <button data-order-filter-shortcut="scheduled" type="button"><strong id="orderScheduledMetric">0</strong><span>Booket</span></button>
+                <button data-order-filter-shortcut="unscheduled" type="button"><strong id="orderUnscheduledMetric">0</strong><span>Ikke planlagt</span></button>
+                <button data-order-filter-shortcut="scheduled" type="button"><strong id="orderScheduledMetric">0</strong><span>Planlagt</span></button>
                 <button data-order-filter-shortcut="billing_ready" type="button"><strong id="orderBillingMetric">0</strong><span>Må faktureres</span></button>
                 <button data-order-filter-shortcut="completed" type="button"><strong id="orderCompletedMetric">0</strong><span>Utført</span></button>
-                <button data-order-filter-shortcut="missing_job" type="button" title="Vis aktive ordre som ikke er koblet til ny jobs-modell."><strong id="orderMissingJobMetric">0</strong><span>Mangler jobbspeil</span></button>
+                <button data-order-filter-shortcut="missing_job" type="button" title="Vis aktive jobber som mangler kobling til ny jobbmodell."><strong id="orderMissingJobMetric">0</strong><span>Mangler jobbkobling</span></button>
               </div>
               <div class="search-row">
-                <input id="orderSearch" type="search" placeholder="Søk ordre, kunde, telefon, sted" />
+                <input id="orderSearch" type="search" placeholder="Søk jobb, kunde, telefon, sted" />
                 <select id="orderStatusFilter">
-                  <option value="all">Alle ordre</option>
-                  <option value="unscheduled">Ikke booket</option>
-                  <option value="scheduled">Booket</option>
+                  <option value="unscheduled">Ikke planlagt</option>
+                  <option value="scheduled">Planlagt</option>
                   <option value="completed">Utført</option>
                   <option value="billing_ready">Må faktureres</option>
+                  <option value="all">Alle jobber</option>
                   <option value="invoiced">Fakturert</option>
-                  <option value="missing_job">Mangler jobbspeil</option>
+                  <option value="missing_job">Mangler jobbkobling</option>
                 </select>
               </div>
-              <div class="order-bulk-actions">
-                <label><input id="orderSelectAll" type="checkbox" /> Velg viste</label>
-                <button id="deleteSelectedOrdersButton" class="secondary" type="button" disabled>Slett valgte</button>
-                <span id="orderSelectionSummary">Ingen valgt</span>
-              </div>
+              <details class="order-admin-tools">
+                <summary>Flere valg</summary>
+                <div class="order-bulk-actions">
+                  <label><input id="orderSelectAll" type="checkbox" /> Velg viste</label>
+                  <button id="deleteSelectedOrdersButton" class="secondary" type="button" disabled>Slett valgte</button>
+                  <span id="orderSelectionSummary">Ingen valgt</span>
+                </div>
+              </details>
               <div id="orderList" class="order-list"></div>
             </section>
             <section id="orderDetail" class="panel order-detail">
-              <div class="empty-state">Velg en ordre.</div>
+              <div class="empty-state">Velg en jobb.</div>
             </section>
           </div>
         </section>
@@ -403,6 +430,10 @@
 
         <section id="planningView" class="view hidden">
           <section class="panel">
+            <div class="plan-tabs" role="tablist" aria-label="Planområde">
+              <button class="active" data-plan-tab-view="planning" type="button">Kalender</button>
+              <button data-plan-tab-view="routeplanner" type="button">Servicerute</button>
+            </div>
             <div class="planning-head">
               <button id="previousWeekButton" type="button">Forrige uke</button>
               <strong id="weekLabel"></strong>
@@ -439,9 +470,13 @@
 
         <section id="routeplannerView" class="view hidden">
           <section class="panel route-planner">
+            <div class="plan-tabs" role="tablist" aria-label="Planområde">
+              <button data-plan-tab-view="planning" type="button">Kalender</button>
+              <button class="active" data-plan-tab-view="routeplanner" type="button">Servicerute</button>
+            </div>
             <div class="section-head">
               <div>
-                <h2>Planlegg servicedag</h2>
+                <h2>Servicerute</h2>
                 <p>Finn kunder i samme område, lag kjørbar rekkefølge og book servicedag.</p>
               </div>
               <button id="routeOpenMapsButton" type="button">Åpne rute i Google Maps</button>
@@ -600,6 +635,15 @@
           </section>
         </section>
       </main>
+      <nav id="mobileBottomNav" class="mobile-bottom-nav" aria-label="Mobilmeny">
+        <button data-view="dashboard" data-admin-mobile type="button">Start</button>
+        <button data-view="leads" data-admin-mobile type="button">Innboks</button>
+        <button data-view="customers" type="button">Kunder</button>
+        <button data-view="orders" data-admin-mobile type="button">Jobber</button>
+        <button data-view="technician" data-tech-mobile type="button">Min dag</button>
+        <button data-view="planning" type="button">Plan</button>
+        <button data-mobile-more-toggle type="button">Mer</button>
+      </nav>
     </div>
 
     <dialog id="passwordResetDialog" class="modal compact-modal">
@@ -647,7 +691,7 @@
           <label>Siste service<input id="formLastService" type="date" /></label>
           <label>Neste service<input id="formNextService" type="date" /></label>
           <label>Adkomst/nøkkelboks<input id="formAccess" /></label>
-          <label class="check-row"><input id="formPaysCash" type="checkbox" /> Betaler cash</label>
+          <label class="check-row"><input id="formPaysCash" type="checkbox" /> Betaling på stedet</label>
           <label class="check-row"><input id="formInsulation" type="checkbox" /> Blåseisolering / Isobygg</label>
         </div>
         <label>Servicehistorikk<textarea id="formServiceDates" rows="2" placeholder="2024-05-10; 2026-05-10"></textarea></label>
@@ -706,7 +750,7 @@
     <dialog id="orderDialog" class="modal">
       <form id="orderForm" method="dialog">
         <div class="modal-head">
-          <h2 id="orderDialogTitle">Ny ordre</h2>
+          <h2 id="orderDialogTitle">Ny jobb</h2>
           <button id="closeOrderDialog" type="button" aria-label="Lukk">×</button>
         </div>
         <div id="orderDialogMessage" class="dialog-message hidden"></div>
@@ -723,12 +767,12 @@
             </select>
           </label>
           <label class="form-wide">Tittel<input id="orderTitleInput" required /></label>
-          <label class="check-row form-wide"><input id="orderBookNow" type="checkbox" /> Book i kalender etterpå</label>
+          <label class="check-row form-wide"><input id="orderBookNow" type="checkbox" /> Planlegg i kalender etterpå</label>
         </div>
         <label>Notat<textarea id="orderNoteInput" rows="4" placeholder="Hva kunden ringte om, avtalt arbeid, pumpeinfo, adkomst eller annet."></textarea></label>
         <div class="modal-actions">
           <button class="secondary" id="cancelOrderDialog" type="button">Avbryt</button>
-          <button type="submit">Lagre ordre</button>
+          <button type="submit">Lagre jobb</button>
         </div>
       </form>
     </dialog>
@@ -736,7 +780,7 @@
     <dialog id="deleteOrdersDialog" class="modal">
       <form id="deleteOrdersForm" method="dialog">
         <div class="modal-head">
-          <h2>Slett ordre</h2>
+          <h2>Slett jobber</h2>
           <button id="closeDeleteOrdersDialog" type="button" aria-label="Lukk">×</button>
         </div>
         <div id="deleteOrdersSummary" class="completion-summary"></div>
@@ -744,17 +788,17 @@
         <div id="deleteOrdersBookingOptions" class="choice-stack">
           <label>
             <input id="deleteOrdersKeepBookings" name="deleteOrdersBookingAction" type="radio" value="keep" checked />
-            <span><strong>Behold eventuelle bookinger i kalender</strong><small>Ordrekoblingen fjernes, men jobben står i planning hvis den fortsatt er booket.</small></span>
+            <span><strong>Behold eventuelle avtaler i kalender</strong><small>Jobbkoblingen fjernes, men avtalen står i planen hvis den fortsatt er booket.</small></span>
           </label>
           <label>
             <input id="deleteOrdersCancelBookings" name="deleteOrdersBookingAction" type="radio" value="cancel" />
-            <span><strong>Slett også bookinger i kalender</strong><small>Bruk dette når utkast eller feilordre skal ryddes helt bort.</small></span>
+            <span><strong>Slett også avtaler i kalender</strong><small>Bruk dette når utkast eller feiljobb skal ryddes helt bort.</small></span>
           </label>
         </div>
         <p class="form-hint">Kundekort og historikk slettes ikke.</p>
         <div class="modal-actions">
           <button class="secondary" id="cancelDeleteOrdersButton" type="button">Avbryt</button>
-          <button class="danger" type="submit">Slett ordre</button>
+          <button class="danger" type="submit">Slett jobber</button>
         </div>
       </form>
     </dialog>
@@ -762,7 +806,7 @@
     <dialog id="deleteBookingDialog" class="modal">
       <form id="deleteBookingForm" method="dialog">
         <div class="modal-head">
-          <h2>Fjern booking</h2>
+          <h2>Fjern avtale</h2>
           <button id="closeDeleteBookingDialog" type="button" aria-label="Lukk">×</button>
         </div>
         <div id="deleteBookingSummary" class="completion-summary"></div>
@@ -770,17 +814,17 @@
         <div id="deleteBookingOrderOptions" class="choice-stack">
           <label>
             <input id="deleteBookingKeepOrder" name="deleteBookingOrderAction" type="radio" value="keep" checked />
-            <span><strong>Behold ordre</strong><small>Jobben fjernes fra kalenderen, men ordren blir liggende som ikke booket.</small></span>
+            <span><strong>Behold jobb</strong><small>Avtalen fjernes fra kalenderen, men jobben blir liggende som ikke planlagt.</small></span>
           </label>
           <label>
             <input id="deleteBookingDeleteOrder" name="deleteBookingOrderAction" type="radio" value="delete" />
-            <span><strong>Slett også ordre</strong><small>Bruk dette når booking og ordre var feil eller bare et testutkast.</small></span>
+            <span><strong>Slett også jobb</strong><small>Bruk dette når avtale og jobb var feil eller bare et testutkast.</small></span>
           </label>
         </div>
         <p class="form-hint">Dette sletter ikke kundekortet og ikke gammel servicehistorikk.</p>
         <div class="modal-actions">
           <button class="secondary" id="cancelDeleteBookingButton" type="button">Avbryt</button>
-          <button class="danger" type="submit">Fjern booking</button>
+          <button class="danger" type="submit">Fjern avtale</button>
         </div>
       </form>
     </dialog>
@@ -802,7 +846,7 @@
     <dialog id="bookingDialog" class="modal">
       <form id="bookingForm" method="dialog">
         <div class="modal-head">
-          <h2>Book jobb</h2>
+          <h2>Book avtale</h2>
           <button id="closeBookingDialog" type="button" aria-label="Lukk">×</button>
         </div>
         <div id="bookingDialogMessage" class="dialog-message hidden"></div>
@@ -859,8 +903,8 @@
         </section>
         <label>Notat<textarea id="bookingNote" rows="3"></textarea></label>
         <div class="modal-actions">
-          <button class="secondary" id="deleteBookingButton" type="button">Fjern booking</button>
-          <button type="submit">Lagre booking</button>
+          <button class="secondary" id="deleteBookingButton" type="button">Fjern avtale</button>
+          <button type="submit">Lagre avtale</button>
         </div>
       </form>
     </dialog>
@@ -944,11 +988,11 @@
           <label>Hva er gjort?
             <select id="billingMode">
               <option value="invoice">Faktura sendt</option>
-              <option value="cash">Betalt cash</option>
+              <option value="cash">Betalt på stedet</option>
             </select>
           </label>
         </div>
-        <p id="billingHint" class="form-hint">Bruk dette etter at faktura er sendt manuelt, eller cash faktisk er mottatt.</p>
+        <p id="billingHint" class="form-hint">Bruk dette etter at faktura er sendt manuelt, eller betaling på stedet faktisk er mottatt.</p>
         <label>Notat<textarea id="billingNote" rows="3" placeholder="Valgfritt, f.eks. fakturanr eller kontant beløp"></textarea></label>
         <div class="modal-actions">
           <button class="secondary" id="cancelBillingButton" type="button">Avbryt</button>

@@ -220,6 +220,11 @@
     viewTitle: document.getElementById("viewTitle"),
     viewSubtitle: document.getElementById("viewSubtitle"),
     importSeedButton: document.getElementById("importSeedButton"),
+    moreMenuButton: document.getElementById("moreMenuButton"),
+    moreMenu: document.getElementById("moreMenu"),
+    mobileBottomNav: document.getElementById("mobileBottomNav"),
+    newActionButton: document.getElementById("newActionButton"),
+    newActionMenu: document.getElementById("newActionMenu"),
     newCustomerButton: document.getElementById("newCustomerButton"),
     newBookingButton: document.getElementById("newBookingButton"),
     redMetric: document.getElementById("redMetric"),
@@ -233,6 +238,7 @@
     dashboardBookingCount: document.getElementById("dashboardBookingCount"),
     dashboardMoveCount: document.getElementById("dashboardMoveCount"),
     dashboardBillingCount: document.getElementById("dashboardBillingCount"),
+    startWorklist: document.getElementById("startWorklist"),
     nextJobs: document.getElementById("nextJobs"),
     moveQueue: document.getElementById("moveQueue"),
     dueCustomers: document.getElementById("dueCustomers"),
@@ -750,12 +756,12 @@
 
   function customerCashBadgeHtml(customer) {
     if (!customer?.pays_cash) return "";
-    return `<span class="cash-badge" title="Cashkunde: kunden er merket med cashbetaling." aria-label="Cashkunde">$</span>`;
+    return `<span class="cash-badge" title="Betaling på stedet: kunden er merket for betaling uten vanlig faktura." aria-label="Betaling på stedet">$</span>`;
   }
 
   const leadStatuses = {
     followup: {
-      label: "Nye leads - må kontaktes",
+      label: "Nye henvendelser - må kontaktes",
       help: "Ny eller gammel henvendelse som bør kontaktes først. Ikke blandes med ordinær servicebooking ennå.",
     },
     needs_offer: {
@@ -767,7 +773,7 @@
       help: "Tilbud er sendt eller muntlig gitt. Følg opp hvis kunden ikke svarer.",
     },
     won: {
-      label: "Vunnet - book jobb",
+      label: "Vunnet - book avtale",
       help: "Kunden har takket ja. Neste steg er installasjon eller jobb i planning.",
     },
     lost: {
@@ -778,9 +784,9 @@
 
   const aiRegistrationTypes = {
     lead: {
-      label: "Lead / ny henvendelse",
+      label: "Ny henvendelse",
       eventType: "Hurtigregistrering - lead",
-      tags: ["Lead", "Leadstatus: Nye leads - må kontaktes"],
+      tags: ["Lead", "Leadstatus: Nye henvendelser - må kontaktes"],
     },
     history: {
       label: "Kun historikk",
@@ -795,17 +801,17 @@
     befaring: {
       label: "Befaring",
       eventType: "Hurtigregistrering - befaring",
-      tags: ["Lead", "Befaring", "Leadstatus: Nye leads - må kontaktes"],
+      tags: ["Lead", "Befaring", "Leadstatus: Nye henvendelser - må kontaktes"],
     },
     installasjon: {
       label: "Installasjon / montering",
       eventType: "Hurtigregistrering - installasjon",
-      tags: ["Lead", "Leadstatus: Vunnet - book jobb"],
+      tags: ["Lead", "Leadstatus: Vunnet - book avtale"],
     },
     blaseisolering: {
       label: "Blåseisolering",
       eventType: "Hurtigregistrering - blåseisolering",
-      tags: ["Blåseisolering", "Lead", "Leadstatus: Nye leads - må kontaktes"],
+      tags: ["Blåseisolering", "Lead", "Leadstatus: Nye henvendelser - må kontaktes"],
     },
   };
 
@@ -825,12 +831,12 @@
 
   const orderStatuses = {
     unscheduled: {
-      label: "Ikke booket",
-      help: "Ordren er avtalt eller vunnet, men ikke lagt i kalender ennå.",
+      label: "Ikke planlagt",
+      help: "Jobben er avtalt eller vunnet, men ikke lagt i kalender ennå.",
     },
     scheduled: {
-      label: "Booket",
-      help: "Ordren har minst en booking i planningboardet.",
+      label: "Planlagt",
+      help: "Jobben har minst en avtale i kalenderen.",
     },
     completed: {
       label: "Utført",
@@ -838,7 +844,7 @@
     },
     cancelled: {
       label: "Avsluttet",
-      help: "Ordren er lukket uten videre arbeid.",
+      help: "Jobben er lukket uten videre arbeid.",
     },
   };
 
@@ -2413,7 +2419,7 @@
     return `
       <div class="payment-control" role="group" aria-label="Betaling">
         <button class="${cash ? "" : "active"}" data-payment-customer="${escapeHtml(key)}" data-payment-mode="invoice" type="button" title="Faktura er standard betaling.">Faktura</button>
-        <button class="${cash ? "active" : ""}" data-payment-customer="${escapeHtml(key)}" data-payment-mode="cash" type="button" title="Marker at kunden betaler cash.">$ Cash</button>
+        <button class="${cash ? "active" : ""}" data-payment-customer="${escapeHtml(key)}" data-payment-mode="cash" type="button" title="Marker at kunden betaler på stedet.">Betaling på stedet</button>
       </div>
     `;
   }
@@ -3188,7 +3194,7 @@
               ${customer.phone ? `<a href="tel:${escapeHtml(phoneForLink(customer.phone))}">Ring</a>${copyPhoneButton(customer.phone, "Kopier")}` : ""}
               ${hasRouteLocation(customer) ? `<a href="${escapeHtml(mapsUrl(customer))}" target="_blank" rel="noreferrer">Kart</a>` : ""}
               ${routeMessageButtons(customer)}
-              <button class="book-primary" data-book-customer="${escapeHtml(customerKey(customer))}" type="button">Book</button>
+              <button class="book-primary" data-book-customer="${escapeHtml(customerKey(customer))}" type="button">Book avtale</button>
             </div>
           </article>
         `;
@@ -3207,7 +3213,7 @@
               <div class="route-overflow-actions">
                 ${row.customer.phone ? `<a href="${escapeHtml(smsUrl())}" target="_blank" rel="noreferrer">SMS</a>${copyPhoneButton(row.customer.phone, "Kopier nr")}` : ""}
                 ${routeMessageButtons(row.customer)}
-                <button data-book-customer="${escapeHtml(customerKey(row.customer))}" type="button">Book</button>
+                <button data-book-customer="${escapeHtml(customerKey(row.customer))}" type="button">Book avtale</button>
                 <button data-route-open-customer="${escapeHtml(customerKey(row.customer))}" type="button">Info</button>
               </div>
             </article>
@@ -3558,15 +3564,16 @@
   function installHelpText() {
     const help = [
       ["#importSeedButton", "Kun utvikling: import fra lokal prototype. Produksjonsimport skal kjøres kontrollert server-side."],
-      ["#newCustomerButton", "Opprett et nytt kundekort manuelt. Brukes for nye leads, befaringer og kunder som ikke finnes fra import."],
-      ["#newBookingButton", "Book service, befaring eller installasjon i planningboardet."],
-      ["#aiRegistrationInput", "Lim inn SMS, e-post eller notater fra kunde. Appen lager et forslag du kan rette før lagring."],
+      ["#newActionButton", "Åpner meny for ny kunde, henvendelse, jobb, avtale, service eller installasjon."],
+      ['[data-new-action="lead"]', "Gå til Innboks og lim inn en ny henvendelse."],
+      ['[data-new-action="booking"]', "Book en avtale direkte i kalenderen."],
+      ["#aiRegistrationInput", "Lim inn SMS, e-post eller notater fra kunde. CRM foreslår et utkast du kan rette før lagring."],
       ["#aiRegistrationParseButton", "Lager forslag til kunde, leadtype og historikk fra teksten. Ingenting lagres før du godkjenner."],
       ["#aiRegistrationClearButton", "Tømmer hurtigregistrering-feltet uten å lagre noe."],
       ['[data-filter-shortcut="red"]', "Service nå: kunder som er over frist eller bør kontaktes/bookes først."],
       ['[data-filter-shortcut="yellow"]', "Snart service: kunder som nærmer seg servicefrist og kan kontaktes når du samler område."],
       ['[data-filter-shortcut="green"]', "Service ok: kunder som nylig har hatt service eller har servicefrist lenger frem."],
-      ['[data-filter-shortcut="booked"]', "Booket: jobber som ligger i planningboardet."],
+      ['[data-filter-shortcut="booked"]', "Planlagt: jobber som ligger i planen."],
       ["#customerSearch", "Søk på navn, telefon, adresse, sted, merke eller annen kundetekst."],
       ["#statusFilter", "Filtrer kundelisten etter service-status, blåseisolering eller manglende data."],
       ["#leadSearch", "Søk i leads etter navn, telefon, sted, produkt, tags og lead-notat."],
@@ -3617,15 +3624,15 @@
       ["#routeCampaignButton", "Kopierer én ferdig SMS-tekst per foreslåtte kunde. Sender ingenting automatisk ennå."],
       ["#routeClearSelectionButton", "Fjerner alle kunder du manuelt har lagt inn som har svart ja."],
       ["#routeCustomerSearch", "Søk opp kunder som har svart ja på SMS, og legg dem inn i ruten før du optimaliserer."],
-      ["#bookingCustomerSearch", "Søk og velg kunden jobben skal bookes på. Fra kundekort skal kunden allerede være valgt."],
-      ["#bookingDate", "Dato jobben skal ligge i planningboardet."],
+      ["#bookingCustomerSearch", "Søk og velg kunden avtalen skal knyttes til. Fra kundekort skal kunden allerede være valgt."],
+      ["#bookingDate", "Dato jobben skal ligge i planen."],
       ["#bookingTime", "Starttid for jobben. Bruk 15-minutters intervaller."],
       ["#bookingType", "Velg type jobb: vanlig service, servicearbeid/timejobb, befaring, installasjon eller blåseisolering."],
-      ["#bookingDuration", "Hvor lang tid jobben settes av i kalenderen/planningboardet."],
+      ["#bookingDuration", "Hvor lang tid jobben settes av i kalenderen."],
       ["#bookingResource", "Hvem som skal utføre jobben."],
-      ["#deleteBookingButton", "Fjerner bookingen fra planningboardet. Hvis den har ordre, får du spørsmål om ordren også skal slettes."],
+      ["#deleteBookingButton", "Fjerner avtalen fra planen. Hvis den har jobb, får du spørsmål om jobben også skal slettes."],
       ["#formDifferentPostal", "Huk av bare hvis kunden har annen faktura-/bostedsadresse enn adressen der varmepumpen/anlegget er."],
-      ["#formPaysCash", "Marker hvis kunden normalt betaler cash i stedet for faktura."],
+      ["#formPaysCash", "Marker hvis kunden normalt betaler på stedet i stedet for faktura."],
       ["#formInsulation", "Marker hvis kunden gjelder blåseisolering/Isobygg. Kunden vises da i blåseisolering-filteret."],
       ["#formGps", "Valgfritt. Bruk koordinater for hytter/steder der vanlig adresse ikke treffer godt nok i kart."],
       ["#formGoogleMaps", "Google Maps-lenke eller koordinater for kundens installasjonssted."],
@@ -3872,7 +3879,7 @@
       const repairedOrders = await ensureOrdersForLoadedBookings();
       renderApp();
       if (message) setSyncStatus(message, "ok");
-      else if (repairedOrders) setSyncStatus(`Fant ${repairedOrders} booking${repairedOrders === 1 ? "" : "er"} uten ordre og opprettet ordre automatisk.`, "ok");
+      else if (repairedOrders) setSyncStatus(`Fant ${repairedOrders} avtale${repairedOrders === 1 ? "" : "r"} uten jobb og opprettet jobb automatisk.`, "ok");
       return true;
     } catch (error) {
       const messageText = error.message || "Klarte ikke laste data.";
@@ -4028,11 +4035,11 @@
   }
 
   function orderStatusLabel(status) {
-    return orderStatuses[status]?.label || "Ordre";
+    return orderStatuses[status]?.label || "Jobb";
   }
 
   function orderStatusHelp(status) {
-    return orderStatuses[status]?.help || "Arbeidsordre knyttet til kundekortet.";
+    return orderStatuses[status]?.help || "Jobb knyttet til kundekortet.";
   }
 
   function billingStatusLabel(status) {
@@ -4064,7 +4071,7 @@
       return `<span class="order-badge job cancelled" title="Avsluttede jobber skjules fra aktiv jobbliste.">Jobb avsluttet</span>`;
     }
     if (!store.isConfigured) return "";
-    return `<span class="order-badge job missing" title="Ordren er ikke speilet til jobs-tabellen ennå.">Mangler jobbspeil</span>`;
+    return `<span class="order-badge job missing" title="Jobben er ikke koblet til ny jobs-tabell ennå.">Mangler jobbkobling</span>`;
   }
 
   function orderBadgesHtml(order, job = jobForOrder(order)) {
@@ -4073,7 +4080,7 @@
 
   function orderJobSummary(order, job = jobForOrder(order)) {
     if (!job && (order?.status || "") === "cancelled") return "Jobb avsluttet";
-    if (!job) return store.isConfigured ? "Mangler jobbspeil" : "Ikke aktivert i demo";
+    if (!job) return store.isConfigured ? "Mangler jobbkobling" : "Ikke aktivert i demo";
     const parts = [
       jobWorkStatusLabel(job.work_status),
       jobBillingStatusLabel(job.billing_status),
@@ -4168,13 +4175,13 @@
 
   async function repairOrderJobMirror(orderId) {
     const order = findOrder(orderId);
-    if (!order) throw new Error("Fant ikke ordren som skulle repareres.");
-    if (!store.repairOrderJobMirror) throw new Error("Jobbspeil-reparasjon krever oppdatert Supabase-adapter.");
+    if (!order) throw new Error("Fant ikke jobben som skulle repareres.");
+    if (!store.repairOrderJobMirror) throw new Error("Jobbkobling krever oppdatert Supabase-adapter.");
     const job = await store.repairOrderJobMirror(order.id, order);
-    if (!job?.id) throw new Error("Supabase opprettet ikke jobbspeil for ordren.");
+    if (!job?.id) throw new Error("Supabase opprettet ikke jobbkobling for jobben.");
     upsertJobMirror(job);
     orders[order.id] = { ...order, jobId: job.id, job_id: job.id };
-    setSyncStatus("Jobbspeil opprettet for ordren.", "ok");
+    setSyncStatus("Jobbkobling opprettet for jobben.", "ok");
     renderAll();
   }
 
@@ -4239,9 +4246,9 @@
   function orderDateText(order) {
     const scheduled = order.scheduledDate || order.scheduled_date;
     const completed = order.completedAt || order.completed_at;
-    if (scheduled) return `Booket ${formatDate(scheduled)}${order.scheduledTime || order.scheduled_time ? ` kl. ${escapeHtml(normalizeBookingTime(order.scheduledTime || order.scheduled_time))}` : ""}`;
+    if (scheduled) return `Planlagt ${formatDate(scheduled)}${order.scheduledTime || order.scheduled_time ? ` kl. ${escapeHtml(normalizeBookingTime(order.scheduledTime || order.scheduled_time))}` : ""}`;
     if (completed) return `Utført ${formatDate(completed)}`;
-    return "Ikke booket";
+    return "Ikke planlagt";
   }
 
   function orderSearchText(row) {
@@ -4279,7 +4286,7 @@
   function orderBillingBadge(order, effectiveStatus = "") {
     const status = effectiveStatus || order.billingStatus || order.billing_status || "not_ready";
     if (status === "not_ready") return "";
-    return `<span class="order-badge billing ${escapeHtml(status)}" title="Fakturastatus for ordren.">${escapeHtml(billingStatusLabel(status))}</span>`;
+    return `<span class="order-badge billing ${escapeHtml(status)}" title="Fakturastatus for jobben.">${escapeHtml(billingStatusLabel(status))}</span>`;
   }
 
   function workflowStep(label, state, help = "") {
@@ -4324,10 +4331,10 @@
     const isCash = Boolean(row.customer?.pays_cash);
     const isBillable = billableJobType(type);
     const steps = [
-      workflowStep("Ordre", "done", "Ordre/jobben finnes i systemet."),
-      workflowStep("Booket", "done", "Jobben ligger i planningboardet."),
+      workflowStep("Jobb", "done", "Jobben finnes i systemet."),
+      workflowStep("Planlagt", "done", "Jobben ligger i planen."),
       workflowStep("Utført", done ? "done" : needsMove || bookingNeedsCompletion(row) ? "warn" : "current", done ? "Jobben er markert utført." : "Trykk Fullfør når jobben er gjort."),
-      workflowStep(isCash ? "Cash" : "Faktura", "pending", isCash ? "Cash må registreres mottatt." : "Faktura må sendes manuelt og markeres her."),
+      workflowStep(isCash ? "Betaling" : "Faktura", "pending", isCash ? "Betaling på stedet må registreres mottatt." : "Faktura må sendes manuelt og markeres her."),
       workflowStep("Ferdig", "pending", "Ingen videre handling når betaling/fakturering er avklart."),
     ];
 
@@ -4346,7 +4353,7 @@
       const overdue = bookingNeedsCompletion(row);
       return {
         kind: overdue ? "overdue" : "scheduled",
-        heading: overdue ? `${workKind.label}: dato passert` : `${workKind.label}: booket`,
+        heading: overdue ? `${workKind.label}: dato passert` : `${workKind.label}: planlagt`,
         next: overdue ? "Trykk Fullfør hvis jobben er gjort, ellers Må flyttes." : "Neste steg er å utføre jobben og trykke Fullfør.",
         help: `${workKind.help} Jobben er ikke markert utført ennå.`,
         steps,
@@ -4356,7 +4363,7 @@
     steps[2] = workflowStep("Utført", "done", "Jobben er markert utført.");
 
     if (!isBillable) {
-      steps[3] = workflowStep("Oppfølging", "current", "Befaring/annet arbeid kan trenge tilbud eller ny ordre.");
+      steps[3] = workflowStep("Oppfølging", "current", "Befaring/annet arbeid kan trenge tilbud eller ny jobb.");
       steps[4] = workflowStep("Ferdig", "pending", "Lukkes når videre oppfølging er avklart.");
       return {
         kind: "done",
@@ -4368,24 +4375,24 @@
     }
 
     if (bookingNeedsPaymentAction(row) || billingStatus === "ready") {
-      steps[3] = workflowStep(isCash ? "Cash mangler" : "Må faktureres", "warn", isCash ? "Cash er ikke markert mottatt." : "Faktura er ikke markert sendt.");
+      steps[3] = workflowStep(isCash ? "Betaling mangler" : "Må faktureres", "warn", isCash ? "Betaling på stedet er ikke markert mottatt." : "Faktura er ikke markert sendt.");
       return {
         kind: "billing",
-        heading: isCash ? "Utført - cash ikke registrert" : "Utført - må faktureres",
-        next: isCash ? "Marker Betalt cash når pengene er mottatt." : "Send faktura i eAccounting og marker Fakturert her.",
+        heading: isCash ? "Utført - betaling ikke registrert" : "Utført - må faktureres",
+        next: isCash ? "Marker betalt når betalingen er mottatt." : "Send faktura i eAccounting og marker Fakturert her.",
         help: "Jobben er utført, men betaling/faktura mangler.",
         steps,
       };
     }
 
     if (paymentMode === "cash" || billingStatus === "paid") {
-      steps[3] = workflowStep("Betalt cash", "done", "Cash er registrert mottatt.");
+      steps[3] = workflowStep("Betalt", "done", "Betaling på stedet er registrert mottatt.");
       steps[4] = workflowStep("Ferdig", "done", "Jobben er ferdig behandlet.");
       return {
         kind: "complete",
-        heading: "Ferdig - betalt cash",
+        heading: "Ferdig - betalt",
         next: "Ingen handling nødvendig.",
-        help: "Jobben er utført og cash er registrert.",
+        help: "Jobben er utført og betaling er registrert.",
         steps,
       };
     }
@@ -4402,11 +4409,11 @@
       };
     }
 
-    steps[3] = workflowStep(isCash ? "Cash" : "Faktura", "current", "Avklar betaling/faktura.");
+    steps[3] = workflowStep(isCash ? "Betaling" : "Faktura", "current", "Avklar betaling/faktura.");
     return {
       kind: "billing",
       heading: "Utført - avklar betaling",
-      next: isCash ? "Marker Betalt cash hvis kunden har betalt." : "Marker Fakturert når faktura er sendt.",
+      next: isCash ? "Marker betalt hvis kunden har betalt på stedet." : "Marker Fakturert når faktura er sendt.",
       help: "Jobben er utført, men betalingsstatus er uklar.",
       steps,
     };
@@ -4428,8 +4435,8 @@
     const billing = orderEffectiveBillingStatus(order, linkedJob);
     const billable = billableJobType(order.type || "service");
     const steps = [
-      workflowStep("Ordre", "done", "Ordren finnes på kundekortet."),
-      workflowStep("Booket", status === "unscheduled" ? "current" : "done", "Ordren må bookes i planningboardet."),
+      workflowStep("Jobb", "done", "Jobben finnes på kundekortet."),
+      workflowStep("Planlagt", status === "unscheduled" ? "current" : "done", "Jobben må legges i planen."),
       workflowStep("Utført", status === "completed" ? "done" : "pending", "Jobben markeres utført etter arbeid."),
       workflowStep("Faktura", billing === "ready" ? "warn" : billing === "sent" || billing === "paid" ? "done" : "pending", "Faktura/betaling avklares etter utført jobb."),
       workflowStep("Ferdig", billing === "sent" || billing === "paid" || (status === "completed" && !billable) ? "done" : "pending", "Ferdig når arbeid og betaling er avklart."),
@@ -4439,9 +4446,9 @@
       return {
         kind: "move",
         heading: "Avsluttet",
-        next: "Ingen aktiv jobb. Lag ny ordre hvis kunden skal følges opp igjen.",
-        help: "Ordren er avsluttet.",
-        steps: [workflowStep("Avsluttet", "warn", "Ordren er lukket uten videre arbeid.")],
+        next: "Ingen aktiv jobb. Lag ny jobb hvis kunden skal følges opp igjen.",
+        help: "Jobben er avsluttet.",
+        steps: [workflowStep("Avsluttet", "warn", "Jobben er lukket uten videre arbeid.")],
       };
     }
     if (billing === "ready") {
@@ -4449,7 +4456,7 @@
         kind: "billing",
         heading: "Utført - må faktureres",
         next: "Send faktura i eAccounting og marker Fakturert.",
-        help: "Ordren er utført, men faktura mangler.",
+        help: "Jobben er utført, men faktura mangler.",
         steps,
       };
     }
@@ -4458,7 +4465,7 @@
         kind: "complete",
         heading: billing === "paid" ? "Ferdig - betalt" : "Ferdig - fakturert",
         next: "Ingen handling nødvendig.",
-        help: "Ordren er ferdig behandlet.",
+        help: "Jobben er ferdig behandlet.",
         steps,
       };
     }
@@ -4467,24 +4474,24 @@
         kind: billable ? "billing" : "done",
         heading: billable ? "Utført - avklar faktura" : "Utført",
         next: billable ? "Marker fakturert når faktura er sendt." : "Sjekk om det trengs videre oppfølging.",
-        help: "Ordren er utført.",
+        help: "Jobben er utført.",
         steps,
       };
     }
     if (status === "scheduled") {
       return {
         kind: "scheduled",
-        heading: "Booket - ikke utført",
-        next: "Utfør jobben og trykk Fullfør i planningboardet.",
-        help: "Ordren ligger i kalenderen.",
+        heading: "Planlagt - ikke utført",
+        next: "Utfør jobben og trykk Fullfør i planen.",
+        help: "Jobben ligger i kalenderen.",
         steps,
       };
     }
     return {
       kind: "unscheduled",
-      heading: "Ordre - ikke booket",
-      next: "Trykk Book ordre og legg jobben i planningboardet.",
-      help: "Ordren finnes, men den ligger ikke i kalenderen ennå.",
+      heading: "Jobb - ikke planlagt",
+      next: "Trykk Book jobb og legg jobben i planen.",
+      help: "Jobben finnes, men den ligger ikke i kalenderen ennå.",
       steps,
     };
   }
@@ -4498,12 +4505,12 @@
     if (!row || !isAdmin()) return "";
     const done = row.booking.status === "done" || doneJobs.has(row.id);
     const needsMove = bookingNeedsMove(row);
-    const paymentActionLabel = row.customer?.pays_cash ? "Betalt cash" : "Fakturert";
+    const paymentActionLabel = row.customer?.pays_cash ? "Betalt" : "Fakturert";
     return [
       !done ? `<button data-complete-booking="${escapeHtml(row.id)}" type="button">Fullfør jobb</button>` : "",
       done && bookingNeedsPaymentAction(row) ? `<button data-billing-booking="${escapeHtml(row.id)}" type="button">${escapeHtml(paymentActionLabel)}</button>` : "",
       !done && !needsMove ? `<button class="secondary" data-move-booking="${escapeHtml(row.id)}" type="button">Må flyttes</button>` : "",
-      options.includeEdit ? `<button class="secondary" data-edit-booking="${escapeHtml(row.id)}" type="button">Endre booking</button>` : "",
+      options.includeEdit ? `<button class="secondary" data-edit-booking="${escapeHtml(row.id)}" type="button">Endre avtale</button>` : "",
     ].filter(Boolean).join("");
   }
 
@@ -4514,14 +4521,14 @@
     const done = row.booking.status === "done" || doneJobs.has(row.id);
     const needsMove = bookingNeedsMove(row);
     const statusLine = bookingNeedsPaymentAction(row)
-      ? (row.customer?.pays_cash ? "Utført, men cash er ikke registrert." : "Utført, men faktura er ikke markert sendt.")
+      ? (row.customer?.pays_cash ? "Utført, men betaling er ikke registrert." : "Utført, men faktura er ikke markert sendt.")
       : needsMove
         ? "Jobben må avtales på nytt eller flyttes."
         : bookingNeedsCompletion(row)
           ? "Datoen er passert. Fullfør jobben hvis den er gjort, ellers flytt den."
           : done
             ? "Jobben er markert utført."
-            : "Jobben er booket, men ikke markert utført.";
+            : "Jobben er planlagt, men ikke markert utført.";
     return `
       <section class="quick-job-focus ${escapeHtml(workKind.type)}">
         <div class="quick-job-head">
@@ -4651,7 +4658,7 @@
       .map((id) => {
         const order = orders[id];
         const customer = order ? findCustomer(orderCustomerId(order)) : null;
-        return `<li>${escapeHtml(order?.title || "Ordre")} · ${escapeHtml(customer ? cleanDisplayName(customer) : "Ukjent kunde")}</li>`;
+        return `<li>${escapeHtml(order?.title || "Jobb")} · ${escapeHtml(customer ? cleanDisplayName(customer) : "Ukjent kunde")}</li>`;
       })
       .join("");
     return { linkedBookingCount, examples };
@@ -4663,8 +4670,8 @@
     deleteOrdersDialogIds = realIds;
     const { linkedBookingCount, examples } = orderDeleteSummary(realIds);
     el.deleteOrdersSummary.innerHTML = `
-      <strong>${realIds.length} ordre valgt</strong>
-      <span>${linkedBookingCount ? `${linkedBookingCount} booking${linkedBookingCount === 1 ? "" : "er"} er koblet til valgte ordre.` : "Ingen aktive bookinger er koblet til valgte ordre."}</span>
+      <strong>${realIds.length} jobber valgt</strong>
+      <span>${linkedBookingCount ? `${linkedBookingCount} avtale${linkedBookingCount === 1 ? "" : "r"} er koblet til valgte jobber.` : "Ingen aktive avtaler er koblet til valgte jobber."}</span>
       ${examples ? `<ul>${examples}${realIds.length > 4 ? `<li>+ ${realIds.length - 4} flere</li>` : ""}</ul>` : ""}
     `;
     if (el.deleteOrdersBookingOptions) el.deleteOrdersBookingOptions.classList.toggle("hidden", linkedBookingCount === 0);
@@ -4680,7 +4687,7 @@
     selectedOrderIds = new Set();
     deleteOrdersDialogIds = [];
     renderAll();
-    setSyncStatus(`${ids.length} ordre slettet.`, "ok");
+    setSyncStatus(`${ids.length} jobber slettet.`, "ok");
   }
 
   async function ensureOrderForBooking(bookingId, booking, overrides = {}, options = {}) {
@@ -4769,12 +4776,12 @@
     });
     await saveServiceEvent(customer, {
       event_date: isoDate(new Date()),
-      event_type: "Ordre opprettet",
+      event_type: "Jobb opprettet",
       note: `${orderTypeLabel(type)} opprettet fra lead. ${note || ""}`.trim(),
     });
     selectedOrderId = order.id;
     setView("orders");
-    setSyncStatus("Ordre opprettet fra lead.", "ok");
+    setSyncStatus("Jobb opprettet fra lead.", "ok");
   }
 
   function showOrderDialogMessage(message, tone = "error") {
@@ -4805,14 +4812,14 @@
     const order = findOrder(orderId);
     const customer = findCustomer(order ? orderCustomerId(order) : customerId);
     if (!customer) {
-      setSyncStatus("Velg eller opprett kunde før du lager ordre.", "error");
+      setSyncStatus("Velg eller opprett kunde før du lager jobb.", "error");
       return;
     }
     editingOrderId = order?.id || "";
     orderDialogCustomerId = customerKey(customer);
     orderTitleManuallyEdited = Boolean(order?.title);
     clearOrderDialogMessage();
-    el.orderDialogTitle.textContent = order ? "Rediger ordre" : "Ny ordre";
+    el.orderDialogTitle.textContent = order ? "Rediger jobb" : "Ny jobb";
     el.orderCustomerName.value = cleanDisplayName(customer);
     el.orderType.value = serviceWorkType(order?.type || options.type) ? "reparasjon" : (order?.type || options.type || "service");
     el.orderTitleInput.value = order?.title || defaultOrderTitle(customer, el.orderType.value);
@@ -4830,7 +4837,7 @@
 
   function orderFormValues() {
     const customer = findCustomer(orderDialogCustomerId);
-    if (!customer) throw new Error("Fant ikke kunden for ordren.");
+    if (!customer) throw new Error("Fant ikke kunden for jobben.");
     return {
       customer,
       type: el.orderType.value || "service",
@@ -4856,15 +4863,15 @@
     });
     await saveServiceEvent(values.customer, {
       event_date: isoDate(new Date()),
-      event_type: existing ? "Ordre endret" : "Ordre opprettet",
-      note: `${orderTypeLabel(values.type)}-ordre ${existing ? "endret" : "opprettet"} direkte på kundekort.${values.note ? `\n${values.note}` : ""}`,
+      event_type: existing ? "Jobb endret" : "Jobb opprettet",
+      note: `${orderTypeLabel(values.type)}-jobb ${existing ? "endret" : "opprettet"} direkte på kundekort.${values.note ? `\n${values.note}` : ""}`,
     });
     selectedOrderId = order.id;
     const shouldBook = values.bookNow;
     const customerId = customerKey(values.customer);
     el.orderDialog.close();
     renderAll();
-    setSyncStatus(existing ? "Ordre oppdatert." : "Ordre opprettet direkte fra kundekort.", "ok");
+    setSyncStatus(existing ? "Jobb oppdatert." : "Jobb opprettet direkte fra kundekort.", "ok");
     if (shouldBook) {
       openBookingDialog(customerId, "", {
         orderId: order.id,
@@ -4924,15 +4931,15 @@
   }
 
   function cashPaymentMarkerRegex() {
-    return /\[Betalt cash[^\]]*\]/i;
+    return /\[(Betalt cash|Betalt på stedet)[^\]]*\]/i;
   }
 
   function paymentMarkerRegex() {
-    return /\[(Fakturert|Betalt cash)[^\]]*\]/i;
+    return /\[(Fakturert|Betalt cash|Betalt på stedet)[^\]]*\]/i;
   }
 
   function paymentMarkersRegex() {
-    return /\[(Fakturert|Betalt cash)[^\]]*\]/gi;
+    return /\[(Fakturert|Betalt cash|Betalt på stedet)[^\]]*\]/gi;
   }
 
   function moveMarkerRegex() {
@@ -5042,24 +5049,67 @@
     renderApp();
   }
 
+  function isTechnicianUser() {
+    return currentUser?.role === "Tekniker";
+  }
+
+  function viewAllowedForCurrentUser(view) {
+    if (!isTechnicianUser()) return true;
+    return new Set(["technician", "planning", "customers"]).has(view);
+  }
+
+  function defaultViewForCurrentUser() {
+    return isTechnicianUser() ? "technician" : "dashboard";
+  }
+
+  function closeFloatingMenus() {
+    el.moreMenu?.classList.add("hidden");
+    el.moreMenuButton?.setAttribute("aria-expanded", "false");
+    el.newActionMenu?.classList.add("hidden");
+    el.newActionButton?.setAttribute("aria-expanded", "false");
+  }
+
+  function updateNavigationForRole() {
+    const technician = isTechnicianUser();
+    document.querySelectorAll("[data-admin-nav]").forEach((node) => node.classList.toggle("hidden", technician));
+    document.querySelectorAll("[data-tech-nav]").forEach((node) => node.classList.toggle("hidden", !technician));
+    document.querySelectorAll("[data-admin-mobile]").forEach((node) => node.classList.toggle("hidden", technician));
+    document.querySelectorAll("[data-tech-mobile]").forEach((node) => node.classList.toggle("hidden", !technician));
+    document.querySelectorAll("[data-mobile-more-toggle]").forEach((node) => node.classList.toggle("hidden", true));
+    el.moreMenuButton?.closest(".more-nav-wrap")?.classList.toggle("hidden", technician);
+  }
+
+  function setNavigationActive(view) {
+    const groupedView = view === "routeplanner" ? "planning" : view;
+    document.querySelectorAll("[data-view]").forEach((button) => {
+      const target = button.dataset.view;
+      const grouped = target === groupedView && !button.closest(".more-menu");
+      button.classList.toggle("active", target === view || grouped);
+    });
+    el.moreMenuButton?.classList.toggle("active", !isTechnicianUser() && ["routeplanner", "technician", "insulation", "settings"].includes(view));
+    document.querySelectorAll("[data-plan-tab-view]").forEach((button) => button.classList.toggle("active", button.dataset.planTabView === view));
+  }
+
   function setView(view) {
-    currentView = view;
-    document.querySelectorAll("nav button").forEach((button) => button.classList.toggle("active", button.dataset.view === view));
+    const requestedView = view || currentUser?.view || defaultViewForCurrentUser();
+    currentView = viewAllowedForCurrentUser(requestedView) ? requestedView : defaultViewForCurrentUser();
+    closeFloatingMenus();
+    setNavigationActive(currentView);
     document.querySelectorAll(".view").forEach((panel) => panel.classList.add("hidden"));
-    document.getElementById(`${view}View`)?.classList.remove("hidden");
+    document.getElementById(`${currentView}View`)?.classList.remove("hidden");
     const titles = {
-      dashboard: ["Oversikt", "Nøkkeltall, neste jobber og serviceklar liste."],
+      dashboard: ["Start", "Hva må følges opp nå."],
       customers: ["Kunder", "Søk, rediger og book kunder."],
-      leads: ["Leads", "Følg opp befaringer, tilbud og gamle henvendelser."],
-      orders: ["Ordre", "Arbeidsordre fra lead, booking og utførte jobber."],
+      leads: ["Innboks", "Nettside, e-post, leads og oppfølging."],
+      orders: ["Jobber", "Jobber fra henvendelser, kalender og utført arbeid."],
       insulation: ["Blåseisolering", "Kalkyle, dokumenter og kunder for iSOBYGG Buskerud."],
-      planning: ["Plan", "Felles planningboard for Gunnar og Hubert."],
-      routeplanner: ["Planlegg servicedag", "Lag kjørbar rute av kunder som har svart ja."],
+      planning: ["Plan", "Kalender for avtaler og jobber."],
+      routeplanner: ["Servicerute", "Lag kjørbar rute av kunder som har svart ja."],
       technician: ["Min dag", "Jobbene dine på mobil."],
       settings: ["Innstillinger", "Brukere, roller og innlogging."],
     };
-    el.viewTitle.textContent = titles[view]?.[0] || "CRM";
-    el.viewSubtitle.textContent = titles[view]?.[1] || "";
+    el.viewTitle.textContent = titles[currentView]?.[0] || "CRM";
+    el.viewSubtitle.textContent = titles[currentView]?.[1] || "";
     renderAll();
   }
 
@@ -5087,6 +5137,83 @@
     }
     setView("planning");
     setSyncStatus(`${cleanDisplayName(row.customer)} ligger i planen ${formatDate(row.booking.date)}. Bruk Flytt eller dra jobben til ny dato.`, "ok");
+  }
+
+  function focusInboxComposer() {
+    currentLeadFilter = "followup";
+    if (el.leadStatusFilter) el.leadStatusFilter.value = currentLeadFilter;
+    setView("leads");
+    setTimeout(() => {
+      el.aiRegistrationPasteZone?.scrollIntoView({ behavior: "smooth", block: "start" });
+      el.aiRegistrationInput?.focus();
+    }, 0);
+  }
+
+  function handleNewAction(action) {
+    closeFloatingMenus();
+    if (action === "customer") {
+      openCustomerDialog("");
+      return;
+    }
+    if (action === "lead" || action === "paste") {
+      focusInboxComposer();
+      return;
+    }
+    if (action === "booking") {
+      openBookingDialog("");
+      return;
+    }
+    if (action === "service") {
+      openBookingDialog("", "", { type: "service" });
+      return;
+    }
+    if (action === "install") {
+      openBookingDialog("", "", { type: "installasjon" });
+      return;
+    }
+    if (action === "job") {
+      setView("orders");
+      setSyncStatus("Velg en kunde eller åpne et kundekort for å lage ny jobb. Book avtale kan brukes direkte fra + Ny.", "ok");
+    }
+  }
+
+  function handleStartAction(action) {
+    if (action === "inbox" || action === "followup") {
+      currentLeadFilter = "followup";
+      if (el.leadStatusFilter) el.leadStatusFilter.value = currentLeadFilter;
+      setView("leads");
+      return;
+    }
+    if (action === "today") {
+      weekStart = startOfWeek(new Date());
+      planningMonthCursor = new Date();
+      setView("planning");
+      return;
+    }
+    if (action === "service") {
+      currentCustomerFilter = "due";
+      if (el.statusFilter) el.statusFilter.value = "due";
+      setView("customers");
+      return;
+    }
+    if (action === "billing") {
+      setView("dashboard");
+      setTimeout(() => el.billingQueue?.closest(".panel")?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
+      return;
+    }
+    if (action === "move") {
+      setView("dashboard");
+      setTimeout(() => el.moveQueue?.closest(".panel")?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
+      return;
+    }
+    if (action === "quality") {
+      const firstQuality = dataQualityRows()[0]?.id || "missing";
+      currentCustomerFilter = firstQuality;
+      currentSearch = "";
+      if (el.statusFilter) el.statusFilter.value = firstQuality;
+      if (el.customerSearch) el.customerSearch.value = "";
+      setView("customers");
+    }
   }
 
   function showPasswordResetMessage(message, tone = "error") {
@@ -5172,11 +5299,12 @@
     el.dataModePill.textContent = store.isConfigured ? "Supabase database" : "Lokal utviklingsdemo";
     el.dataModePill.classList.toggle("online", store.isConfigured);
     el.importSeedButton.classList.toggle("hidden", !(store.isConfigured && browserImportEnabled && isAdmin() && (rawData.customers || []).length));
-    const technician = currentUser.role === "Tekniker";
-    document.querySelector('[data-view="settings"]')?.classList.toggle("hidden", technician);
-    if (technician && currentView === "settings") currentView = "technician";
-    el.newCustomerButton.classList.toggle("hidden", technician);
-    el.newBookingButton.classList.toggle("hidden", technician);
+    const technician = isTechnicianUser();
+    updateNavigationForRole();
+    if (!viewAllowedForCurrentUser(currentView)) currentView = defaultViewForCurrentUser();
+    el.newActionButton?.classList.toggle("hidden", technician);
+    el.newCustomerButton?.classList.toggle("hidden", technician);
+    el.newBookingButton?.classList.toggle("hidden", technician);
     setView(currentView || currentUser.view);
     installHelpText();
   }
@@ -5213,6 +5341,14 @@
     if (el.dashboardMoveCount) el.dashboardMoveCount.textContent = moveRows.length.toLocaleString("nb-NO");
     if (el.dashboardBillingCount) el.dashboardBillingCount.textContent = billingRows.length.toLocaleString("nb-NO");
 
+    renderStartWorklist({
+      redCount,
+      yellowCount,
+      activeLeadCount,
+      openWebsiteSubmissionCount,
+      moveCount: moveRows.length,
+      billingCount: billingRows.length,
+    });
     renderGlobalSearch();
     renderNextJobs();
     renderMoveQueue(moveRows);
@@ -5232,6 +5368,66 @@
     renderDataQuality();
     renderRecentActivity();
     renderIntakeInbox();
+  }
+
+  function renderStartWorklist(counts = {}) {
+    if (!el.startWorklist) return;
+    const today = isoDate(new Date());
+    const todayJobs = bookingRows().filter((row) => row.booking?.date === today && row.booking?.status !== "done");
+    const followupCount = allLeadEntries().filter((entry) => ["followup", "needs_offer", "offer_sent"].includes(leadStatusForEntry(entry))).length;
+    const qualityRows = dataQualityRows();
+    const qualityCount = qualityRows.reduce((sum, row) => sum + row.count, 0);
+    const items = [
+      {
+        action: "inbox",
+        label: "Nye henvendelser",
+        count: (counts.activeLeadCount || 0) + (counts.openWebsiteSubmissionCount || 0),
+        help: "Nettside, e-postutkast og leads som må avklares.",
+      },
+      {
+        action: "followup",
+        label: "Oppfølging",
+        count: followupCount,
+        help: "Kontakter, tilbud og svar som bør følges videre.",
+      },
+      {
+        action: "today",
+        label: "Dagens jobber",
+        count: todayJobs.length,
+        help: "Avtaler i kalenderen for i dag.",
+      },
+      {
+        action: "billing",
+        label: "Må faktureres",
+        count: counts.billingCount || 0,
+        help: "Utførte jobber som ikke er markert fakturert eller betalt.",
+      },
+      {
+        action: "service",
+        label: "Serviceklar",
+        count: (counts.redCount || 0) + (counts.yellowCount || 0),
+        help: "Kunder som bør kontaktes eller legges inn i servicerute.",
+      },
+      {
+        action: "move",
+        label: "Må flyttes",
+        count: counts.moveCount || 0,
+        help: "Avtaler som må planlegges på nytt.",
+      },
+      {
+        action: "quality",
+        label: "Datakvalitet",
+        count: qualityCount,
+        help: qualityRows[0]?.label ? `Første ryddepunkt: ${qualityRows[0].label}.` : "Ingen tydelige varsler akkurat nå.",
+      },
+    ];
+    el.startWorklist.innerHTML = items.map((item) => `
+      <button data-start-action="${escapeHtml(item.action)}" type="button">
+        <span>${escapeHtml(item.label)}</span>
+        <strong>${Number(item.count || 0).toLocaleString("nb-NO")}</strong>
+        <small>${escapeHtml(item.help)}</small>
+      </button>
+    `).join("");
   }
 
   function globalSearchMatches(text, query) {
@@ -5309,7 +5505,7 @@
       if (!globalSearchMatches(text, query)) continue;
       results.push({
         id: `order:${row.id}`,
-        kind: "Ordre",
+        kind: "Jobb",
         title: row.order.title || defaultOrderTitle(row.customer, row.order.type),
         meta: [cleanDisplayName(row.customer), orderStatusLabel(orderEffectiveStatus(row.order, row.job)), billingStatusLabel(orderEffectiveBillingStatus(row.order, row.job))].filter(Boolean).join(" · "),
         orderId: row.id,
@@ -5330,7 +5526,7 @@
       if (!globalSearchMatches(text, query)) continue;
       results.push({
         id: `booking:${row.id}`,
-        kind: "Booking",
+        kind: "Avtale",
         title: cleanDisplayName(row.customer),
         meta: [formatDate(row.booking.date), bookingTimeText(row.booking), row.booking.resource, bookingJobLabel(row)].filter(Boolean).join(" · "),
         bookingId: row.id,
@@ -5357,7 +5553,7 @@
         searchText: text,
       });
     }
-    const rank = { Lead: 0, Kunde: 1, Ordre: 2, Booking: 3, Faktura: 4 };
+    const rank = { Lead: 0, Kunde: 1, Jobb: 2, Avtale: 3, Faktura: 4 };
     return results
       .sort((a, b) => (rank[a.kind] ?? 9) - (rank[b.kind] ?? 9) || String(a.title || "").localeCompare(String(b.title || ""), "nb"))
       .slice(0, 18);
@@ -5366,11 +5562,14 @@
   function renderGlobalSearch() {
     if (!el.globalSearchResults) return;
     const query = globalSearchQuery || el.globalSearchInput?.value?.trim() || "";
+    const searchFocused = document.activeElement === el.globalSearchInput;
     globalSearchResultCache.clear();
     if (!query) {
-      el.globalSearchResults.innerHTML = `<div class="empty-state compact">Søk etter navn, telefon, adresse, lead, ordre, booking eller faktura.</div>`;
+      el.globalSearchResults.innerHTML = "";
+      el.globalSearchResults.classList.add("hidden");
       return;
     }
+    el.globalSearchResults.classList.toggle("hidden", !searchFocused);
     if (normalizeMatch(query).length < 2) {
       el.globalSearchResults.innerHTML = `<div class="empty-state compact">Skriv minst to tegn.</div>`;
       return;
@@ -5411,7 +5610,7 @@
       setView("leads");
       return;
     }
-    if (row.kind === "Ordre") {
+    if (row.kind === "Jobb") {
       selectedOrderId = row.orderId;
       currentOrderFilter = "all";
       currentOrderSearch = "";
@@ -5420,7 +5619,7 @@
       setView("orders");
       return;
     }
-    if (row.kind === "Booking") {
+    if (row.kind === "Avtale") {
       const linked = linkedOrderForBooking(row.bookingId);
       if (linked?.id) {
         selectedOrderId = linked.id;
@@ -5446,7 +5645,7 @@
       button.type = "button";
       button.dataset.billingCustomer = customerKey(row.customer);
       button.dataset.billingBooking = row.id;
-      const label = bookingNeedsCashPayment(row) ? "Cash ikke registrert" : bookingNeedsInvoice(row) ? "Må faktureres" : "Dato passert";
+      const label = bookingNeedsCashPayment(row) ? "Betaling ikke registrert" : bookingNeedsInvoice(row) ? "Må faktureres" : "Dato passert";
       const kind = bookingNeedsPaymentAction(row) ? "yellow" : "red";
       button.innerHTML = `
         <span class="dot ${kind}"></span>
@@ -5847,7 +6046,7 @@
       intakeId: row.id,
     };
     aiRegistrationSelectedCustomerId = row.linked_customer_id || "";
-    if (currentView !== "dashboard") setView("dashboard");
+    if (currentView !== "leads") setView("leads");
     if (el.aiRegistrationInput) el.aiRegistrationInput.value = raw;
     renderAiRegistrationDraft();
     el.aiRegistrationDraft?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -5870,6 +6069,7 @@
     else if (store.updateIntakeItem) await store.updateIntakeItem(id, { status: "discarded" });
     intakeItems = intakeItems.filter((item) => item.id !== id);
     renderDashboard();
+    renderLeads();
     setSyncStatus("Innboksutkast kastet.", "ok");
   }
 
@@ -6137,7 +6337,7 @@
         kind: "order",
         customerId: customerKey(row.customer),
         orderId: row.id,
-        title: "Ordre",
+        title: "Jobb",
         customer: row.customer?.name || "Uten navn",
         text: `${orderStatusLabel(status)} · ${orderTypeLabel(row.order.type)} · ${orderDateText(row.order)}${jobText}`,
       });
@@ -6358,6 +6558,7 @@
   function renderLeads() {
     if (!el.leadList || !el.leadDetail) return;
     renderWebsiteSubmissionInbox();
+    renderIntakeInbox();
     const selectedFilter = el.leadStatusFilter?.value || "";
     currentLeadFilter = selectedFilter || (currentLeadFilter === "all" || leadStatuses[currentLeadFilter] ? currentLeadFilter : "followup");
     if (el.leadStatusFilter && !selectedFilter) el.leadStatusFilter.value = currentLeadFilter;
@@ -6379,7 +6580,7 @@
     if (!selectedLeadId || !selectedLeadEntry(list)) selectedLeadId = leadEntryKey(list[0]) || "";
     el.leadList.innerHTML = "";
     if (!list.length) {
-      el.leadList.innerHTML = `<div class="empty-state">Ingen leads i dette filteret.</div>`;
+      el.leadList.innerHTML = `<div class="empty-state">Ingen henvendelser i dette filteret.</div>`;
     }
     for (const entry of list.slice(0, 250)) {
       const customer = entry.customer;
@@ -6439,7 +6640,7 @@
                 ${customerHint ? `<small class="website-duplicate-hint">${escapeHtml(customerHint)}</small>` : ""}
               </div>
               <div class="mini-action-row">
-                ${canCreateServiceOrder ? `<button data-create-website-service-order="${escapeHtml(row.id)}" type="button" title="Opprett kundekort og serviceordre fra denne nettsideinnsendingen.">Lag serviceordre</button>` : ""}
+                ${canCreateServiceOrder ? `<button data-create-website-service-order="${escapeHtml(row.id)}" type="button" title="Opprett kundekort og servicejobb fra denne nettsideinnsendingen.">Lag servicejobb</button>` : ""}
                 <button data-create-website-lead="${escapeHtml(row.id)}" type="button" title="Opprett lead fra denne nettsideinnsendingen.">Lag lead</button>
                 <button class="secondary" data-website-submission-status="read" data-website-submission-id="${escapeHtml(row.id)}" type="button" title="Skjul fra innboksen uten å opprette lead.">Marker lest</button>
                 <button class="secondary" data-website-submission-status="spam" data-website-submission-id="${escapeHtml(row.id)}" type="button" title="Marker som spam/ugyldig og skjul fra innboksen.">Spam</button>
@@ -6628,10 +6829,10 @@
     if (websiteSubmissionCanCreateServiceOrder(row)) {
       return {
         kind: duplicateCount ? "service duplicate" : "service",
-        label: "Anbefalt: Lag serviceordre",
+        label: "Anbefalt: Lag servicejobb",
         detail: duplicateCount
           ? "Service/feil. Behandle én innsending, marker eventuell kopi lest."
-          : "Service, feil eller fakturerbar hjelp som bør bli ordre.",
+          : "Service, feil eller fakturerbar hjelp som bør bli jobb.",
       };
     }
     return {
@@ -6639,7 +6840,7 @@
       label: "Anbefalt: Lag lead",
       detail: duplicateCount
         ? "Tilbud/befaring. Behandle én innsending, marker eventuell kopi lest."
-        : "Tilbud, befaring eller ny kundeoppfølging før ordre.",
+        : "Tilbud, befaring eller ny kundeoppfølging før jobb.",
     };
   }
 
@@ -6788,7 +6989,7 @@
 
   async function createServiceOrderFromWebsiteSubmission(id) {
     if (!store.saveCustomer || !store.saveOrder || !store.updateWebsiteSubmission) {
-      throw new Error("Serviceordre fra nettside krever Supabase og oppdatert adapter.");
+      throw new Error("Servicejobb fra nettside krever Supabase og oppdatert adapter.");
     }
     const row = (websiteSubmissions || []).find((item) => item.id === id);
     if (!row) throw new Error("Fant ikke nettsideinnsendingen.");
@@ -6797,14 +6998,14 @@
     }
     const values = websiteSubmissionLeadValues(row);
     if (!values.name && !values.phone && !values.email && !values.address && !values.street) {
-      throw new Error("Nettsideinnsendingen mangler nok kontaktinfo til å lage serviceordre.");
+      throw new Error("Nettsideinnsendingen mangler nok kontaktinfo til å lage servicejobb.");
     }
     const duplicateRows = websiteSubmissionDuplicateRows(row);
     if (duplicateRows.length) {
       const ok = await askForConfirmation({
         title: "Mulig duplikat",
-        message: `Fant annen åpen nettsideinnsending som ligner: ${websiteSubmissionDuplicateSummary(row)}. Fortsett og lag serviceordre for valgt innsending?`,
-        confirmLabel: "Lag serviceordre",
+        message: `Fant annen åpen nettsideinnsending som ligner: ${websiteSubmissionDuplicateSummary(row)}. Fortsett og lag servicejobb for valgt innsending?`,
+        confirmLabel: "Lag servicejobb",
       });
       if (!ok) return;
     }
@@ -6853,7 +7054,7 @@
     mergeWebsiteSubmission(id, updatedPatch, updated);
     await saveServiceEvent(customer, {
       event_date: isoDate(new Date()),
-      event_type: created ? "Serviceordre fra nettside" : "Serviceordre fra nettside på eksisterende kundekort",
+      event_type: created ? "Servicejobb fra nettside" : "Servicejobb fra nettside på eksisterende kundekort",
       note: [
         `${orderTypeLabel(type)} opprettet fra nettsideinnsending.`,
         match?.customer ? `Koblet til eksisterende kunde: ${cleanDisplayName(match.customer)}.` : "",
@@ -6867,7 +7068,7 @@
     if (el.orderStatusFilter) el.orderStatusFilter.value = currentOrderFilter;
     if (el.orderSearch) el.orderSearch.value = "";
     setView("orders");
-    setSyncStatus(activityWarning ? `Serviceordre opprettet fra nettsideinnsending. Aktivitetsspor ble ikke lagret: ${activityWarning}` : "Serviceordre opprettet fra nettsideinnsending.", "ok");
+    setSyncStatus(activityWarning ? `Servicejobb opprettet fra nettsideinnsending. Aktivitetsspor ble ikke lagret: ${activityWarning}` : "Servicejobb opprettet fra nettsideinnsending.", "ok");
   }
 
   async function updateWebsiteSubmissionStatus(id, status) {
@@ -7007,7 +7208,7 @@
     if (el.leadStatusFilter) el.leadStatusFilter.value = currentLeadFilter;
     renderAll();
     setView("leads");
-    setSyncStatus("Lead koblet til eksisterende kundekort. Du kan nå sette status, booke eller opprette ordre.", "ok");
+    setSyncStatus("Lead koblet til eksisterende kundekort. Du kan nå sette status, booke avtale eller opprette jobb.", "ok");
   }
 
   async function createCustomerFromLead(entryKey) {
@@ -7061,7 +7262,7 @@
     if (el.leadStatusFilter) el.leadStatusFilter.value = currentLeadFilter;
     renderAll();
     setView("leads");
-    setSyncStatus("Kundekort opprettet fra lead. Du kan nå sette status, opprette ordre eller booke.", "ok");
+    setSyncStatus("Kundekort opprettet fra lead. Du kan nå sette status, opprette jobb eller booke avtale.", "ok");
   }
 
   function leadTemplateButtons(customer, target = "") {
@@ -7097,13 +7298,13 @@
     if (!realCustomer) {
       return {
         heading: "Opprett eller koble kundekort",
-        body: "Før saken kan bli ordre, booking eller faktura må den kobles til et kundekort.",
+        body: "Før saken kan bli jobb, avtale eller faktura må den kobles til et kundekort.",
       };
     }
     if (status === "needs_offer") {
       return {
         heading: "Skriv og send tilbud",
-        body: "Bruk tilbudsfeltet under. Når kunden svarer ja, marker leaden som vunnet og opprett ordre.",
+        body: "Bruk tilbudsfeltet under. Når kunden svarer ja, marker leaden som vunnet og opprett jobb.",
       };
     }
     if (status === "offer_sent") {
@@ -7114,8 +7315,8 @@
     }
     if (status === "won") {
       return {
-        heading: "Opprett ordre og book jobb",
-        body: "Saken er vunnet. Lag ordre før booking, så flyten går videre til utført og fakturert.",
+        heading: "Opprett jobb og book avtale",
+        body: "Saken er vunnet. Lag jobb før avtale, så flyten går videre til utført og fakturert.",
       };
     }
     if (status === "lost") {
@@ -7126,7 +7327,7 @@
     }
     return {
       heading: "Avklar behovet",
-      body: "Kontakt kunden, sjekk om det er tilbud, befaring, serviceordre eller ny varmepumpe.",
+      body: "Kontakt kunden, sjekk om det er tilbud, befaring, servicejobb eller ny varmepumpe.",
     };
   }
 
@@ -7140,19 +7341,19 @@
     }
     if (realCustomer && status === "followup") {
       actions.push(`<button class="order-primary" data-lead-set-status="needs_offer" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button" title="Flytt leaden til tilbudskøen når du har nok info til å lage tilbud.">Klar for tilbud</button>`);
-      actions.push(`<button class="secondary" data-book-customer="${escapeHtml(key)}" type="button" title="Book befaring, installasjon eller service direkte på kundekortet.">Book</button>`);
+      actions.push(`<button class="secondary" data-book-customer="${escapeHtml(key)}" type="button" title="Book befaring, installasjon eller service direkte på kundekortet.">Book avtale</button>`);
     }
     if (realCustomer && status === "needs_offer") {
       actions.push(`<button class="order-primary" data-focus-lead-offer="${escapeHtml(leadTarget)}" type="button" title="Hopp til tilbudsfeltet og bruk en tilbudsmal.">Skriv tilbud</button>`);
       actions.push(`<button class="secondary" data-lead-set-status="offer_sent" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button" title="Brukes bare når tilbudet faktisk er sendt utenfor CRM eller bekreftet sendt.">Marker sendt</button>`);
     }
     if (realCustomer && status === "offer_sent") {
-      actions.push(`<button class="order-primary" data-lead-set-status="won" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button" title="Kunden har takket ja. Neste steg blir ordre og booking.">Vunnet</button>`);
+      actions.push(`<button class="order-primary" data-lead-set-status="won" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button" title="Kunden har takket ja. Neste steg blir jobb og avtale.">Vunnet</button>`);
       actions.push(`<button class="secondary" data-lead-set-status="lost" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button" title="Kunden har takket nei eller saken skal avsluttes.">Tapt</button>`);
     }
     if (realCustomer && status === "won") {
-      actions.push(`<button class="order-primary" data-create-order-from-lead="${escapeHtml(key)}" type="button" title="Opprett ordre fra vunnet lead, slik at jobben kan bookes og senere faktureres.">Opprett ordre</button>`);
-      actions.push(`<button class="secondary" data-book-customer="${escapeHtml(key)}" type="button" title="Book jobb hvis ordre allerede finnes eller avtalen er klar.">Book</button>`);
+      actions.push(`<button class="order-primary" data-create-order-from-lead="${escapeHtml(key)}" type="button" title="Opprett jobb fra vunnet lead, slik at jobben kan planlegges og senere faktureres.">Opprett jobb</button>`);
+      actions.push(`<button class="secondary" data-book-customer="${escapeHtml(key)}" type="button" title="Book avtale hvis jobb allerede finnes eller avtalen er klar.">Book avtale</button>`);
     }
     if (status === "lost") {
       actions.push(`<button class="secondary" data-lead-set-status="followup" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button" title="Gjenåpne leaden hvis kunden tar kontakt igjen.">Gjenåpne</button>`);
@@ -7190,7 +7391,7 @@
           <div><dt>Adresse</dt><dd>${escapeHtml(addressFor(customer) || customer.location_tag || customer.visit_city || "Ikke registrert")}</dd></div>
           <div><dt>Kilde/status</dt><dd>${escapeHtml(sourceText || "Ikke registrert")}</dd></div>
           <div><dt>Merke/modell</dt><dd>${escapeHtml([customer.brand, customer.model_or_note].filter(Boolean).join(" · ") || "Ikke registrert")}</dd></div>
-          <div><dt>Betaling</dt><dd>${customer.pays_cash ? "Cash" : "Faktura"}</dd></div>
+          <div><dt>Betaling</dt><dd>${customer.pays_cash ? "Betaling på stedet" : "Faktura"}</dd></div>
         </dl>
       </section>
     `;
@@ -7225,7 +7426,7 @@
             <p>Samme kundeinfo vises her, så leaden kan jobbes ferdig uten ekstra åpning.</p>
           </div>
           <div class="section-actions">
-            ${isAdmin() && !customer.is_inactive ? `<button class="secondary" data-new-installation-customer="${escapeHtml(key)}" type="button" title="Registrer flere varmepumper/anlegg med egen adresse og serviceintervall.">Ny varmepumpe/anlegg</button><button class="secondary" data-new-order-customer="${escapeHtml(key)}" type="button" title="Lag ordre som kan bookes, utføres og faktureres.">Ny ordre</button><button class="secondary" data-edit-customer="${escapeHtml(key)}" type="button" title="Rediger kundedata, adresse, e-post, telefon og betalingsvalg.">Rediger</button>` : ""}
+            ${isAdmin() && !customer.is_inactive ? `<button class="secondary" data-new-installation-customer="${escapeHtml(key)}" type="button" title="Registrer flere varmepumper/anlegg med egen adresse og serviceintervall.">Ny varmepumpe/anlegg</button><button class="secondary" data-new-order-customer="${escapeHtml(key)}" type="button" title="Lag jobb som kan planlegges, utføres og faktureres.">Ny jobb</button><button class="secondary" data-edit-customer="${escapeHtml(key)}" type="button" title="Rediger kundedata, adresse, e-post, telefon og betalingsvalg.">Rediger</button>` : ""}
           </div>
         </div>
         ${booking ? workflowHtml(bookingWorkflowState(booking), { title: "Aktiv jobbstatus", compact: true }) : ""}
@@ -7233,7 +7434,7 @@
           <div><dt>Neste service</dt><dd>${formatDate(nextServiceDueForCustomer(customer))}</dd></div>
           <div><dt>Siste service</dt><dd>${escapeHtml(lastServiceText(customer, events))}</dd></div>
           <div><dt>Fakturaer</dt><dd>${invoices.length.toLocaleString("nb-NO")} koblet</dd></div>
-          <div><dt>Booking</dt><dd>${booking ? `${formatDate(booking.booking.date)} ${booking.booking.time || ""} · ${escapeHtml(booking.booking.resource || "")}` : "Ikke booket"}</dd></div>
+          <div><dt>Avtale</dt><dd>${booking ? `${formatDate(booking.booking.date)} ${booking.booking.time || ""} · ${escapeHtml(booking.booking.resource || "")}` : "Ikke planlagt"}</dd></div>
         </dl>
       </section>
       ${lookupMissingDataSection(customer)}
@@ -7276,11 +7477,11 @@
       <section class="detail-section">
         <h3>Oppfølging</h3>
         ${canEditLead ? leadStatusControlHtml(customer, status, leadTarget) : `<p class="muted">Denne leaden ligger som henvendelse. Opprett kundekort først når saken er reell og skal følges opp videre.</p>`}
-        ${!realCustomer && entry?.lead ? `<p class="muted">Du kan følge opp status og notat her. Opprett kundekort når saken er reell og skal bli kunde, ordre eller booking.</p>` : ""}
+        ${!realCustomer && entry?.lead ? `<p class="muted">Du kan følge opp status og notat her. Opprett kundekort når saken er reell og skal bli kunde, jobb eller avtale.</p>` : ""}
         <div class="lead-status-actions">
           ${canEditLead ? `<button data-lead-set-status="needs_offer" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button" title="Legg saken i tilbudskøen.">Tilbud må sendes</button>
           <button data-lead-set-status="offer_sent" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button" title="Marker manuelt at tilbud er sendt og venter på svar.">Tilbud sendt</button>
-          <button data-lead-set-status="won" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button" title="Kunden har takket ja. Da bør det opprettes ordre.">Vunnet</button>
+          <button data-lead-set-status="won" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button" title="Kunden har takket ja. Da bør det opprettes jobb.">Vunnet</button>
           <button data-lead-set-status="lost" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button" title="Avslutt saken når kunden ikke skal gå videre.">Tapt</button>
           ${realCustomer && !entry?.lead ? `<button class="secondary" data-inactivate-lead="${escapeHtml(key)}" type="button" title="Skjul denne gamle kunde-tag-leaden fra aktiv leadliste.">Sett inaktiv</button>` : ""}` : ""}
         </div>
@@ -7321,7 +7522,7 @@
     if (el.deleteSelectedOrdersButton) el.deleteSelectedOrdersButton.disabled = selectedOrderIds.size === 0;
     if (el.orderSelectionSummary) {
       el.orderSelectionSummary.textContent = selectedOrderIds.size
-        ? `${selectedOrderIds.size} ordre valgt`
+        ? `${selectedOrderIds.size} jobber valgt`
         : "Ingen valgt";
     }
   }
@@ -7343,13 +7544,13 @@
     if (!selectedOrderId || !list.some((row) => row.id === selectedOrderId)) selectedOrderId = list[0]?.id || "";
     el.orderList.innerHTML = "";
     if (!list.length) {
-      el.orderList.innerHTML = `<div class="empty-state">Ingen ordre i dette filteret.</div>`;
+      el.orderList.innerHTML = `<div class="empty-state">Ingen jobber i dette filteret.</div>`;
     }
     for (const row of visibleRows) {
       const item = document.createElement("article");
       item.className = `order-list-row ${row.id === selectedOrderId ? "active" : ""}`;
       item.innerHTML = `
-        <label class="order-select" title="Velg ordre for sletting.">
+        <label class="order-select" title="Velg jobb for sletting.">
           <input data-order-check="${escapeHtml(row.id)}" type="checkbox" ${selectedOrderIds.has(row.id) ? "checked" : ""} />
           <span>Velg</span>
         </label>
@@ -7373,7 +7574,7 @@
     const order = findOrder(selectedOrderId);
     const customer = order ? findCustomer(orderCustomerId(order)) : null;
     if (!order || !customer) {
-      el.orderDetail.innerHTML = `<div class="empty-state">Velg en ordre.</div>`;
+      el.orderDetail.innerHTML = `<div class="empty-state">Velg en jobb.</div>`;
       return;
     }
     const key = customerKey(customer);
@@ -7390,14 +7591,14 @@
         <h2>${customerStarHtml(customer, { showEmpty: true })}${customerCashBadgeHtml(customer)}${escapeHtml(order.title || orderTitleFromBooking(customer, order))}</h2>
         <p>${escapeHtml(cleanDisplayName(customer))} · ${escapeHtml(addressFor(customer) || customer.location_tag || "Adresse mangler")}</p>
       </div>
-      ${workflowHtml(flow, { title: "Hvor er ordren?" })}
+      ${workflowHtml(flow, { title: "Hvor er jobben?" })}
       <div class="action-row">
         ${customerActionLinks(customer)}
-        ${primaryBooking ? bookingWorkflowButtons(primaryBooking, { includeEdit: true }) : `<button data-book-order="${escapeHtml(order.id)}" type="button">Book ordre</button>`}
-        <button data-edit-order="${escapeHtml(order.id)}" type="button">Rediger ordre</button>
-        <button class="secondary" data-delete-one-order="${escapeHtml(order.id)}" type="button">Slett ordre</button>
+        ${primaryBooking ? bookingWorkflowButtons(primaryBooking, { includeEdit: true }) : `<button data-book-order="${escapeHtml(order.id)}" type="button">Book jobb</button>`}
+        <button data-edit-order="${escapeHtml(order.id)}" type="button">Rediger jobb</button>
+        <button class="secondary" data-delete-one-order="${escapeHtml(order.id)}" type="button">Slett jobb</button>
         <button data-open-order-customer="${escapeHtml(key)}" type="button">Åpne kundekort</button>
-        ${orderMissingJobMirror({ order, job: linkedJob }) && store.repairOrderJobMirror && isAdmin() ? `<button data-repair-order-job="${escapeHtml(order.id)}" type="button">Opprett jobbspeil</button>` : ""}
+        ${orderMissingJobMirror({ order, job: linkedJob }) && store.repairOrderJobMirror && isAdmin() ? `<button data-repair-order-job="${escapeHtml(order.id)}" type="button">Opprett jobbkobling</button>` : ""}
         ${!primaryBooking && effectiveBilling === "ready" ? `<button data-mark-order-invoiced="${escapeHtml(order.id)}" type="button">Marker fakturert</button>` : ""}
       </div>
       <dl class="facts">
@@ -7405,12 +7606,12 @@
         <div><dt>Type</dt><dd>${escapeHtml(orderTypeLabel(order.type))}</dd></div>
         <div><dt>Status</dt><dd>${escapeHtml(orderStatusLabel(orderEffectiveStatus(order, linkedJob)))}</dd></div>
         <div><dt>Faktura</dt><dd>${escapeHtml(billingStatusLabel(effectiveBilling))}</dd></div>
-        <div><dt>Jobbspeil</dt><dd>${escapeHtml(orderJobSummary(order, linkedJob))}</dd></div>
+        <div><dt>Jobbkobling</dt><dd>${escapeHtml(orderJobSummary(order, linkedJob))}</dd></div>
         <div><dt>Dato</dt><dd>${escapeHtml(orderDateText(order))}</dd></div>
         <div><dt>Telefon</dt><dd class="copy-field">${phoneField(customer.phone)}</dd></div>
       </dl>
       <section class="detail-section">
-        <h3>Booking</h3>
+        <h3>Avtale</h3>
         ${linkedBookings.length ? `<div class="order-booking-list">${linkedBookings.map((row) => `
           <article>
             <strong>${weekdayDate(row.booking.date, { long: true })} kl. ${escapeHtml(bookingTimeText(row.booking))}</strong>
@@ -7418,27 +7619,27 @@
             ${workflowInlineHtml(bookingWorkflowState(row, order))}
             <button data-edit-booking="${escapeHtml(row.id)}" type="button">Endre</button>
           </article>
-        `).join("")}</div>` : `<div class="empty-state">Ordren er ikke booket ennå.</div>`}
+        `).join("")}</div>` : `<div class="empty-state">Jobben er ikke planlagt ennå.</div>`}
       </section>
-      ${order.note ? `<section class="detail-section"><h3>Ordrenotat</h3><div class="note-box">${escapeHtml(order.note).replaceAll("\n", "<br>")}</div></section>` : ""}
+      ${order.note ? `<section class="detail-section"><h3>Jobbnotat</h3><div class="note-box">${escapeHtml(order.note).replaceAll("\n", "<br>")}</div></section>` : ""}
     `;
   }
 
   function renderCustomerOrders(customer) {
     const rows = customerOrders(customer).slice(0, 8);
     if (!rows.length) {
-      return `<section class="detail-section"><h3>Ordre / jobber</h3><div class="empty-state">Ingen ordre opprettet ennå. Bruk Ny ordre hvis kunden ringer og vil ha service, befaring eller installasjon direkte.</div></section>`;
+      return `<section class="detail-section"><h3>Jobber</h3><div class="empty-state">Ingen jobber opprettet ennå. Bruk Ny jobb hvis kunden ringer og vil ha service, befaring eller installasjon direkte.</div></section>`;
     }
     return `
       <section class="detail-section">
-        <h3>Ordre / jobber</h3>
+        <h3>Jobber</h3>
         <div class="customer-order-list">
           ${rows.map((order) => {
             const linkedBookings = bookingRows().filter((row) => bookingIdsForOrder(order).includes(row.id) || row.booking.orderId === order.id);
             const linkedJob = jobForOrder(order);
             const bookingLine = linkedBookings.length
               ? linkedBookings.map((row) => `${formatDate(row.booking.date)} ${bookingTimeText(row.booking)} ${row.booking.resource || ""}`.trim()).join(" · ")
-              : "Ikke booket";
+              : "Ikke planlagt";
             return `
               <article>
                 <div>
@@ -7447,7 +7648,7 @@
                   <small>${escapeHtml(bookingLine)}</small>
                   ${workflowInlineHtml(orderWorkflowState(order, linkedBookings))}
                 </div>
-                <button data-open-order="${escapeHtml(order.id)}" type="button">Åpne ordre</button>
+                <button data-open-order="${escapeHtml(order.id)}" type="button">Åpne jobb</button>
               </article>
             `;
           }).join("")}
@@ -7810,7 +8011,7 @@
             ${customer.email ? `<a href="${escapeHtml(emailUrl(customer))}" target="_blank" rel="noreferrer">E-post</a>` : ""}
             <button data-select-insulation-customer="${escapeHtml(key)}" type="button">Velg til tilbud</button>
             <button data-book-insulation-customer="${escapeHtml(key)}" type="button">Book blåsejobb</button>
-            <button data-new-insulation-order="${escapeHtml(key)}" type="button">Ny ordre</button>
+            <button data-new-insulation-order="${escapeHtml(key)}" type="button">Ny jobb</button>
             <button data-jump-customer="${escapeHtml(key)}" type="button">Kundekort</button>
           </div>
         </article>
@@ -8352,7 +8553,7 @@
       </div>
       <div class="action-row">
         ${customerActionLinks(customer)}
-        ${isAdmin() ? `${!customer.is_inactive ? `<button class="secondary" data-new-lead-existing-customer="${escapeHtml(key)}" type="button" title="Opprett ny lead/tilbudssak på eksisterende kunde, f.eks. ekstra varmepumpe.">Ny lead</button><button data-new-installation-customer="${escapeHtml(key)}" type="button" title="Registrer egen varmepumpe/anlegg med adresse og servicefrist.">Ny varmepumpe/anlegg</button><button class="order-primary" data-new-order-customer="${escapeHtml(key)}" type="button" title="Lag serviceordre, installasjonsordre eller annet arbeid direkte fra kundekortet.">Ny ordre</button><button class="book-primary" data-book-customer="${escapeHtml(key)}" type="button">Book</button>` : ""}<button data-edit-customer="${escapeHtml(key)}" type="button">Rediger</button>` : ""}
+        ${isAdmin() ? `${!customer.is_inactive ? `<button class="secondary" data-new-lead-existing-customer="${escapeHtml(key)}" type="button" title="Opprett ny lead/tilbudssak på eksisterende kunde, f.eks. ekstra varmepumpe.">Ny lead</button><button data-new-installation-customer="${escapeHtml(key)}" type="button" title="Registrer egen varmepumpe/anlegg med adresse og servicefrist.">Ny varmepumpe/anlegg</button><button class="order-primary" data-new-order-customer="${escapeHtml(key)}" type="button" title="Lag servicejobb, installasjonsjobb eller annet arbeid direkte fra kundekortet.">Ny jobb</button><button class="book-primary" data-book-customer="${escapeHtml(key)}" type="button">Book avtale</button>` : ""}<button data-edit-customer="${escapeHtml(key)}" type="button">Rediger</button>` : ""}
       </div>
       ${booking ? workflowHtml(bookingWorkflowState(booking), { title: "Aktiv jobbstatus", compact: true }) : ""}
       ${lookupMissingDataSection(customer)}
@@ -8372,7 +8573,7 @@
         <div><dt>GPS/kart</dt><dd>${escapeHtml(customer.gps_coordinates || customer.google_maps ? "Registrert" : "Ikke registrert")}</dd></div>
         <div><dt>Tags</dt><dd>${escapeHtml(customer.tags || "Ikke registrert")}</dd></div>
         <div><dt>Fakturaer</dt><dd>${invoices.length.toLocaleString("nb-NO")} koblet</dd></div>
-        <div><dt>Booking</dt><dd>${booking ? `${formatDate(booking.booking.date)} ${booking.booking.time || ""} · ${escapeHtml(booking.booking.resource || "")}` : "Ikke booket"}</dd></div>
+        <div><dt>Avtale</dt><dd>${booking ? `${formatDate(booking.booking.date)} ${booking.booking.time || ""} · ${escapeHtml(booking.booking.resource || "")}` : "Ikke planlagt"}</dd></div>
       </dl>
       ${renderInstallationList(customer, installations)}
       ${renderCustomerOrders(customer)}
@@ -8429,7 +8630,7 @@
       <div class="invoice-payment-row">
         <div>
           <strong>Betaling</strong>
-          <span>Faktura er standard. Bruk Cash bare når kunden normalt betaler kontant.</span>
+          <span>Faktura er standard. Bruk betaling på stedet bare når kunden normalt betaler kontant.</span>
         </div>
         ${paymentControlsHtml(customer)}
       </div>
@@ -8611,9 +8812,9 @@
       if (needsMove) statusBits.push("Må flyttes");
       if (done) statusBits.push("Utført");
       if (bookingNeedsInvoice(row)) statusBits.push("Må faktureres");
-      if (bookingNeedsCashPayment(row)) statusBits.push("Cash ikke registrert");
+      if (bookingNeedsCashPayment(row)) statusBits.push("Betaling ikke registrert");
       if (paymentMode === "invoice") statusBits.push("Fakturert");
-      if (paymentMode === "cash") statusBits.push("Betalt cash");
+      if (paymentMode === "cash") statusBits.push("Betalt på stedet");
       if (bookingNeedsCompletion(row)) statusBits.push("Dato passert");
       const statusText = statusBits.join(" · ");
       const title = `${statusText ? `${statusText}: ` : ""}${bookingJobLabel(row)} ${timeRangeText(bookingRowStartMinutes(row), bookingRowEndMinutes(row))}: ${cleanDisplayName(row.customer)}`;
@@ -8678,9 +8879,9 @@
     const paymentMode = bookingPaymentMode(row);
     const linkedOrder = linkedOrderForBooking(row.id) || findOrder(row.booking.orderId);
     const flow = bookingWorkflowState(row, linkedOrder);
-    const paymentActionLabel = row.customer?.pays_cash ? "Betalt cash" : "Fakturert";
+    const paymentActionLabel = row.customer?.pays_cash ? "Betalt" : "Fakturert";
     const paymentActionTitle = row.customer?.pays_cash
-      ? "Marker at cash er mottatt for denne jobben."
+      ? "Marker at betaling er mottatt for denne jobben."
       : "Marker at faktura er sendt manuelt i eAccounting.";
     const headerParts = options.showDate
       ? [weekdayDate(row.booking.date, { long: true }), `kl. ${bookingTimeText(row.booking)}`, row.booking.resource || "", bookingJobLabel(row)]
@@ -8701,9 +8902,9 @@
       ${needsMove ? `<span class="invoice-pill move">Må flyttes</span>` : ""}
       ${bookingNeedsCompletion(row) ? `<span class="invoice-pill overdue">Dato passert - fullfør</span>` : ""}
       ${bookingNeedsInvoice(row) ? `<span class="invoice-pill">Må faktureres</span>` : ""}
-      ${bookingNeedsCashPayment(row) ? `<span class="invoice-pill">Cash ikke registrert</span>` : ""}
+      ${bookingNeedsCashPayment(row) ? `<span class="invoice-pill">Betaling ikke registrert</span>` : ""}
       ${paymentMode === "invoice" ? `<span class="invoice-pill invoiced">Fakturert</span>` : ""}
-      ${paymentMode === "cash" ? `<span class="invoice-pill paid">Betalt cash</span>` : ""}
+      ${paymentMode === "cash" ? `<span class="invoice-pill paid">Betalt på stedet</span>` : ""}
       <strong>${customerStarHtml(row.customer)}${customerCashBadgeHtml(row.customer)}${escapeHtml(cleanDisplayName(row.customer))}</strong>
       ${workflowInlineHtml(flow)}
       <span class="job-type-pill ${escapeHtml(type)}">${escapeHtml(bookingJobLabel(row))}</span>
@@ -8720,7 +8921,7 @@
         ${editable && isAdmin() ? `<button data-complete-booking="${escapeHtml(row.id)}" type="button" title="Marker jobben som utført og velg eventuell neste oppfølging.">${done ? "Utført" : "Fullfør"}</button>` : ""}
         ${editable && isAdmin() && !done && !needsMove ? `<button data-move-booking="${escapeHtml(row.id)}" type="button" title="Marker at jobben må flyttes fordi kunden ikke var tilgjengelig, dere ikke kom inn, eller tidspunkt må avtales på nytt.">Må flyttes</button>` : ""}
         ${editable && isAdmin() && bookingNeedsPaymentAction(row) ? `<button data-billing-booking="${escapeHtml(row.id)}" type="button" title="${escapeHtml(paymentActionTitle)}">${escapeHtml(paymentActionLabel)}</button>` : ""}
-        ${editable && isAdmin() ? `<button data-delete-booking="${escapeHtml(row.id)}" type="button" title="Fjern bookingen fra planning uten å slette kundehistorikk.">Fjern</button>` : ""}
+        ${editable && isAdmin() ? `<button data-delete-booking="${escapeHtml(row.id)}" type="button" title="Fjern avtalen fra planen uten å slette kundehistorikk.">Fjern</button>` : ""}
       </div>
     `;
     return card;
@@ -8855,7 +9056,7 @@
         <h3>${isAdmin() ? starToggleHtml(customer) : customerStarHtml(customer, { showEmpty: true })}${customerCashBadgeHtml(customer)}${escapeHtml(cleanDisplayName(customer))}</h3>
         <p>${escapeHtml(addressFor(customer) || "Adresse mangler")}</p>
       </div>
-      <div class="action-row">${customerActionLinks(customer)}${isAdmin() && !customer.is_inactive ? `<button class="secondary" data-new-lead-existing-customer="${escapeHtml(key)}" type="button">Ny lead</button><button data-new-installation-customer="${escapeHtml(key)}" type="button">Ny varmepumpe/anlegg</button><button class="order-primary" data-new-order-customer="${escapeHtml(key)}" type="button">Ny ordre</button><button class="book-primary" data-book-customer="${escapeHtml(key)}" type="button">Book</button>` : ""}</div>
+      <div class="action-row">${customerActionLinks(customer)}${isAdmin() && !customer.is_inactive ? `<button class="secondary" data-new-lead-existing-customer="${escapeHtml(key)}" type="button">Ny lead</button><button data-new-installation-customer="${escapeHtml(key)}" type="button">Ny varmepumpe/anlegg</button><button class="order-primary" data-new-order-customer="${escapeHtml(key)}" type="button">Ny jobb</button><button class="book-primary" data-book-customer="${escapeHtml(key)}" type="button">Book avtale</button>` : ""}</div>
       ${lookupMissingDataSection(customer, true)}
       ${isLikelyHomeAddress(customer) ? `<section class="quick-block attention"><strong>Mulig hjemmeadresse</strong><p>Tagg/område tyder på hytte/anlegg, men adressen kan være hjemmeadresse. Kontroller koordinater for rute.</p></section>` : ""}
       ${isAdmin() ? `<div class="customer-controls compact">${insulationToggleHtml(customer)}</div>` : ""}
@@ -8866,7 +9067,7 @@
         <div><dt>Merke/modell</dt><dd>${escapeHtml([customer.brand, customer.model_or_note].filter(Boolean).join(" · ") || "Ikke registrert")}</dd></div>
         <div><dt>Neste service</dt><dd>${formatDate(nextServiceDueForCustomer(customer))}</dd></div>
         <div><dt>Siste service</dt><dd>${escapeHtml(lastServiceText(customer, events))}</dd></div>
-        <div><dt>Betaling</dt><dd>${customer.pays_cash ? "Cash" : "Faktura"}</dd></div>
+        <div><dt>Betaling</dt><dd>${customer.pays_cash ? "Betaling på stedet" : "Faktura"}</dd></div>
         <div><dt>Tags</dt><dd>${escapeHtml(customer.tags || "Ikke registrert")}</dd></div>
         <div><dt>Fakturaer</dt><dd>${invoices.length.toLocaleString("nb-NO")} koblet</dd></div>
       </dl>
@@ -8875,9 +9076,9 @@
       ${customer.local_note ? `<section class="quick-block"><strong>Notat</strong><p>${escapeHtml(customer.local_note)}</p></section>` : ""}
       <div class="quick-actions">
         <button data-jump-customer="${escapeHtml(key)}" type="button">Åpne kundekort</button>
-        ${isAdmin() && !customer.is_inactive ? `<button class="secondary" data-new-lead-existing-customer="${escapeHtml(key)}" type="button">Ny lead</button><button class="secondary" data-new-installation-customer="${escapeHtml(key)}" type="button">Ny varmepumpe/anlegg</button><button class="secondary" data-new-order-customer="${escapeHtml(key)}" type="button">Ny ordre</button>` : ""}
+        ${isAdmin() && !customer.is_inactive ? `<button class="secondary" data-new-lead-existing-customer="${escapeHtml(key)}" type="button">Ny lead</button><button class="secondary" data-new-installation-customer="${escapeHtml(key)}" type="button">Ny varmepumpe/anlegg</button><button class="secondary" data-new-order-customer="${escapeHtml(key)}" type="button">Ny jobb</button>` : ""}
         ${isAdmin() ? `<button class="secondary" data-edit-customer="${escapeHtml(key)}" type="button">Rediger kunde</button>` : ""}
-        ${bookingId && isAdmin() ? `<button class="secondary" data-edit-booking="${escapeHtml(bookingId)}" type="button">Endre booking</button>` : ""}
+        ${bookingId && isAdmin() ? `<button class="secondary" data-edit-booking="${escapeHtml(bookingId)}" type="button">Endre avtale</button>` : ""}
       </div>
     `;
     if (!el.customerQuickDialog.open) el.customerQuickDialog.showModal();
@@ -9661,12 +9862,12 @@
 
   async function saveBookingFromDialog() {
     const values = bookingFormValues();
-    if (!values.customerId) throw new Error("Velg en kunde før du lagrer booking.");
+    if (!values.customerId) throw new Error("Velg en kunde før du lagrer avtale.");
     const conflict = bookingConflict(values, editingBookingId);
     if (conflict) {
-      throw new Error(`Konflikt: ${conflict.booking.resource || "Ansatt"} er allerede booket ${formatDate(conflict.booking.date)} kl. ${bookingTimeText(conflict.booking)} hos ${cleanDisplayName(conflict.customer)}.`);
+      throw new Error(`Konflikt: ${conflict.booking.resource || "Ansatt"} er allerede planlagt ${formatDate(conflict.booking.date)} kl. ${bookingTimeText(conflict.booking)} hos ${cleanDisplayName(conflict.customer)}.`);
     }
-    const savedMessage = store.isConfigured ? "Booking lagret i Supabase." : "Booking lagret i lokal utviklingsdemo.";
+    const savedMessage = store.isConfigured ? "Avtale lagret i Supabase." : "Avtale lagret i lokal utviklingsdemo.";
     let savedId = editingBookingId;
     if (store.isConfigured) {
       const saved = await store.saveBooking(editingBookingId, values);
@@ -9702,7 +9903,7 @@
     bookingPendingOrderId = "";
     if (values.date) weekStart = startOfWeek(new Date(`${values.date}T00:00:00`));
     el.bookingDialog.close();
-    renderAll();
+    showBookingInPlanning(savedId);
     setSyncStatus(savedMessage, "ok");
   }
 
@@ -9721,7 +9922,7 @@
     }
     const ok = await askForConfirmation({
       title: "Book rute som utkast",
-      message: `Booke ${drafts.length} servicejobber som utkast på ${formatDate(drafts[0].date)}?\n\nDette legger jobbene i planningboardet og oppretter ordreutkast på kundene.`,
+      message: `Booke ${drafts.length} servicejobber som utkast på ${formatDate(drafts[0].date)}?\n\nDette legger jobbene i planen og oppretter jobbutkast på kundene.`,
       confirmLabel: "Book utkast",
     });
     if (!ok) return;
@@ -9785,7 +9986,7 @@
     el.deleteBookingSummary.innerHTML = `
       <strong>${customerStarHtml(customer)}${customerCashBadgeHtml(customer)}${escapeHtml(cleanDisplayName(customer))}</strong>
       <span>${escapeHtml(bookingJobLabel(booking))} · ${formatDate(booking.date)} kl. ${escapeHtml(bookingTimeText(booking))} · ${escapeHtml(booking.resource || "")}</span>
-      ${order ? `<p>Koblet til ordre: ${escapeHtml(order.title || "Ordre")}</p>` : `<p>Ingen tilknyttet ordre funnet. Kun bookingen fjernes fra kalenderen.</p>`}
+      ${order ? `<p>Koblet til jobb: ${escapeHtml(order.title || "Jobb")}</p>` : `<p>Ingen tilknyttet jobb funnet. Kun avtalen fjernes fra kalenderen.</p>`}
     `;
     if (el.deleteBookingOrderOptions) el.deleteBookingOrderOptions.classList.toggle("hidden", !order);
     if (el.deleteBookingKeepOrder) el.deleteBookingKeepOrder.checked = true;
@@ -9804,7 +10005,7 @@
     el.deleteBookingDialog.close();
     if (deleteBookingCloseBookingDialog && el.bookingDialog?.open) el.bookingDialog.close();
     deleteBookingCloseBookingDialog = false;
-    setSyncStatus(deleteLinkedOrder ? "Booking og tilknyttet ordre slettet." : "Booking fjernet fra kalenderen.", "ok");
+    setSyncStatus(deleteLinkedOrder ? "Avtale og tilknyttet jobb slettet." : "Avtale fjernet fra kalenderen.", "ok");
   }
 
   function completionOptions(type) {
@@ -9911,13 +10112,13 @@
     el.completionPaymentHint?.classList.toggle("hidden", !show);
     if (!show) return;
     const labelText = row.customer?.pays_cash
-      ? "Cash er mottatt"
+      ? "Betaling er mottatt"
       : "Faktura er sendt";
     const labelSpan = el.completionPaymentDoneLabel.querySelector("span");
     if (labelSpan) labelSpan.textContent = labelText;
     if (el.completionPaymentHint) {
       el.completionPaymentHint.textContent = row.customer?.pays_cash
-        ? "La stå av hvis jobben er utført, men cash ikke er mottatt ennå."
+        ? "La stå av hvis jobben er utført, men betaling ikke er mottatt ennå."
         : "La stå av hvis jobben er utført, men faktura skal sendes manuelt etterpå.";
     }
   }
@@ -10131,11 +10332,11 @@
   }
 
   function billingModeLabel(mode) {
-    return mode === "cash" ? "Betalt cash" : "Fakturert";
+    return mode === "cash" ? "Betalt på stedet" : "Fakturert";
   }
 
   function billingModeMarker(mode, date) {
-    return mode === "cash" ? `[Betalt cash ${date}]` : `[Fakturert ${date}]`;
+    return mode === "cash" ? `[Betalt på stedet ${date}]` : `[Fakturert ${date}]`;
   }
 
   function defaultBillingModeForRow(row) {
@@ -10168,7 +10369,7 @@
       customer.tags = customerTagsWithoutLead(customer);
       customer.local_note = appendCustomerNote(
         customer,
-        `Installasjon ${mode === "cash" ? "betalt cash" : "fakturert"} ${formatDate(billingDate)}. Neste service satt til ${formatDate(customer.next_service_due)} basert på installasjonsdato ${formatDate(installDate)}.`,
+        `Installasjon ${mode === "cash" ? "betalt på stedet" : "fakturert"} ${formatDate(billingDate)}. Neste service satt til ${formatDate(customer.next_service_due)} basert på installasjonsdato ${formatDate(installDate)}.`,
       );
     } else if (displayType === "service") {
       customer.last_service_date = installDate;
@@ -10180,14 +10381,14 @@
       event_date: billingDate,
       event_type: billingModeLabel(mode),
       note: [
-        `${bookingJobLabel(row)} markert ${mode === "cash" ? "betalt cash" : "fakturert"}.`,
+        `${bookingJobLabel(row)} markert ${mode === "cash" ? "betalt på stedet" : "fakturert"}.`,
         `Jobbdato/installasjonsdato: ${formatDate(installDate)}.`,
         userNote,
       ].filter(Boolean).join(" "),
     });
     await markOrderBillingForBooking(id, mode === "cash" ? "paid" : "sent", billingDate);
     renderAll();
-    setSyncStatus(mode === "cash" ? "Jobb markert betalt cash og kundekort oppdatert." : "Jobb markert fakturert og kundekort oppdatert.", "ok");
+    setSyncStatus(mode === "cash" ? "Jobb markert betalt og kundekort oppdatert." : "Jobb markert fakturert og kundekort oppdatert.", "ok");
   }
 
   async function markBookingInvoiced(id) {
@@ -10209,12 +10410,12 @@
     if (!el.billingMode || !el.billingTitle || !el.billingHint || !el.saveBillingButton) return;
     const mode = el.billingMode.value === "cash" ? "cash" : "invoice";
     if (mode === "cash") {
-      el.billingTitle.textContent = "Marker betalt cash";
-      el.billingHint.textContent = "Bruk bare når cash faktisk er mottatt. Jobben lagres som betalt, ikke fakturert.";
-      el.saveBillingButton.textContent = "Marker betalt cash";
+      el.billingTitle.textContent = "Marker betalt";
+      el.billingHint.textContent = "Bruk bare når betaling på stedet faktisk er mottatt. Jobben lagres som betalt, ikke fakturert.";
+      el.saveBillingButton.textContent = "Marker betalt";
     } else {
       el.billingTitle.textContent = "Marker faktura sendt";
-      el.billingHint.textContent = "Bruk etter at faktura er sendt manuelt i eAccounting. Dette oppdaterer kundehistorikk og ordre.";
+      el.billingHint.textContent = "Bruk etter at faktura er sendt manuelt i eAccounting. Dette oppdaterer kundehistorikk og jobb.";
       el.saveBillingButton.textContent = "Marker fakturert";
     }
   }
@@ -10231,7 +10432,7 @@
       <strong>${customerStarHtml(row.customer)}${customerCashBadgeHtml(row.customer)}${escapeHtml(cleanDisplayName(row.customer))}</strong>
       <span>${escapeHtml(bookingJobLabel(row))} · Jobbdato ${formatDate(row.booking.date)} kl. ${escapeHtml(bookingTimeText(row.booking))} · ${escapeHtml(row.booking.resource || "")}</span>
       <em>${escapeHtml(bookingWorkKind(row).billing)}</em>
-      <p>${defaultMode === "cash" ? "Kunden er merket som cashkunde. Velg faktura hvis denne jobben likevel skal faktureres." : "Faktura er standard. Velg cash bare hvis dette faktisk ble betalt kontant."}</p>
+      <p>${defaultMode === "cash" ? "Kunden er merket for betaling på stedet. Velg faktura hvis denne jobben likevel skal faktureres." : "Faktura er standard. Velg betaling på stedet bare hvis dette faktisk ble betalt kontant."}</p>
     `;
     clearBillingDialogMessage();
     syncBillingDialogText();
@@ -10340,7 +10541,7 @@
     const eventLines = [
       `${bookingJobLabel(row)} fullført ${formatDate(doneDate)}.`,
       selectedInstallation ? `Anlegg: ${installationDisplayName(selectedInstallation)}.` : "",
-      paymentDone ? (customer.pays_cash ? "Cash markert mottatt ved fullføring." : "Faktura markert ferdig/sendt ved fullføring.") : "",
+      paymentDone ? (customer.pays_cash ? "Betaling markert mottatt ved fullføring." : "Faktura markert ferdig/sendt ved fullføring.") : "",
       userNote,
     ].filter(Boolean);
     const useAdminCompletionRpc = store.isConfigured && isAdmin() && store.completeBookingAsAdmin;
@@ -10506,7 +10707,25 @@
   }
 
   document.querySelectorAll("[data-login]").forEach((button) => button.addEventListener("click", () => setDemoUser(button.dataset.login)));
-  document.querySelectorAll("nav button").forEach((button) => button.addEventListener("click", () => setView(button.dataset.view)));
+  document.querySelectorAll("[data-view]").forEach((button) => button.addEventListener("click", () => setView(button.dataset.view)));
+  document.querySelectorAll("[data-plan-tab-view]").forEach((button) => button.addEventListener("click", () => setView(button.dataset.planTabView)));
+  el.moreMenuButton?.addEventListener("click", () => {
+    const shouldOpen = el.moreMenu?.classList.contains("hidden");
+    closeFloatingMenus();
+    el.moreMenu?.classList.toggle("hidden", !shouldOpen);
+    el.moreMenuButton?.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
+  });
+  el.newActionButton?.addEventListener("click", () => {
+    const shouldOpen = el.newActionMenu?.classList.contains("hidden");
+    closeFloatingMenus();
+    el.newActionMenu?.classList.toggle("hidden", !shouldOpen);
+    el.newActionButton?.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
+  });
+  el.newActionMenu?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-new-action]");
+    if (!button) return;
+    handleNewAction(button.dataset.newAction);
+  });
   document.querySelectorAll("[data-view-jump]").forEach((button) => button.addEventListener("click", () => setView(button.dataset.viewJump)));
   document.querySelectorAll("[data-dashboard-action]").forEach((button) => button.addEventListener("click", () => {
     const action = button.dataset.dashboardAction;
@@ -10558,7 +10777,16 @@
     if (el.orderStatusFilter) el.orderStatusFilter.value = currentOrderFilter;
     setView("orders");
   }));
+  el.startWorklist?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-start-action]");
+    if (!button) return;
+    handleStartAction(button.dataset.startAction);
+  });
   el.globalSearchInput?.addEventListener("input", () => {
+    globalSearchQuery = el.globalSearchInput.value.trim();
+    renderGlobalSearch();
+  });
+  el.globalSearchInput?.addEventListener("focus", () => {
     globalSearchQuery = el.globalSearchInput.value.trim();
     renderGlobalSearch();
   });
@@ -10566,6 +10794,11 @@
     const button = event.target.closest("[data-global-search-result]");
     if (!button) return;
     openGlobalSearchResult(button.dataset.globalSearchResult);
+    el.globalSearchResults.classList.add("hidden");
+  });
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest(".top-search")) el.globalSearchResults?.classList.add("hidden");
+    if (!event.target.closest(".new-action-wrap") && !event.target.closest(".more-nav-wrap")) closeFloatingMenus();
   });
 
   el.loginForm.addEventListener("submit", async (event) => {
@@ -10768,8 +11001,8 @@
     renderAiRegistrationCandidates();
   });
 
-  el.newCustomerButton.addEventListener("click", () => openCustomerDialog(""));
-  el.newBookingButton.addEventListener("click", () => openBookingDialog(""));
+  el.newCustomerButton?.addEventListener("click", () => openCustomerDialog(""));
+  el.newBookingButton?.addEventListener("click", () => openBookingDialog(""));
   el.customerSearch.addEventListener("input", () => {
     currentSearch = el.customerSearch.value.trim();
     selectedCustomerId = "";
@@ -10806,7 +11039,7 @@
     const createServiceOrder = event.target.closest("[data-create-website-service-order]");
     if (createServiceOrder) {
       createServiceOrderFromWebsiteSubmission(createServiceOrder.dataset.createWebsiteServiceOrder)
-        .catch((error) => setSyncStatus(error.message || "Klarte ikke lage serviceordre fra nettsideinnsending.", "error"));
+        .catch((error) => setSyncStatus(error.message || "Klarte ikke lage servicejobb fra nettsideinnsending.", "error"));
       return;
     }
     const createLead = event.target.closest("[data-create-website-lead]");
@@ -10990,7 +11223,7 @@
     const createOrder = event.target.closest("[data-create-order-from-lead]");
     if (createOrder) {
       createOrderFromLead(createOrder.dataset.createOrderFromLead)
-        .catch((error) => setSyncStatus(error.message || "Klarte ikke opprette ordre.", "error"));
+        .catch((error) => setSyncStatus(error.message || "Klarte ikke opprette jobb.", "error"));
       return;
     }
     const createCustomer = event.target.closest("[data-create-customer-from-lead]");
@@ -11109,9 +11342,9 @@
       saveOrderRecord(order.id, { ...order, billingStatus: "sent", invoicedAt: isoDate(new Date()) })
         .then(() => {
           renderAll();
-          setSyncStatus("Ordre markert fakturert.", "ok");
+          setSyncStatus("Jobb markert fakturert.", "ok");
         })
-        .catch((error) => setSyncStatus(error.message || "Klarte ikke markere ordre fakturert.", "error"));
+        .catch((error) => setSyncStatus(error.message || "Klarte ikke markere jobb fakturert.", "error"));
     }
   });
   el.insulationAddLineButton?.addEventListener("click", addInsulationLine);
@@ -11400,7 +11633,7 @@
     try {
       await saveOrderFromDialog();
     } catch (error) {
-      showOrderDialogMessage(error.message || "Klarte ikke lagre ordre.", "error");
+      showOrderDialogMessage(error.message || "Klarte ikke lagre jobb.", "error");
     }
   });
 
@@ -11500,8 +11733,8 @@
       await deleteSelectedOrders({ cancelLinkedBookings: Boolean(el.deleteOrdersCancelBookings?.checked) });
       el.deleteOrdersDialog.close();
     } catch (error) {
-      showDeleteOrdersMessage(error.message || "Klarte ikke slette ordre.", "error");
-      setSyncStatus(error.message || "Klarte ikke slette ordre.", "error");
+      showDeleteOrdersMessage(error.message || "Klarte ikke slette jobb.", "error");
+      setSyncStatus(error.message || "Klarte ikke slette jobb.", "error");
     }
   });
   el.closeConfirmDialog?.addEventListener("click", () => {
