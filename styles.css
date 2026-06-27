@@ -2661,7 +2661,14 @@ textarea {
   margin-top: 10px;
 }
 
-.duplicate-links button {
+.duplicate-link-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.duplicate-open-button {
   min-height: 44px;
   display: grid;
   gap: 2px;
@@ -2674,7 +2681,7 @@ textarea {
   text-align: left;
 }
 
-.duplicate-links button:hover {
+.duplicate-open-button:hover {
   border-color: #f59e0b;
   background: #fffbeb;
 }
@@ -2682,6 +2689,21 @@ textarea {
 .duplicate-links span {
   color: var(--muted);
   font-size: 13px;
+}
+
+.duplicate-dismiss-button {
+  min-width: 96px;
+  white-space: nowrap;
+}
+
+@media (max-width: 620px) {
+  .duplicate-link-row {
+    grid-template-columns: 1fr;
+  }
+
+  .duplicate-dismiss-button {
+    justify-self: start;
+  }
 }
 
 .lookup-block {
@@ -2802,6 +2824,11 @@ textarea {
   background: var(--soft);
 }
 
+.timeline-list article.legacy-reminder {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
 .timeline-list time,
 .invoice-list span {
   color: var(--muted);
@@ -2814,6 +2841,19 @@ textarea {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.35;
+}
+
+.timeline-hint {
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.timeline-list article button {
+  justify-self: start;
+  min-height: 34px;
+  padding: 7px 10px;
+  font-size: 12px;
 }
 
 .invoice-list article {

@@ -13,11 +13,18 @@
     tech: { name: "Hubert", role: "Tekniker", view: "technician", key: "tech" },
   };
   const hiddenDuplicateLimeIds = new Set(["2396394"]);
+  const ignoredDuplicateEmails = new Set([
+    "gunnarruthol@gmail.com",
+    "numedalvps@gmail.com",
+    "post@numedalvps.no",
+    "gunnar@numedalvps.no",
+  ]);
   const storage = {
     user: "numedalWebUser",
     bookings: "numedalWebBookings",
     orders: "numedalWebOrders",
     insulationCalc: "numedalWebInsulationCalc",
+    crmSettings: "numedalWebCrmSettings",
     edits: "numedalWebCustomerEdits",
     leads: "numedalWebLeads",
     deleted: "numedalWebDeletedCustomers",
@@ -613,6 +620,10 @@
       .replace(/ã¥/g, "a")
       .replace(/[^a-z0-9]+/g, " ")
       .trim();
+  }
+
+  function escapeRegex(value) {
+    return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
 
   function applyLimeEnrichmentToCustomers(list) {
@@ -1730,7 +1741,6 @@
     const model = intakeFieldValue(equipment.model);
     const note = [
       `${aiRegistrationTypeLabel(type)} foreslått fra hurtigregistrering ${weekdayDate(isoDate(new Date()), { long: true })}.`,
-      analysis?.summary || "",
       aiProjectDetailNote(analysis),
       [brand, model].filter(Boolean).length ? `Varmepumpe/produkt: ${[brand, model].filter(Boolean).join(" ")}` : "",
     ].filter(Boolean).join("\n\n");
@@ -1886,6 +1896,7 @@
     const parserLabel = /(server|supabase|edge)/i.test(analysis?.parser || "")
       ? "Serverbasert tekstgjenkjenning"
       : "Enkel lokal tekstgjenkjenning";
+    const originalTextAlreadyStored = Boolean(aiRegistrationDraft.intakeId);
     el.aiRegistrationDraft.classList.remove("hidden");
     el.aiRegistrationDraft.innerHTML = `
       <div id="aiRegistrationMessage" class="dialog-message hidden"></div>
@@ -1949,8 +1960,8 @@
             <textarea id="aiRegistrationNote" rows="8">${escapeHtml(aiRegistrationDraft.note)}</textarea>
           </label>
           <label class="checkbox-line">
-            <input id="aiRegistrationKeepOriginal" type="checkbox" checked />
-            Behold originaltekst i historikk
+            <input id="aiRegistrationKeepOriginal" type="checkbox" ${originalTextAlreadyStored ? "disabled" : "checked"} />
+            ${originalTextAlreadyStored ? "Originaltekst ligger allerede i CRM-innboks" : "Behold originaltekst i historikk"}
           </label>
           <div class="ai-save-row">
             <button id="aiRegistrationInboxButton" class="secondary" type="button" title="Legg forslaget i CRM-innboks uten å opprette kunde eller lead ennå.">Lagre i CRM-innboks</button>
@@ -2315,6 +2326,29 @@
       .split(/[;,]/)
       .map((tag) => tag.trim())
       .filter(Boolean);
+  }
+
+  function isLegacyImportTag(tag) {
+    const normalized = normalizeMatch(tag);
+    if (!normalized) return true;
+    if (/^lead(status)?\s*:/.test(String(tag || "").trim().toLowerCase()) || normalized === "lead") return true;
+    if (/^(varmepumpe kunde|service kunde|lime go|lime|import|eaccounting|visma)$/.test(normalized)) return true;
+    if (/^(panasonic|samsung|mitsubishi|fujitsu|wilfa|norgespumpa)$/.test(normalized)) return true;
+    if (/^(hz|nz|cz|z)\s*\d{0,2}\s*(xke|zke|yke)?$/.test(normalized)) return true;
+    if (/^(samsung )?smart\s*9$/.test(normalized)) return true;
+    if (/^(kaiteki|hara|iguru|vindfree|gulvmodell)$/.test(normalized)) return true;
+    if (/^(19|20)\d{2}$/.test(normalized)) return true;
+    return false;
+  }
+
+  function customerVisibleTags(customer) {
+    return splitTags(customer?.tags).filter((tag) => !isLegacyImportTag(tag));
+  }
+
+  function customerTagFactText(customer) {
+    const visible = customerVisibleTags(customer);
+    if (visible.length) return visible.join("; ");
+    return splitTags(customer?.tags).length ? "Gamle importtagger skjult" : "Ikke registrert";
   }
 
   function uniqueTags(tags) {
@@ -3602,6 +3636,17 @@
     el.syncStatus.className = `sync-status ${tone || ""}`.trim();
   }
 
+  async function saveCrmSettingValue(key, value) {
+    crmSettings[key] = value;
+    if (store.saveCrmSetting) {
+      const saved = await store.saveCrmSetting(key, value);
+      crmSettings[key] = saved?.value ?? value;
+      return crmSettings[key];
+    }
+    localStorage.setItem(storage.crmSettings, JSON.stringify(crmSettings));
+    return value;
+  }
+
   function resolveConfirmDialog(value) {
     if (!confirmDialogResolver) return;
     const resolver = confirmDialogResolver;
@@ -3734,6 +3779,7 @@
     deletedCustomers = new Set(JSON.parse(localStorage.getItem(storage.deleted) || "[]"));
     doneJobs = new Set(JSON.parse(localStorage.getItem(storage.doneJobs) || "[]"));
     insulationCalcLines = JSON.parse(localStorage.getItem(storage.insulationCalc) || "[]");
+    crmSettings = JSON.parse(localStorage.getItem(storage.crmSettings) || "{}");
     profiles = Object.values(users).map((user) => ({
       id: user.key,
       display_name: user.name,
@@ -6216,7 +6262,7 @@
     const name = normalizeMatch(cleanDisplayName(customer));
     if (name.length >= 5) parts.push(`name:${name}`);
     const email = String(customer?.email || "").trim().toLowerCase();
-    if (email.includes("@")) parts.push(`email:${email}`);
+    if (email.includes("@") && !ignoredDuplicateEmails.has(email)) parts.push(`email:${email}`);
     const phone = compactPhone(customer?.phone);
     if (phone.length >= 8) parts.push(`phone:${phone}`);
     const address = normalizeMatch([
@@ -6244,6 +6290,32 @@
     return { keys, byPart };
   }
 
+  function duplicatePairKey(a, b) {
+    const keys = [String(a || ""), String(b || "")].filter(Boolean).sort();
+    return keys.length === 2 ? keys.join("::") : "";
+  }
+
+  function dismissedDuplicatePairs() {
+    const pairs = Array.isArray(crmSettings.dismissed_duplicate_pairs)
+      ? crmSettings.dismissed_duplicate_pairs
+      : [];
+    return new Set(pairs.map(String).filter(Boolean));
+  }
+
+  function isDuplicatePairDismissed(a, b) {
+    const key = duplicatePairKey(a, b);
+    return Boolean(key && dismissedDuplicatePairs().has(key));
+  }
+
+  async function dismissDuplicateMatch(customerId, otherId) {
+    const key = duplicatePairKey(customerId, otherId);
+    if (!key) return;
+    const next = [...dismissedDuplicatePairs(), key].sort();
+    await saveCrmSettingValue("dismissed_duplicate_pairs", next);
+    renderAll();
+    setSyncStatus("Dublettreff avvist. Kundekortene er ikke endret.", "ok");
+  }
+
   function duplicateMatchesForCustomer(customer, duplicateData = duplicateIndex()) {
     if (!customer || customer.is_inactive) return [];
     const selfKey = customerKey(customer);
@@ -6255,6 +6327,7 @@
       for (const other of duplicateData.byPart.get(part) || []) {
         const key = customerKey(other);
         if (!key || key === selfKey || seen.has(key)) continue;
+        if (isDuplicatePairDismissed(selfKey, key)) continue;
         seen.add(key);
         const label = kind === "email" ? "samme e-post" : kind === "phone" ? "samme telefon" : kind === "address" ? "samme adresse" : "samme navn";
         rows.push({ customer: other, label });
@@ -6272,10 +6345,13 @@
         <p>Fant andre kundekort med likt navn, e-post, telefon eller adresse. Ikke slå sammen automatisk, men sjekk før du redigerer.</p>
         <div class="duplicate-links">
           ${matches.map((row) => `
-            <button data-open-customer="${escapeHtml(customerKey(row.customer))}" type="button" title="Åpne mulig dublett i kundelisten.">
-              <strong>${escapeHtml(cleanDisplayName(row.customer))}</strong>
-              <span>${escapeHtml(row.label)} · ${escapeHtml([row.customer.visit_city, row.customer.phone, row.customer.email].filter(Boolean).join(" · "))}</span>
-            </button>
+            <div class="duplicate-link-row">
+              <button class="duplicate-open-button" data-open-customer="${escapeHtml(customerKey(row.customer))}" type="button" title="Åpne mulig dublett i kundelisten.">
+                <strong>${escapeHtml(cleanDisplayName(row.customer))}</strong>
+                <span>${escapeHtml(row.label)} · ${escapeHtml([row.customer.visit_city, row.customer.phone, row.customer.email].filter(Boolean).join(" · "))}</span>
+              </button>
+              ${isAdmin() ? `<button class="secondary duplicate-dismiss-button" data-dismiss-duplicate="${escapeHtml(customerKey(customer))}" data-dismiss-duplicate-other="${escapeHtml(customerKey(row.customer))}" type="button" title="Skjul akkurat dette dubletttreffet. Kundedata slettes ikke.">Avvis treff</button>` : ""}
+            </div>
           `).join("")}
         </div>
       </section>
@@ -6427,18 +6503,26 @@
     return findCustomer(event.customer_id || event.lime_id || event.legacy_lime_id);
   }
 
+  function serviceEventKey(event) {
+    return event?.id || `${event?.customer_id || event?.lime_id || ""}-${event?.event_date || ""}-${event?.event_type || ""}-${event?.note || ""}`;
+  }
+
   function allServiceEvents() {
     const seen = new Set();
     const rows = [];
     for (const list of serviceEventsByCustomer.values()) {
       for (const event of list) {
-        const key = event.id || `${event.customer_id || event.lime_id || ""}-${event.event_date || ""}-${event.event_type || ""}-${event.note || ""}`;
+        const key = serviceEventKey(event);
         if (seen.has(key)) continue;
         seen.add(key);
         rows.push(event);
       }
     }
     return rows;
+  }
+
+  function findServiceEventByKey(key) {
+    return allServiceEvents().find((event) => String(serviceEventKey(event)) === String(key || ""));
   }
 
   function activityTime(value, fallbackDate = "") {
@@ -7614,7 +7698,7 @@
       ${renderInstallationList(customer, installations)}
       ${renderCustomerOrders(customer)}
       ${accessInfo(customer) ? `<section class="detail-section attention"><h3>Adkomst / nøkkel</h3><p>${escapeHtml(accessInfo(customer)).replaceAll("\n", "<br>")}</p></section>` : ""}
-      ${renderServiceHistory(events)}
+      ${renderServiceHistory(events, customer)}
       ${renderInvoiceList(invoices, customer)}
       ${renderNoteSection(customer)}
     `;
@@ -8780,14 +8864,14 @@
         <div><dt>Neste service</dt><dd>${formatDate(nextServiceDueForCustomer(customer))}</dd></div>
         <div><dt>Siste service</dt><dd>${escapeHtml(lastServiceText(customer, events))}</dd></div>
         <div><dt>GPS/kart</dt><dd>${escapeHtml(customer.gps_coordinates || customer.google_maps ? "Registrert" : "Ikke registrert")}</dd></div>
-        <div><dt>Tags</dt><dd>${escapeHtml(customer.tags || "Ikke registrert")}</dd></div>
+        <div><dt>Tags</dt><dd title="${escapeHtml(customer.tags || "")}">${escapeHtml(customerTagFactText(customer))}</dd></div>
         <div><dt>Fakturaer</dt><dd>${invoices.length.toLocaleString("nb-NO")} koblet</dd></div>
         <div><dt>Avtale</dt><dd>${booking ? `${formatDate(booking.booking.date)} ${booking.booking.time || ""} · ${escapeHtml(booking.booking.resource || "")}` : "Ikke planlagt"}</dd></div>
       </dl>
       ${renderInstallationList(customer, installations)}
       ${renderCustomerOrders(customer)}
       ${accessInfo(customer) ? `<section class="detail-section attention"><h3>Adkomst / nøkkel</h3><p>${escapeHtml(accessInfo(customer)).replaceAll("\n", "<br>")}</p></section>` : ""}
-      ${renderServiceHistory(events)}
+      ${renderServiceHistory(events, customer)}
       ${renderInvoiceList(invoices, customer)}
       ${renderNoteSection(customer)}
     `;
@@ -8804,7 +8888,111 @@
     return dates.length ? formatDate(dates.at(-1)) : "Ikke registrert";
   }
 
-  function renderServiceHistory(events) {
+  function legacyServiceReminderSource(event) {
+    const note = repairTextEncoding(event?.note || "");
+    const original = note.match(/Original tekst:\s*([^\n]+)/i)?.[1] || "";
+    return (original || shortEventNote(note)).replace(/[•·]/g, " ").replace(/\s+/g, " ").trim();
+  }
+
+  function legacyPumpModelFromText(value) {
+    const text = repairTextEncoding(value || "");
+    const modelPatterns = [
+      [/\bnz\s*25\s*(yke)?\b/i, "NZ25YKE"],
+      [/\bnz\s*35\s*(yke)?\b/i, "NZ35YKE"],
+      [/\bhz\s*25\s*(xke|zke|yke)?\b/i, (match) => `HZ25${(match[1] || "").toUpperCase()}`],
+      [/\bcz\s*25\s*(?:tke|wke|zke|yke)?\b/i, "CZ25"],
+      [/\bz\s*25\b/i, "Z25 gulvmodell"],
+      [/\bsamsung\s+smart\s*9\b/i, "Samsung Smart 9"],
+      [/\bsmart\s*9\b/i, "Smart 9"],
+      [/\bkaiteki\b/i, "Kaiteki"],
+      [/\bhara\b/i, "Hara"],
+      [/\biguru\b/i, "Iguru"],
+    ];
+    for (const [pattern, label] of modelPatterns) {
+      const match = text.match(pattern);
+      if (match) return typeof label === "function" ? label(match) : label;
+    }
+    return "";
+  }
+
+  function brandFromPumpModel(model, source = "") {
+    const text = normalizeMatch(`${model || ""} ${source || ""}`);
+    if (/\b(hz|nz|cz)\s*\d|\bz\s*(25|35)\b|\bpanasonic\b/.test(text)) return "Panasonic";
+    if (/\b(samsung|smart 9|vindfree)\b/.test(text)) return "Samsung";
+    if (/\b(kaiteki|hara|iguru|mitsubishi)\b/.test(text)) return "Mitsubishi";
+    if (/\b(wilfa|narvik)\b/.test(text)) return "Wilfa";
+    if (/\b(fujitsu|norgespumpa)\b/.test(text)) return "Fujitsu";
+    return "";
+  }
+
+  function legacyReminderLocationLabel(source, model) {
+    let text = repairTextEncoding(source || "")
+      .split(/[|]/)[0]
+      .replace(/^\s*service\s*/i, "")
+      .trim();
+    text = text
+      .replace(/\b(hz|nz|cz)\s*\d{0,2}\s*(xke|zke|yke)?\b/i, "")
+      .replace(/\bz\s*25\b/i, "")
+      .replace(/\bsamsung\s+smart\s*9\b/i, "")
+      .replace(/\bsmart\s*9\b/i, "")
+      .replace(/\b(kaiteki|hara|iguru)\b/i, "")
+      .replace(model ? new RegExp(escapeRegex(model), "i") : /$^/, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    return text.length >= 3 ? text : "";
+  }
+
+  function legacyServiceReminderInfo(event) {
+    const text = repairTextEncoding(`${event?.event_type || ""}\n${event?.note || ""}`);
+    if (!/(lime go|servicepåminnelse|servicepaminnelse|fremtidig servicefrist|original tekst:\s*service)/i.test(text)) return null;
+    const source = legacyServiceReminderSource(event);
+    const model = legacyPumpModelFromText(source || text);
+    const brand = brandFromPumpModel(model, source || text);
+    const locationLabel = legacyReminderLocationLabel(source, model);
+    const isFuture = /fremtidig|frist/i.test(text) || String(event?.event_date || "") > isoDate(new Date());
+    return { source, model, brand, locationLabel, isFuture };
+  }
+
+  function installationPrefillFromServiceEvent(event, customer) {
+    const info = legacyServiceReminderInfo(event) || {};
+    const label = info.locationLabel
+      ? `Anlegg ${info.locationLabel}`
+      : info.model
+        ? `Anlegg ${info.model}`
+        : `Anlegg ${installationsForCustomer(customer).length + 1}`;
+    const notes = [
+      "Opprettet fra importert Lime Go-servicepåminnelse. Kontroller modell, installasjonsdato, adresse og serviceintervall før lagring.",
+      info.source ? `Importtekst: ${info.source}` : "",
+      event?.event_date ? `Påminnelsesdato: ${formatDate(event.event_date)}` : "",
+      shortEventNote(event?.note || ""),
+    ].filter(Boolean).join("\n");
+    return {
+      label,
+      brand: info.brand || "",
+      model: info.model || "",
+      next_service_due: info.isFuture ? event?.event_date || "" : "",
+      last_service_at: !info.isFuture ? event?.event_date || "" : "",
+      service_interval_months: 24,
+      notes,
+      forceNewLocation: Boolean(info.locationLabel),
+      location_name: info.locationLabel || "",
+    };
+  }
+
+  function openInstallationFromServiceReminder(eventKey, customerId) {
+    const customer = findCustomer(customerId);
+    const event = findServiceEventByKey(eventKey);
+    if (!customer || !event) {
+      setSyncStatus("Fant ikke påminnelsen eller kundekortet.", "error");
+      return;
+    }
+    openInstallationDialog(customerKey(customer), "", {
+      prefill: installationPrefillFromServiceEvent(event, customer),
+    });
+    setSyncStatus("Forslag til nytt anlegg er fylt ut fra gammel påminnelse. Kontroller før du lagrer.", "ok");
+  }
+
+  function renderServiceHistory(events, customer = null) {
     const visible = (events || []).slice(0, 6);
     if (!visible.length) {
       return `<section class="detail-section"><h3>Historikk / servicepåminnelser</h3><div class="empty-state">Ingen historikk importert på denne kunden ennå.</div></section>`;
@@ -8813,23 +9001,33 @@
       <section class="detail-section">
         <h3>Historikk / servicepåminnelser</h3>
         <div class="timeline-list">
-          ${visible.map((event) => `
-            <article>
-              <time>${formatDate(event.event_date)}</time>
-              <strong>${escapeHtml(event.event_type || "Historikk")}</strong>
-              <p>${escapeHtml(shortEventNote(event.note || "")).replaceAll("\n", "<br>")}</p>
-            </article>
-          `).join("")}
+          ${visible.map((event) => {
+            const reminder = legacyServiceReminderInfo(event);
+            return `
+              <article class="${reminder ? "legacy-reminder" : ""}">
+                <time>${formatDate(event.event_date)}</time>
+                <strong>${escapeHtml(event.event_type || "Historikk")}</strong>
+                <p>${escapeHtml(shortEventNote(event.note || "")).replaceAll("\n", "<br>")}</p>
+                ${reminder ? `
+                  <small class="timeline-hint">Importert servicepåminnelse${reminder.model ? ` · ${escapeHtml(reminder.model)}` : ""}${reminder.locationLabel ? ` · ${escapeHtml(reminder.locationLabel)}` : ""}. Dette er ikke bekreftet som utført service.</small>
+                  ${customer && isAdmin() ? `<button class="secondary" data-installation-from-event="${escapeHtml(serviceEventKey(event))}" data-installation-event-customer="${escapeHtml(customerKey(customer))}" type="button" title="Lag forslag til varmepumpe/anlegg fra denne gamle påminnelsen. Du kontrollerer og lagrer selv.">Lag anlegg fra påminnelse</button>` : ""}
+                ` : ""}
+              </article>
+            `;
+          }).join("")}
         </div>
       </section>
     `;
   }
 
   function shortEventNote(note) {
-    return String(note || "")
+    const text = String(note || "")
       .replace(/\n?Kilde:.*$/is, "")
       .replace(/Service burde vært gjort \/ følges opp\.\s*/i, "")
-      .trim()
+      .trim();
+    const original = text.match(/\n?Original tekst:\s*([^\n]+)/i)?.[1] || "";
+    const withoutOriginal = text.replace(/\n?Original tekst:\s*[^\n]+/i, "").trim();
+    return (withoutOriginal || original)
       .slice(0, 360);
   }
 
@@ -9282,7 +9480,7 @@
         <div><dt>Neste service</dt><dd>${formatDate(nextServiceDueForCustomer(customer))}</dd></div>
         <div><dt>Siste service</dt><dd>${escapeHtml(lastServiceText(customer, events))}</dd></div>
         <div><dt>Betaling</dt><dd>${customer.pays_cash ? "Betaling på stedet" : "Faktura"}</dd></div>
-        <div><dt>Tags</dt><dd>${escapeHtml(customer.tags || "Ikke registrert")}</dd></div>
+        <div><dt>Tags</dt><dd title="${escapeHtml(customer.tags || "")}">${escapeHtml(customerTagFactText(customer))}</dd></div>
         <div><dt>Fakturaer</dt><dd>${invoices.length.toLocaleString("nb-NO")} koblet</dd></div>
       </dl>
       ${renderInstallationList(customer, installations)}
@@ -9471,28 +9669,38 @@
     syncInstallationLocationFields();
   }
 
-  function openInstallationDialog(customerId, installationId = "") {
+  function openInstallationDialog(customerId, installationId = "", options = {}) {
     const customer = findCustomer(customerId);
     if (!customer) return;
     const installation = installationId
       ? installationsForCustomer(customer).find((item) => String(item.id || "") === String(installationId))
       : null;
+    const prefill = !installation ? (options.prefill || {}) : {};
     editingInstallationCustomerId = customerKey(customer);
     editingInstallationId = installation?.id || "";
     showInstallationDialogMessage("", "error");
     el.installationDialogTitle.textContent = installation ? "Rediger varmepumpe / anlegg" : "Ny varmepumpe / anlegg";
     el.installationCustomerName.value = cleanDisplayName(customer);
-    el.installationLabel.value = installation?.label || `Anlegg ${installationsForCustomer(customer).length + 1}`;
-    el.installationBrand.value = installation?.brand || "";
-    el.installationModel.value = installation?.model || "";
-    el.installationSerial.value = installation?.serial_number || "";
-    el.installationInstalledAt.value = installation?.installed_at || "";
-    el.installationLastServiceAt.value = installation?.last_service_at || "";
-    el.installationNextServiceDue.value = installation?.next_service_due || "";
-    el.installationServiceInterval.value = String(installationServiceIntervalMonths(installation) || 24);
+    el.installationLabel.value = installation?.label || prefill.label || `Anlegg ${installationsForCustomer(customer).length + 1}`;
+    el.installationBrand.value = installation?.brand || prefill.brand || "";
+    el.installationModel.value = installation?.model || prefill.model || "";
+    el.installationSerial.value = installation?.serial_number || prefill.serial_number || "";
+    el.installationInstalledAt.value = installation?.installed_at || prefill.installed_at || "";
+    el.installationLastServiceAt.value = installation?.last_service_at || prefill.last_service_at || "";
+    el.installationNextServiceDue.value = installation?.next_service_due || prefill.next_service_due || "";
+    el.installationServiceInterval.value = String(installationServiceIntervalMonths(installation) || prefill.service_interval_months || 24);
     el.installationActive.checked = installation?.active !== false;
-    el.installationNotes.value = installation?.notes || "";
-    renderInstallationLocationOptions(customer, installation?.location_id || "", !installation && !customerLocationsForCustomer(customer).length);
+    el.installationNotes.value = installation?.notes || prefill.notes || "";
+    renderInstallationLocationOptions(customer, installation?.location_id || prefill.location_id || "", Boolean(prefill.forceNewLocation) || (!installation && !customerLocationsForCustomer(customer).length));
+    if (!installation && prefill.forceNewLocation) {
+      fillInstallationLocationFields({
+        location_name: prefill.location_name || "",
+        address: prefill.address || "",
+        postal_code: prefill.postal_code || "",
+        city: prefill.city || "",
+      });
+      syncInstallationLocationFields();
+    }
     if (!el.installationDialog.open) el.installationDialog.showModal();
     setTimeout(() => el.installationLabel?.focus(), 0);
   }
@@ -11308,6 +11516,12 @@
     renderCustomers();
   });
   el.customerDetail.addEventListener("click", (event) => {
+    const dismissDuplicate = event.target.closest("[data-dismiss-duplicate]");
+    if (dismissDuplicate) {
+      dismissDuplicateMatch(dismissDuplicate.dataset.dismissDuplicate, dismissDuplicate.dataset.dismissDuplicateOther)
+        .catch((error) => setSyncStatus(error.message || "Klarte ikke avvise dublettreff.", "error"));
+      return;
+    }
     const payment = event.target.closest("[data-payment-mode]");
     if (payment) {
       setCustomerPaymentMode(payment.dataset.paymentCustomer, payment.dataset.paymentMode)
@@ -11344,6 +11558,11 @@
     const editInstallation = event.target.closest("[data-edit-installation]");
     if (editInstallation) {
       openInstallationDialog(editInstallation.dataset.installationCustomer, editInstallation.dataset.editInstallation);
+      return;
+    }
+    const installationFromEvent = event.target.closest("[data-installation-from-event]");
+    if (installationFromEvent) {
+      openInstallationFromServiceReminder(installationFromEvent.dataset.installationFromEvent, installationFromEvent.dataset.installationEventCustomer);
       return;
     }
     const newOrder = event.target.closest("[data-new-order-customer]");
@@ -11466,6 +11685,11 @@
     const newInstallation = event.target.closest("[data-new-installation-customer]");
     if (newInstallation) {
       openInstallationDialog(newInstallation.dataset.newInstallationCustomer);
+      return;
+    }
+    const installationFromEvent = event.target.closest("[data-installation-from-event]");
+    if (installationFromEvent) {
+      openInstallationFromServiceReminder(installationFromEvent.dataset.installationFromEvent, installationFromEvent.dataset.installationEventCustomer);
       return;
     }
     const newOrder = event.target.closest("[data-new-order-customer]");
