@@ -4216,14 +4216,18 @@
     ));
     if (existingIndex < 0 && !(order.jobId || order.job_id)) return;
     const existing = existingIndex >= 0 ? jobs[existingIndex] : {};
+    const hasInstallationId = Object.prototype.hasOwnProperty.call(order, "installationId")
+      || Object.prototype.hasOwnProperty.call(order, "installation_id");
+    const hasLocationId = Object.prototype.hasOwnProperty.call(order, "locationId")
+      || Object.prototype.hasOwnProperty.call(order, "location_id");
     const next = {
       ...existing,
       id: existing.id || order.jobId || order.job_id,
       customer_id: order.customerId || order.customer_id || existing.customer_id || null,
       title: order.title || existing.title || "Jobb",
       job_type: order.type || existing.job_type || "service",
-      installation_id: order.installation_id || order.installationId || existing.installation_id || null,
-      location_id: order.location_id || order.locationId || existing.location_id || null,
+      installation_id: hasInstallationId ? (order.installationId ?? order.installation_id ?? null) : (existing.installation_id || null),
+      location_id: hasLocationId ? (order.locationId ?? order.location_id ?? null) : (existing.location_id || null),
       work_status: jobWorkStatusFromOrder(order),
       billing_status: jobBillingStatusFromOrder(order),
       payment_status: jobPaymentStatusFromOrder(order),
