@@ -7810,6 +7810,7 @@
       ${renderCustomerOrders(customer)}
       ${accessInfo(customer) ? `<section class="detail-section attention"><h3>Adkomst / nøkkel</h3><p>${escapeHtml(accessInfo(customer)).replaceAll("\n", "<br>")}</p></section>` : ""}
       ${renderServiceHistory(events, customer)}
+      ${renderCustomerActivities(customer)}
       ${renderInvoiceList(invoices, customer)}
       ${renderNoteSection(customer)}
     `;
@@ -8983,6 +8984,7 @@
       ${renderCustomerOrders(customer)}
       ${accessInfo(customer) ? `<section class="detail-section attention"><h3>Adkomst / nøkkel</h3><p>${escapeHtml(accessInfo(customer)).replaceAll("\n", "<br>")}</p></section>` : ""}
       ${renderServiceHistory(events, customer)}
+      ${renderCustomerActivities(customer)}
       ${renderInvoiceList(invoices, customer)}
       ${renderNoteSection(customer)}
     `;
@@ -9123,6 +9125,60 @@
                   <small class="timeline-hint">Importert servicepåminnelse${reminder.model ? ` · ${escapeHtml(reminder.model)}` : ""}${reminder.locationLabel ? ` · ${escapeHtml(reminder.locationLabel)}` : ""}. Dette er ikke bekreftet som utført service.</small>
                   ${customer && isAdmin() ? `<button class="secondary" data-installation-from-event="${escapeHtml(serviceEventKey(event))}" data-installation-event-customer="${escapeHtml(customerKey(customer))}" type="button" title="Lag forslag til varmepumpe/anlegg fra denne gamle påminnelsen. Du kontrollerer og lagrer selv.">Lag anlegg fra påminnelse</button>` : ""}
                 ` : ""}
+              </article>
+            `;
+          }).join("")}
+        </div>
+      </section>
+    `;
+  }
+
+  function activitiesForCustomer(customer) {
+    const keys = new Set([
+      customerKey(customer),
+      customer?.id,
+      customer?.lime_id,
+      customer?.legacy_lime_id,
+    ].filter(Boolean).map(String));
+    return (activities || [])
+      .filter((activity) => {
+        const metadata = activity?.metadata || {};
+        return keys.has(String(activity?.customer_id || ""))
+          || keys.has(String(activity?.customerId || ""))
+          || keys.has(String(metadata.customer_id || ""))
+          || keys.has(String(metadata.customer_lime_id || ""));
+      })
+      .filter((activity) => !["status_change", "lead_status"].includes(String(activity.activity_type || "").toLowerCase()))
+      .sort((a, b) => activityTime(b.occurred_at || b.created_at) - activityTime(a.occurred_at || a.created_at));
+  }
+
+  function activityTypeLabel(type) {
+    const value = String(type || "").toLowerCase();
+    if (value === "email_history") return "E-post";
+    if (value === "website_submission") return "Nettside";
+    if (value === "note") return "Notat";
+    if (value === "job_completed") return "Jobb fullført";
+    return "Aktivitet";
+  }
+
+  function renderCustomerActivities(customer) {
+    const visible = activitiesForCustomer(customer).slice(0, 8);
+    if (!visible.length) return "";
+    return `
+      <section class="detail-section">
+        <h3>Aktivitet / e-post</h3>
+        <div class="timeline-list">
+          ${visible.map((activity) => {
+            const metadata = activity.metadata || {};
+            const direction = metadata.direction === "incoming" ? "Inn" : metadata.direction === "outgoing" ? "Ut" : "";
+            const folder = metadata.folder || metadata.source_folder || "";
+            const hint = [activityTypeLabel(activity.activity_type), direction, folder].filter(Boolean).join(" · ");
+            return `
+              <article>
+                <time>${formatDate(activity.occurred_at || activity.created_at)}</time>
+                <strong>${escapeHtml(activity.summary || activityTypeLabel(activity.activity_type))}</strong>
+                <p>${escapeHtml(shortEventNote(activity.body || "") || activityTypeLabel(activity.activity_type)).replaceAll("\n", "<br>")}</p>
+                ${hint ? `<small class="timeline-hint">${escapeHtml(hint)}</small>` : ""}
               </article>
             `;
           }).join("")}
