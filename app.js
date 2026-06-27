@@ -6647,6 +6647,7 @@
       });
     }
     for (const activity of activities || []) {
+      if (String(activity.activity_type || "").toLowerCase() === "email_history") continue;
       const customer = findCustomer(activity.customer_id);
       const orderId = orderIdForActivity(activity);
       if (!customer && !orderId) continue;
