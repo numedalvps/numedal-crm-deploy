@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260627-02" />
+    <link rel="stylesheet" href="./styles.css?v=20260627-03" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -268,7 +268,7 @@
               <div id="leadList" class="lead-list"></div>
             </section>
             <section id="leadDetail" class="panel lead-detail">
-              <div class="empty-state">Velg en lead.</div>
+              <div class="empty-state">Velg en henvendelse til venstre, eller bruk + Ny for ny henvendelse.</div>
             </section>
           </div>
         </section>
@@ -288,6 +288,13 @@
                 <button data-order-filter-shortcut="billing_ready" type="button"><strong id="orderBillingMetric">0</strong><span>Må faktureres</span></button>
                 <button data-order-filter-shortcut="completed" type="button"><strong id="orderCompletedMetric">0</strong><span>Utført</span></button>
                 <button data-order-filter-shortcut="missing_job" type="button" title="Vis aktive jobber som mangler kobling til ny jobbmodell."><strong id="orderMissingJobMetric">0</strong><span>Mangler jobbkobling</span></button>
+              </div>
+              <div class="job-tabs" role="tablist" aria-label="Jobbfilter">
+                <button class="active" data-order-filter-shortcut="unscheduled" type="button">Ikke planlagt</button>
+                <button data-order-filter-shortcut="scheduled" type="button">Planlagt</button>
+                <button data-order-filter-shortcut="completed" type="button">Utført</button>
+                <button data-order-filter-shortcut="billing_ready" type="button">Må faktureres</button>
+                <button data-order-filter-shortcut="all" type="button">Alle</button>
               </div>
               <div class="search-row">
                 <input id="orderSearch" type="search" placeholder="Søk jobb, kunde, telefon, sted" />
@@ -312,18 +319,24 @@
               <div id="orderList" class="order-list"></div>
             </section>
             <section id="orderDetail" class="panel order-detail">
-              <div class="empty-state">Velg en jobb.</div>
+              <div class="empty-state">Velg en jobb til venstre, eller bruk + Ny for å lage jobb eller booke avtale.</div>
             </section>
           </div>
         </section>
 
         <section id="insulationView" class="view hidden">
+          <div class="insulation-tabs" role="tablist" aria-label="Blåseisolering">
+            <button class="active" data-insulation-workspace-tab="offer" type="button">Tilbud</button>
+            <button data-insulation-workspace-tab="rental" type="button">Utleie</button>
+            <button data-insulation-workspace-tab="customers" type="button">Kunder</button>
+            <button data-insulation-workspace-tab="documents" type="button">Dokumenter</button>
+          </div>
           <div class="insulation-layout">
-            <section class="panel insulation-calculator">
+            <section class="panel insulation-calculator" data-insulation-workspace-panel="offer rental">
               <div class="section-head">
                 <div>
-                  <h2>Blåseisolering kalkulator</h2>
-                  <p>Basert på iSOBYGG sitt tilbudsskjema. Tall kan justeres før tilbud sendes.</p>
+                  <h2>Blåseisolering tilbud</h2>
+                  <p>Velg kunde, velg tilbudstype og lag tekst fra kalkyle eller utleiepriser.</p>
                 </div>
                 <div class="insulation-head-actions">
                   <button id="insulationCreateOfferButton" data-insulation-action-mode="insulation" type="button">Lag isolasjonstilbud</button>
@@ -410,7 +423,7 @@
               </section>
             </section>
 
-            <section class="panel insulation-documents">
+            <section class="panel insulation-documents hidden" data-insulation-workspace-panel="documents">
               <div class="section-head">
                 <div>
                   <h2>Dokumenter</h2>
@@ -420,7 +433,7 @@
               <div id="insulationDocuments" class="document-list"></div>
             </section>
 
-            <section class="panel insulation-customers">
+            <section class="panel insulation-customers hidden" data-insulation-workspace-panel="customers">
               <div class="section-head">
                 <div>
                   <h2>Blåseisolering kunder</h2>
@@ -490,93 +503,110 @@
               <button id="routeOpenMapsButton" type="button">Åpne rute i Google Maps</button>
             </div>
 
-            <div class="route-controls">
-              <label>Område/sted
-                <input id="routeArea" list="routeAreaOptions" placeholder="Vegglifjell, Blefjell, Flesberg..." />
-                <datalist id="routeAreaOptions"></datalist>
-              </label>
-              <label>Status
-                <select id="routeStatus">
-                  <option value="due">Service nå + snart service</option>
-                  <option value="red">Service nå</option>
-                  <option value="yellow">Snart service</option>
-                  <option value="green">Service ok</option>
-                </select>
-              </label>
-              <label>Bookingklar
-                <select id="routeReplyFilter">
-                  <option value="all">Alle aktuelle</option>
-                  <option value="positive">Har svart ja / ok</option>
-                  <option value="key">Nøkkel/adkomst mulig</option>
-                  <option value="manual">Manuelt valgte</option>
-                </select>
-              </label>
-              <label>Maks jobber
-                <input id="routeMaxJobs" type="number" min="1" max="10" value="8" />
-              </label>
-              <label>Start
-                <input id="routeOrigin" value="Svene, 3622, Norge" />
-              </label>
-              <label>Dato ved booking
-                <input id="routeBookingDate" type="date" />
-              </label>
-              <label>Starttid
-                <input id="routeStartTime" type="time" value="08:00" step="900" />
-              </label>
-              <label>Slutt senest
-                <input id="routeEndTime" type="time" value="18:00" step="900" />
-              </label>
-              <label>Varighet pr jobb
-                <select id="routeDuration">
-                  <option value="60">60 min</option>
-                  <option value="45">45 min</option>
-                  <option value="75">75 min</option>
-                </select>
-              </label>
-              <label>Ansatt
-                <select id="routeResource">
-                  <option>Hubert</option>
-                  <option>Gunnar</option>
-                  <option>Gunnar og Hubert</option>
-                </select>
-              </label>
-              <label class="check-label">
-                <input id="routeRequireLocation" type="checkbox" checked />
-                Bare kunder med adresse/koordinater
-              </label>
-              <label class="check-label">
-                <input id="routeStarredOnly" type="checkbox" />
-                Kun stjernemerkede kunder
-              </label>
-            </div>
-
-            <section class="booking-month route-booking-month">
-              <div class="booking-month-head">
-                <button id="routeMonthPrev" class="secondary" type="button">Forrige</button>
-                <strong id="routeMonthLabel"></strong>
-                <button id="routeMonthNext" class="secondary" type="button">Neste</button>
+            <section class="route-step">
+              <div class="route-step-head">
+                <span>1</span>
+                <div>
+                  <h3>Hvor og når?</h3>
+                  <p>Start med område, dato, ansatt og hvor mange jobber som får plass.</p>
+                </div>
               </div>
-              <div class="booking-month-legend">
-                <span><i class="legend-dot service"></i>Service</span>
-                <span><i class="legend-dot reparasjon"></i>Servicearbeid</span>
-                <span><i class="legend-dot befaring"></i>Befaring</span>
-                <span><i class="legend-dot installasjon"></i>Installasjon</span>
-                <span><i class="legend-dot blaseisolering"></i>Blåseisolering</span>
+              <div class="route-controls primary">
+                <label>Område/sted
+                  <input id="routeArea" list="routeAreaOptions" placeholder="Vegglifjell, Blefjell, Flesberg..." />
+                  <datalist id="routeAreaOptions"></datalist>
+                </label>
+                <label>Dato ved booking
+                  <input id="routeBookingDate" type="date" />
+                </label>
+                <label>Ansatt
+                  <select id="routeResource">
+                    <option>Hubert</option>
+                    <option>Gunnar</option>
+                    <option>Gunnar og Hubert</option>
+                  </select>
+                </label>
+                <label>Maks jobber
+                  <input id="routeMaxJobs" type="number" min="1" max="10" value="8" />
+                </label>
               </div>
-              <div id="routeMonthGrid" class="booking-month-grid"></div>
+              <details class="route-advanced">
+                <summary>Flere valg</summary>
+                <div class="route-controls">
+                  <label>Status
+                    <select id="routeStatus">
+                      <option value="due">Service nå + snart service</option>
+                      <option value="red">Service nå</option>
+                      <option value="yellow">Snart service</option>
+                      <option value="green">Service ok</option>
+                    </select>
+                  </label>
+                  <label>Bookingklar
+                    <select id="routeReplyFilter">
+                      <option value="all">Alle aktuelle</option>
+                      <option value="positive">Har svart ja / ok</option>
+                      <option value="key">Nøkkel/adkomst mulig</option>
+                      <option value="manual">Manuelt valgte</option>
+                    </select>
+                  </label>
+                  <label>Start
+                    <input id="routeOrigin" value="Svene, 3622, Norge" />
+                  </label>
+                  <label>Starttid
+                    <input id="routeStartTime" type="time" value="08:00" step="900" />
+                  </label>
+                  <label>Slutt senest
+                    <input id="routeEndTime" type="time" value="18:00" step="900" />
+                  </label>
+                  <label>Varighet pr jobb
+                    <select id="routeDuration">
+                      <option value="60">60 min</option>
+                      <option value="45">45 min</option>
+                      <option value="75">75 min</option>
+                    </select>
+                  </label>
+                  <label class="check-label">
+                    <input id="routeRequireLocation" type="checkbox" checked />
+                    Bare kunder med adresse/koordinater
+                  </label>
+                  <label class="check-label">
+                    <input id="routeStarredOnly" type="checkbox" />
+                    Kun stjernemerkede kunder
+                  </label>
+                </div>
+              </details>
+              <details class="route-calendar-details">
+                <summary>Se månedskalender</summary>
+                <section class="booking-month route-booking-month">
+                  <div class="booking-month-head">
+                    <button id="routeMonthPrev" class="secondary" type="button">Forrige</button>
+                    <strong id="routeMonthLabel"></strong>
+                    <button id="routeMonthNext" class="secondary" type="button">Neste</button>
+                  </div>
+                  <div class="booking-month-legend">
+                    <span><i class="legend-dot service"></i>Service</span>
+                    <span><i class="legend-dot reparasjon"></i>Servicearbeid</span>
+                    <span><i class="legend-dot befaring"></i>Befaring</span>
+                    <span><i class="legend-dot installasjon"></i>Installasjon</span>
+                    <span><i class="legend-dot blaseisolering"></i>Blåseisolering</span>
+                  </div>
+                  <div id="routeMonthGrid" class="booking-month-grid"></div>
+                </section>
+              </details>
             </section>
 
-            <div class="route-actions">
-              <button id="routeRefreshButton" type="button">Finn rute</button>
-              <button id="routeBookDraftButton" class="secondary" type="button">Book alle som utkast</button>
-              <button id="routeCampaignButton" class="secondary" type="button">Kopier SMS til alle</button>
-            </div>
-
             <section class="route-selection">
+              <div class="route-step-head">
+                <span>2</span>
+                <div>
+                  <h3>Velg kunder</h3>
+                  <p>Legg inn kunder som har svart ja eller er klare for service.</p>
+                </div>
+              </div>
               <div class="section-head">
                 <div>
-                  <h2>Kunder som har svart ja</h2>
-                  <p>Legg inn de som kan ha service, så sorterer appen kjøreruten for deg.</p>
+                  <h2>Aktuelle kunder</h2>
+                  <p>Appen foreslår rekkefølge når kundene er valgt.</p>
                 </div>
                 <button id="routeClearSelectionButton" class="secondary" type="button">Tøm valgte</button>
               </div>
@@ -587,9 +617,23 @@
               <div id="routeSelectedCustomers" class="route-selected-customers"></div>
             </section>
 
-            <div id="routeSummary" class="route-summary"></div>
-            <div id="routeResults" class="route-results"></div>
-            <div id="routeMissing" class="route-missing"></div>
+            <section class="route-step route-step-results">
+              <div class="route-step-head">
+                <span>3</span>
+                <div>
+                  <h3>Rute og booking</h3>
+                  <p>Kontroller rekkefølge, åpne Google Maps, og book som utkast når ruta ser riktig ut.</p>
+                </div>
+              </div>
+              <div class="route-actions">
+                <button id="routeRefreshButton" type="button">Finn rute</button>
+                <button id="routeBookDraftButton" class="secondary" type="button">Book alle som utkast</button>
+                <button id="routeCampaignButton" class="secondary" type="button">Kopier SMS til alle</button>
+              </div>
+              <div id="routeSummary" class="route-summary"></div>
+              <div id="routeResults" class="route-results"></div>
+              <div id="routeMissing" class="route-missing"></div>
+            </section>
             <section class="route-help">
               <strong>Slik brukes denne nå:</strong>
               <span>Legg kunder som har svart ja/ok i lista, juster rekkefølge ved behov, og book dem som utkast. Kjøretidene i appen er grove estimater; Google Maps er fasit når du åpner ruten.</span>
@@ -1020,10 +1064,10 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260627-02"></script>
-    <script src="./supabase-adapter.js?v=20260627-02"></script>
-    <script src="./intake-parser.js?v=20260627-02"></script>
-    <script src="./app.js?v=20260627-02"></script>
+    <script src="./supabase-config.js?v=20260627-03"></script>
+    <script src="./supabase-adapter.js?v=20260627-03"></script>
+    <script src="./intake-parser.js?v=20260627-03"></script>
+    <script src="./app.js?v=20260627-03"></script>
   </body>
 </html>
 

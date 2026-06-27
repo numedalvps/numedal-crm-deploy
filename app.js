@@ -188,6 +188,7 @@
   let routeSelectedCustomerIds = new Set();
   let insulationCalcLines = [];
   let insulationMode = "insulation";
+  let currentInsulationWorkspaceTab = "offer";
   let aiRegistrationDraft = null;
   let aiRegistrationSelectedCustomerId = "";
   let aiRegistrationAttachments = [];
@@ -320,6 +321,9 @@
     insulationDocuments: document.getElementById("insulationDocuments"),
     insulationCustomerSearch: document.getElementById("insulationCustomerSearch"),
     insulationCustomers: document.getElementById("insulationCustomers"),
+    insulationLayout: document.querySelector(".insulation-layout"),
+    insulationWorkspaceTabs: document.querySelectorAll("[data-insulation-workspace-tab]"),
+    insulationWorkspacePanels: document.querySelectorAll("[data-insulation-workspace-panel]"),
     insulationNewCustomerButton: document.getElementById("insulationNewCustomerButton"),
     previousWeekButton: document.getElementById("previousWeekButton"),
     nextWeekButton: document.getElementById("nextWeekButton"),
@@ -4530,7 +4534,7 @@
     return {
       kind: "unscheduled",
       heading: "Jobb - ikke planlagt",
-      next: "Trykk Book jobb og legg jobben i planen.",
+      next: "Trykk Book avtale og legg jobben i planen.",
       help: "Jobben finnes, men den ligger ikke i kalenderen ennå.",
       steps,
     };
@@ -7528,7 +7532,7 @@
     const entry = selectedLeadEntry();
     const customer = entry?.customer || null;
     if (!customer) {
-      el.leadDetail.innerHTML = `<div class="empty-state">Velg en lead.</div>`;
+      el.leadDetail.innerHTML = `<div class="empty-state">Velg en henvendelse til venstre, eller bruk + Ny for ny henvendelse.</div>`;
       return;
     }
     const key = customerKey(customer);
@@ -7608,6 +7612,11 @@
     if (!el.orderList || !el.orderDetail) return;
     currentOrderSearch = el.orderSearch?.value?.trim() || "";
     currentOrderFilter = el.orderStatusFilter?.value || currentOrderFilter || "all";
+    document.querySelectorAll("[data-order-filter-shortcut]").forEach((button) => {
+      const active = button.dataset.orderFilterShortcut === currentOrderFilter;
+      button.classList.toggle("active", active);
+      if (button.closest(".job-tabs")) button.setAttribute("aria-selected", active ? "true" : "false");
+    });
     const rows = orderRows();
     if (el.orderUnscheduledMetric) el.orderUnscheduledMetric.textContent = rows.filter((row) => orderEffectiveStatus(row.order, row.job) === "unscheduled").length.toLocaleString("nb-NO");
     if (el.orderScheduledMetric) el.orderScheduledMetric.textContent = rows.filter((row) => orderEffectiveStatus(row.order, row.job) === "scheduled").length.toLocaleString("nb-NO");
@@ -7621,7 +7630,7 @@
     if (!selectedOrderId || !list.some((row) => row.id === selectedOrderId)) selectedOrderId = list[0]?.id || "";
     el.orderList.innerHTML = "";
     if (!list.length) {
-      el.orderList.innerHTML = `<div class="empty-state">Ingen jobber i dette filteret.</div>`;
+      el.orderList.innerHTML = `<div class="empty-state">Ingen jobber i dette filteret. Bruk + Ny for ny jobb, eller bytt til Alle.</div>`;
     }
     for (const row of visibleRows) {
       const item = document.createElement("article");
@@ -7651,7 +7660,7 @@
     const order = findOrder(selectedOrderId);
     const customer = order ? findCustomer(orderCustomerId(order)) : null;
     if (!order || !customer) {
-      el.orderDetail.innerHTML = `<div class="empty-state">Velg en jobb.</div>`;
+      el.orderDetail.innerHTML = `<div class="empty-state">Velg en jobb til venstre, eller bruk + Ny for å lage jobb eller booke avtale.</div>`;
       return;
     }
     const key = customerKey(customer);
@@ -7671,7 +7680,7 @@
       ${workflowHtml(flow, { title: "Hvor er jobben?" })}
       <div class="action-row">
         ${customerActionLinks(customer)}
-        ${primaryBooking ? bookingWorkflowButtons(primaryBooking, { includeEdit: true }) : `<button data-book-order="${escapeHtml(order.id)}" type="button">Book jobb</button>`}
+        ${primaryBooking ? bookingWorkflowButtons(primaryBooking, { includeEdit: true }) : `<button data-book-order="${escapeHtml(order.id)}" type="button">Book avtale</button>`}
         <button data-edit-order="${escapeHtml(order.id)}" type="button">Rediger jobb</button>
         <button class="secondary" data-delete-one-order="${escapeHtml(order.id)}" type="button">Slett jobb</button>
         <button data-open-order-customer="${escapeHtml(key)}" type="button">Åpne kundekort</button>
@@ -8117,13 +8126,39 @@
     }
   }
 
+  function syncInsulationWorkspace() {
+    const valid = new Set(["offer", "rental", "customers", "documents"]);
+    if (!valid.has(currentInsulationWorkspaceTab)) currentInsulationWorkspaceTab = "offer";
+    el.insulationWorkspaceTabs?.forEach((button) => {
+      const active = button.dataset.insulationWorkspaceTab === currentInsulationWorkspaceTab;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-selected", active ? "true" : "false");
+    });
+    el.insulationWorkspacePanels?.forEach((panel) => {
+      const panels = String(panel.dataset.insulationWorkspacePanel || "").split(/\s+/);
+      panel.classList.toggle("hidden", !panels.includes(currentInsulationWorkspaceTab));
+    });
+    el.insulationLayout?.classList.toggle("single-panel", ["customers", "documents"].includes(currentInsulationWorkspaceTab));
+  }
+
+  function setInsulationWorkspaceTab(tab) {
+    currentInsulationWorkspaceTab = ["offer", "rental", "customers", "documents"].includes(tab) ? tab : "offer";
+    if (currentInsulationWorkspaceTab === "rental") insulationMode = "rental";
+    if (currentInsulationWorkspaceTab === "offer") insulationMode = "insulation";
+    syncInsulationMode();
+    syncInsulationWorkspace();
+  }
+
   function setInsulationMode(mode) {
     insulationMode = mode === "rental" ? "rental" : "insulation";
+    currentInsulationWorkspaceTab = insulationMode === "rental" ? "rental" : "offer";
     syncInsulationMode();
+    syncInsulationWorkspace();
   }
 
   function renderInsulation() {
     syncInsulationMode();
+    syncInsulationWorkspace();
     renderInsulationCatalogOptions();
     renderInsulationDocuments();
     renderRentalImages();
@@ -11450,6 +11485,7 @@
   el.insulationCreateOfferButton?.addEventListener("click", createInsulationOfferDraft);
   el.rentalCreateOfferButton?.addEventListener("click", createRentalOfferDraft);
   el.insulationModeButtons?.forEach((button) => button.addEventListener("click", () => setInsulationMode(button.dataset.insulationMode)));
+  el.insulationWorkspaceTabs?.forEach((button) => button.addEventListener("click", () => setInsulationWorkspaceTab(button.dataset.insulationWorkspaceTab)));
   el.insulationCopyOfferTextButton?.addEventListener("click", () => {
     copyInsulationOfferDraft().catch((error) => setSyncStatus(error.message || "Klarte ikke kopiere tilbud.", "error"));
   });

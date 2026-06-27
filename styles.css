@@ -1381,14 +1381,18 @@ textarea {
   color: #0f766e;
 }
 
-.inbox-tabs {
+.inbox-tabs,
+.job-tabs,
+.insulation-tabs {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   margin: 0 0 10px;
 }
 
-.inbox-tabs button {
+.inbox-tabs button,
+.job-tabs button,
+.insulation-tabs button {
   min-height: 34px;
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -1399,7 +1403,9 @@ textarea {
   font-weight: 900;
 }
 
-.inbox-tabs button.active {
+.inbox-tabs button.active,
+.job-tabs button.active,
+.insulation-tabs button.active {
   border-color: var(--teal);
   background: #ccfbf1;
   color: #0f766e;
@@ -1624,6 +1630,10 @@ textarea {
   align-items: start;
 }
 
+.insulation-layout.single-panel {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .insulation-calculator,
 .insulation-customers,
 .insulation-documents {
@@ -1633,6 +1643,10 @@ textarea {
 
 .insulation-calculator {
   grid-row: span 2;
+}
+
+.insulation-layout.single-panel .insulation-calculator {
+  grid-row: auto;
 }
 
 .insulation-head-actions {
@@ -3381,14 +3395,80 @@ textarea {
   gap: 16px;
 }
 
+.route-step,
+.route-selection {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px;
+  background: #f8fafc;
+}
+
+.route-step-head {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.route-step-head span {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--teal);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.route-step-head h3,
+.route-step-head p {
+  margin: 0;
+}
+
+.route-step-head p {
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .route-controls {
   display: grid;
   grid-template-columns: repeat(4, minmax(160px, 1fr));
   gap: 10px;
-  border: 1px solid var(--line);
+  border: 1px solid #d7e5e8;
   border-radius: 10px;
   padding: 12px;
-  background: #f8fafc;
+  background: #fff;
+}
+
+.route-controls.primary {
+  border-color: #bae6fd;
+  background: #eff6ff;
+}
+
+.route-advanced,
+.route-calendar-details {
+  border: 1px solid #d7e5e8;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.route-advanced summary,
+.route-calendar-details summary {
+  cursor: pointer;
+  padding: 10px 12px;
+  color: var(--teal);
+  font-weight: 900;
+}
+
+.route-advanced .route-controls,
+.route-calendar-details .booking-month {
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 10px 10px;
 }
 
 .check-label {
@@ -3407,13 +3487,6 @@ textarea {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-}
-
-.route-selection {
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 14px;
-  background: #f8fafc;
 }
 
 .route-customer-results,
