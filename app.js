@@ -275,6 +275,7 @@
     websiteSubmissionInbox: document.getElementById("websiteSubmissionInbox"),
     intakeInbox: document.getElementById("intakeInbox"),
     leadFollowupMetric: document.getElementById("leadFollowupMetric"),
+    leadEmailMetric: document.getElementById("leadEmailMetric"),
     leadWebsiteMetric: document.getElementById("leadWebsiteMetric"),
     leadNeedsOfferMetric: document.getElementById("leadNeedsOfferMetric"),
     leadOfferSentMetric: document.getElementById("leadOfferSentMetric"),
@@ -1904,7 +1905,7 @@
         <div>
           <span>${escapeHtml(parserLabel)}</span>
           <h3>${escapeHtml(analysis?.summary || "Forslag laget fra innlimt tekst.")}</h3>
-          <p>Forslag: ${escapeHtml(suggestedAction.replaceAll("_", " "))}. Bruk CRM-innboks hvis du vil behandle senere, eller lagre godkjent forslag når det er kontrollert.</p>
+          <p title="Anbefalt handling fra teksttolkingen: ${escapeHtml(suggestedAction.replaceAll("_", " "))}.">Kontroller feltene før lagring.</p>
         </div>
         <strong>${escapeHtml(aiRegistrationTypeLabel(aiRegistrationDraft.type))}</strong>
       </div>
@@ -1966,12 +1967,12 @@
           <div class="ai-save-row">
             <button id="aiRegistrationInboxButton" class="secondary" type="button" title="Legg forslaget i CRM-innboks uten å opprette kunde eller lead ennå.">Lagre i CRM-innboks</button>
             <button id="aiRegistrationSaveButton" type="button">Lagre godkjent forslag</button>
-            <span>Innboks lagrer for senere kontroll. Godkjent forslag oppretter/kobler faktisk kunde, lead eller historikk.</span>
+            <span title="CRM-innboks er bare utkast. Lagre godkjent forslag oppretter eller kobler kunde, lead eller historikk.">Innboks = utkast. Lagre = opprett/koble.</span>
           </div>
         </div>
         <aside class="ai-match-panel">
           <h3>Mulige eksisterende kunder</h3>
-          <p>Velg treff manuelt. Appen kobler ikke automatisk selv om treffet virker sikkert.</p>
+          <p title="Appen foreslår treff, men du velger selv riktig kunde før lagring.">Velg kunde ved treff.</p>
           <div id="aiRegistrationSelectedCustomer" class="ai-selected-customer"></div>
           <div id="aiRegistrationCandidates" class="ai-candidate-list"></div>
           <details class="ai-original-source">
@@ -6175,8 +6176,8 @@
     el.intakeInbox.innerHTML = `
       <div class="section-head compact">
         <div>
-          <h3>CRM-innboks</h3>
-          <p>Tekst lagret fra Hurtigregistrering. Behandles manuelt før noe blir kunde, lead eller historikk.</p>
+          <h3>Utkast fra hurtigregistrering</h3>
+          <p title="Dette er lagrede utkast. Åpne og godkjenn før de blir kunde, lead eller historikk.">Åpne og godkjenn.</p>
         </div>
         <strong>${rows.length.toLocaleString("nb-NO")}</strong>
       </div>
@@ -6790,7 +6791,7 @@
     document.querySelectorAll("[data-lead-inbox-tab]").forEach((button) => {
       const active = currentLeadFilter === "inbox_tab" && button.dataset.leadInboxTab === currentLeadInboxTab;
       button.classList.toggle("active", active);
-      if (button.closest(".inbox-tabs")) button.setAttribute("aria-selected", active ? "true" : "false");
+      if (button.closest("[role='tablist']")) button.setAttribute("aria-selected", active ? "true" : "false");
     });
   }
 
@@ -6822,6 +6823,7 @@
     currentLeadSearch = el.leadSearch?.value?.trim() || "";
     const all = allLeadEntries();
     if (el.leadFollowupMetric) el.leadFollowupMetric.textContent = all.filter((entry) => leadEntryMatchesInboxTab(entry, "new")).length.toLocaleString("nb-NO");
+    if (el.leadEmailMetric) el.leadEmailMetric.textContent = all.filter((entry) => leadEntryMatchesInboxTab(entry, "email")).length.toLocaleString("nb-NO");
     if (el.leadWebsiteMetric) el.leadWebsiteMetric.textContent = (openWebsiteSubmissionRows().length + all.filter((entry) => leadEntryMatchesInboxTab(entry, "website")).length).toLocaleString("nb-NO");
     if (el.leadNeedsOfferMetric) el.leadNeedsOfferMetric.textContent = all.filter((entry) => leadEntryMatchesInboxTab(entry, "followup")).length.toLocaleString("nb-NO");
     if (el.leadOfferSentMetric) el.leadOfferSentMetric.textContent = all.filter((entry) => leadStatusForEntry(entry) === "offer_sent").length.toLocaleString("nb-NO");
@@ -6870,8 +6872,8 @@
     el.websiteSubmissionInbox.innerHTML = `
       <div class="section-head compact">
         <div>
-          <h3>Nettsideinnsendinger</h3>
-          <p>Nye skjema fra nettsiden skal kontrolleres før de blir lead eller jobb.</p>
+          <h3>Nye nettskjema</h3>
+          <p title="Kontroller innsendingen. Lag lead for tilbud/befaring, eller servicejobb når kunden ber om hjelp på eksisterende anlegg.">Kontroller og velg neste steg.</p>
         </div>
         <strong>${rows.length.toLocaleString("nb-NO")}</strong>
       </div>
@@ -6892,8 +6894,7 @@
                 <span>${escapeHtml(text || "Ny innsending")}</span>
                 ${message ? `<small>${escapeHtml(message).slice(0, 180)}</small>` : ""}
                 <div class="website-workflow-hint ${escapeHtml(workflowHint.kind)}">
-                  <strong>${escapeHtml(workflowHint.label)}</strong>
-                  <span>${escapeHtml(workflowHint.detail)}</span>
+                  <strong title="${escapeHtml(workflowHint.detail)}">${escapeHtml(workflowHint.label)}</strong>
                 </div>
                 ${duplicateHints.length ? `<small class="website-duplicate-hint">Mulig duplikat: ${escapeHtml(duplicateHints.join(", "))}</small>` : ""}
                 ${customerHint ? `<small class="website-duplicate-hint">${escapeHtml(customerHint)}</small>` : ""}
@@ -7680,7 +7681,7 @@
         <div class="section-title-row">
           <div>
             <h3>Kundekort</h3>
-            <p>Samme kundeinfo vises her, så leaden kan jobbes ferdig uten ekstra åpning.</p>
+            <p title="Denne delen viser kundekort, anlegg, jobber, historikk og fakturaer direkte i leaden.">Kundeinfo, anlegg og historikk.</p>
           </div>
           <div class="section-actions">
             ${isAdmin() && !customer.is_inactive ? `<button class="secondary" data-new-installation-customer="${escapeHtml(key)}" type="button" title="Registrer flere varmepumper/anlegg med egen adresse og serviceintervall.">Ny varmepumpe/anlegg</button><button class="secondary" data-new-order-customer="${escapeHtml(key)}" type="button" title="Lag jobb som kan planlegges, utføres og faktureres.">Ny jobb</button><button class="secondary" data-edit-customer="${escapeHtml(key)}" type="button" title="Rediger kundedata, adresse, e-post, telefon og betalingsvalg.">Rediger</button>` : ""}
@@ -7745,7 +7746,7 @@
       </section>
       <section class="detail-section lead-template-section">
         <h3>E-postmaler</h3>
-        <p>Trykk på en mal for å fylle tilbudsutkastet under. Hvis tilbudsfeltet ikke finnes, kopieres malen.</p>
+        <p title="Velg en mal for å fylle tilbudsfeltet. Hvis tilbudsfeltet ikke er synlig, kopieres teksten.">Fyll tilbudstekst.</p>
         <div class="lead-template-buttons">${leadTemplateButtons(customer, leadTarget)}</div>
       </section>
       ${isAdmin() ? leadOfferComposerHtml(entry) : ""}
@@ -9119,8 +9120,8 @@
           ${today ? `<small>I dag</small>` : ""}
           <em>${dayRows.length} jobb${dayRows.length === 1 ? "" : "er"}</em>
         </div>
-        <div class="drop-hint">Slipp her for å flytte jobben til ${formatDate(dayIso)}</div>
-        ${planningDayTimeline(dayRows)}
+        <div class="drop-hint">Slipp i tidslinjen for klokkeslett, eller over en jobb for før/etter.</div>
+        ${planningDayTimeline(dayRows, dayIso)}
         <div class="day-jobs"></div>
       `;
       const list = column.querySelector(".day-jobs");
@@ -9182,7 +9183,30 @@
     el.planningMonthGrid.innerHTML = cells.join("");
   }
 
-  function planningDayTimeline(rows) {
+  function planningTimelineDropZones(dayIso, workStart, workEnd) {
+    const workSpan = workEnd - workStart;
+    const zones = [];
+    for (let hour = Math.floor(workStart / 60); hour < Math.ceil(workEnd / 60); hour += 1) {
+      const minutes = hour * 60;
+      if (minutes < workStart || minutes >= workEnd) continue;
+      const top = ((minutes - workStart) / workSpan) * 100;
+      const height = (60 / workSpan) * 100;
+      const label = `${String(hour).padStart(2, "0")}:00`;
+      zones.push(`
+        <div
+          class="timeline-drop-zone"
+          data-planning-date="${escapeHtml(dayIso)}"
+          data-planning-time="${label}"
+          style="top:${top.toFixed(2)}%;height:${height.toFixed(2)}%"
+        >
+          <span>${label}</span>
+        </div>
+      `);
+    }
+    return zones.join("");
+  }
+
+  function planningDayTimeline(rows, dayIso = "") {
     const workStart = minutesFromTime("08:00");
     const workEnd = minutesFromTime("18:00");
     const workSpan = workEnd - workStart;
@@ -9258,6 +9282,7 @@
           <div class="timeline-axis">${hourMarks}</div>
           <div class="timeline-grid">
             ${hourMarks}
+            <div class="timeline-drop-zones">${planningTimelineDropZones(dayIso, workStart, workEnd)}</div>
             <div class="timeline-events">${events || `<div class="timeline-empty">Ledig dag</div>`}</div>
           </div>
         </div>
@@ -9302,7 +9327,7 @@
     card.dataset.customerId = customerKey(row.customer);
     card.draggable = Boolean(editable && isAdmin() && !done);
     card.title = card.draggable
-      ? "Dra jobben til en annen dag i kalenderen. Klokkeslett og tekniker beholdes."
+      ? "Dra jobben til en dag eller et timefelt i planen. Slipp over en jobb for å legge den før eller etter."
       : done
         ? "Utført jobb kan ikke flyttes med dra-og-slipp."
         : "Åpne kundekort eller bruk knappene for å endre jobben.";
@@ -10730,19 +10755,61 @@
     return { id, booking };
   }
 
-  async function moveBookingToDate(id, targetDate) {
+  function clampPlanningMinutes(minutes) {
+    const workStart = minutesFromTime("08:00");
+    const workEnd = minutesFromTime("18:00");
+    const rounded = Math.round(Number(minutes || workStart) / 15) * 15;
+    return Math.max(workStart, Math.min(workEnd - 15, rounded));
+  }
+
+  function planningDropPlacement(event, bookingId, day) {
+    const draggedRow = bookingRows().find((item) => item.id === bookingId);
+    const targetEvent = event.target.closest(".timeline-event[data-booking-id]");
+    if (targetEvent && targetEvent.dataset.bookingId !== bookingId) {
+      const targetRow = bookingRows().find((item) => item.id === targetEvent.dataset.bookingId);
+      if (targetRow) {
+        const rect = targetEvent.getBoundingClientRect();
+        const after = event.clientY >= rect.top + rect.height / 2;
+        const minutes = after
+          ? bookingRowEndMinutes(targetRow)
+          : bookingRowStartMinutes(targetRow) - bookingDurationMinutes(draggedRow || targetRow);
+        return {
+          time: timeFromMinutes(clampPlanningMinutes(minutes)),
+          label: after ? "etter valgt jobb" : "før valgt jobb",
+        };
+      }
+    }
+    const slot = event.target.closest("[data-planning-time]");
+    if (slot?.dataset.planningTime) return { time: slot.dataset.planningTime, label: `kl. ${slot.dataset.planningTime}` };
+    const grid = event.target.closest(".timeline-grid");
+    if (grid && day?.contains(grid)) {
+      const rect = grid.getBoundingClientRect();
+      const ratio = rect.height ? Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height)) : 0;
+      const workStart = minutesFromTime("08:00");
+      const workEnd = minutesFromTime("18:00");
+      const minutes = workStart + ratio * (workEnd - workStart);
+      const time = timeFromMinutes(clampPlanningMinutes(Math.round(minutes / 60) * 60));
+      return { time, label: `kl. ${time}` };
+    }
+    return { time: "", label: "" };
+  }
+
+  async function moveBookingToDate(id, targetDate, options = {}) {
     const row = bookingRows().find((item) => item.id === id);
     if (!row) throw new Error("Fant ikke bookingen som skulle flyttes.");
     if (row.booking.status === "done" || doneJobs.has(id)) {
       throw new Error("Utførte jobber kan ikke flyttes direkte. Angre fullføring først hvis datoen er feil.");
     }
-    if (!targetDate || row.booking.date === targetDate) return;
+    const targetTime = normalizeBookingTime(options.time || row.booking.time || bookingTimeText(row.booking));
+    if (!targetDate || (row.booking.date === targetDate && bookingTimeText(row.booking) === targetTime)) return;
     const updated = {
       ...row.booking,
       date: targetDate,
+      time: targetTime,
       needs_move: false,
       note: noteWithoutMoveMarker(row.booking.note),
-      status: row.booking.status || "booked",
+      status: "booked",
+      done_at: null,
     };
     const conflict = bookingConflict(updated, id);
     if (conflict) {
@@ -10756,7 +10823,8 @@
       scheduledTime: updated.time,
     });
     renderAll();
-    setSyncStatus(`Booking flyttet til ${formatDate(targetDate)}.`, "ok");
+    const placement = options.placement ? ` (${options.placement})` : "";
+    setSyncStatus(`Booking flyttet til ${formatDate(targetDate)} kl. ${targetTime}${placement}.`, "ok");
   }
 
   function billingModeLabel(mode) {
@@ -12380,6 +12448,7 @@
   el.planningBoard.addEventListener("dragend", (event) => {
     event.target.closest(".job-card, .timeline-event")?.classList.remove("dragging");
     el.planningBoard.querySelectorAll(".planning-day.drag-over").forEach((day) => day.classList.remove("drag-over"));
+    el.planningBoard.querySelectorAll(".timeline-drop-zone.active").forEach((slot) => slot.classList.remove("active"));
     draggedBookingId = "";
   });
   el.planningBoard.addEventListener("dragover", (event) => {
@@ -12391,6 +12460,9 @@
     el.planningBoard.querySelectorAll(".planning-day.drag-over").forEach((item) => {
       if (item !== day) item.classList.remove("drag-over");
     });
+    el.planningBoard.querySelectorAll(".timeline-drop-zone.active").forEach((slot) => slot.classList.remove("active"));
+    const slot = event.target.closest("[data-planning-time]");
+    if (slot && day.contains(slot)) slot.classList.add("active");
     day.classList.add("drag-over");
   });
   el.planningBoard.addEventListener("dragleave", (event) => {
@@ -12403,8 +12475,13 @@
     if (!day || !bookingId) return;
     event.preventDefault();
     day.classList.remove("drag-over");
+    el.planningBoard.querySelectorAll(".timeline-drop-zone.active").forEach((slot) => slot.classList.remove("active"));
     try {
-      await moveBookingToDate(bookingId, day.dataset.planningDate);
+      const placement = planningDropPlacement(event, bookingId, day);
+      await moveBookingToDate(bookingId, day.dataset.planningDate, {
+        time: placement.time,
+        placement: placement.label,
+      });
     } catch (error) {
       setSyncStatus(error.message || "Klarte ikke flytte booking.", "error");
     }

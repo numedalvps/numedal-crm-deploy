@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260627-06" />
+    <link rel="stylesheet" href="./styles.css?v=20260627-07" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -210,8 +210,8 @@
           <section class="panel ai-registration-panel">
             <div class="section-head">
               <div>
-                <h2>Hurtigregistrering / lim inn melding</h2>
-                <p>Lim inn tekst eller skjermbilde. CRM foreslår et utkast som du kontrollerer før noe lagres.</p>
+                <h2>Hurtigregistrering</h2>
+                <p title="Lim inn SMS, e-post eller notat. CRM lager forslag som du kontrollerer før lagring.">Lim inn melding og kontroller forslaget.</p>
               </div>
               <div class="ai-registration-actions">
                 <button id="aiRegistrationFileButton" class="secondary" type="button">Velg skjermbilde</button>
@@ -223,8 +223,8 @@
             <input id="aiRegistrationFileInput" class="hidden" type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif" multiple />
             <input id="aiRegistrationCameraInput" class="hidden" type="file" accept="image/*" capture="environment" />
             <div id="aiRegistrationPasteZone" class="ai-paste-zone" tabindex="0">
-              <strong>Lim inn tekst eller skjermbilde her</strong>
-              <span>Ctrl+V, dra bilde hit, eller bruk knappene over. Bilder vises som vedlegg til senere OCR.</span>
+              <strong>Lim inn her</strong>
+              <span title="Ctrl+V fungerer for tekst. Bilder kan dras hit eller velges med knappene. OCR på bilder kommer senere.">Tekst, e-post, SMS eller bilde.</span>
               <textarea id="aiRegistrationInput" rows="6" placeholder="Lim inn SMS, e-post eller notat her."></textarea>
               <div id="aiRegistrationAttachments" class="ai-attachment-list hidden"></div>
             </div>
@@ -236,21 +236,15 @@
               <div class="section-head">
                 <div>
                   <h2>Innboks</h2>
-                  <p>Nettside, e-post, leads og oppfølging før henvendelsen blir jobb.</p>
+                  <p title="Her ligger nye henvendelser, e-post, nettskjema og tilbud som må følges opp.">Velg kø og jobb videre.</p>
                 </div>
               </div>
-              <div class="lead-metrics">
-                <button data-lead-inbox-tab="new" type="button"><strong id="leadFollowupMetric">0</strong><span>Nye</span></button>
-                <button data-lead-inbox-tab="website" type="button"><strong id="leadWebsiteMetric">0</strong><span>Nettside</span></button>
-                <button data-lead-inbox-tab="followup" type="button"><strong id="leadNeedsOfferMetric">0</strong><span>Må følges opp</span></button>
-                <button data-lead-inbox-tab="archive" type="button"><strong id="leadLostMetric">0</strong><span>Arkiv</span></button>
-              </div>
-              <div class="inbox-tabs" role="tablist" aria-label="Innboksfilter">
-                <button class="active" data-lead-inbox-tab="new" type="button">Nye</button>
-                <button data-lead-inbox-tab="email" type="button">E-post</button>
-                <button data-lead-inbox-tab="website" type="button">Nettside</button>
-                <button data-lead-inbox-tab="followup" type="button">Må følges opp</button>
-                <button data-lead-inbox-tab="archive" type="button">Arkiv</button>
+              <div class="lead-metrics inbox-filter-cards" role="tablist" aria-label="Innboksfilter">
+                <button class="active" data-lead-inbox-tab="new" type="button" title="Nye henvendelser som bør avklares først."><strong id="leadFollowupMetric">0</strong><span>Nye henvendelser</span></button>
+                <button data-lead-inbox-tab="email" type="button" title="Henvendelser som er tolket fra e-post eller CRM-innboks."><strong id="leadEmailMetric">0</strong><span>E-post</span></button>
+                <button data-lead-inbox-tab="website" type="button" title="Skjema som er sendt inn fra nettsiden."><strong id="leadWebsiteMetric">0</strong><span>Fra nettside</span></button>
+                <button data-lead-inbox-tab="followup" type="button" title="Leads der neste steg er tilbud, purring eller svar fra kunde."><strong id="leadNeedsOfferMetric">0</strong><span>Tilbud / oppfølging</span></button>
+                <button data-lead-inbox-tab="archive" type="button" title="Vunne og tapte saker som ikke ligger i aktiv oppfølging."><strong id="leadLostMetric">0</strong><span>Ferdig / tapt</span></button>
               </div>
               <div id="websiteSubmissionInbox" class="website-submission-inbox hidden"></div>
               <div class="search-row">
@@ -1067,10 +1061,10 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260627-06"></script>
-    <script src="./supabase-adapter.js?v=20260627-06"></script>
-    <script src="./intake-parser.js?v=20260627-06"></script>
-    <script src="./app.js?v=20260627-06"></script>
+    <script src="./supabase-config.js?v=20260627-07"></script>
+    <script src="./supabase-adapter.js?v=20260627-07"></script>
+    <script src="./intake-parser.js?v=20260627-07"></script>
+    <script src="./app.js?v=20260627-07"></script>
   </body>
 </html>
 
