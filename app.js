@@ -438,6 +438,7 @@
     orderDialogMessage: document.getElementById("orderDialogMessage"),
     orderCustomerName: document.getElementById("orderCustomerName"),
     orderType: document.getElementById("orderType"),
+    orderInstallationSelect: document.getElementById("orderInstallationSelect"),
     orderTitleInput: document.getElementById("orderTitleInput"),
     orderBookNow: document.getElementById("orderBookNow"),
     orderNoteInput: document.getElementById("orderNoteInput"),
@@ -3460,6 +3461,35 @@
     return (id && customerLocationById.get(String(id))) || primaryLocationForCustomer(customer);
   }
 
+  function installationIdForOrder(order, job = jobForOrder(order)) {
+    return order?.installation_id || order?.installationId || job?.installation_id || job?.installationId || "";
+  }
+
+  function locationIdForOrder(order, job = jobForOrder(order)) {
+    return order?.location_id || order?.locationId || job?.location_id || job?.locationId || "";
+  }
+
+  function installationForOrder(order, customer, job = jobForOrder(order)) {
+    const id = installationIdForOrder(order, job);
+    if (!id || !customer) return null;
+    return installationsForCustomer(customer).find((installation) => String(installation.id || "") === String(id)) || null;
+  }
+
+  function orderInstallationText(order, customer, job = jobForOrder(order)) {
+    const installation = installationForOrder(order, customer, job);
+    if (installation) {
+      const location = locationForInstallation(installation, customer);
+      return [
+        installationDisplayName(installation),
+        locationAddressText(location),
+      ].filter(Boolean).join(" - ");
+    }
+    const locationId = locationIdForOrder(order, job);
+    const location = locationId ? customerLocationById.get(String(locationId)) : null;
+    if (location) return locationOptionLabel(location);
+    return "";
+  }
+
   function installationServiceIntervalMonths(installation) {
     const months = Number(installation?.service_interval_months || installation?.serviceIntervalMonths || 0);
     return Number.isFinite(months) && months > 0 ? months : 0;
@@ -4192,6 +4222,8 @@
       customer_id: order.customerId || order.customer_id || existing.customer_id || null,
       title: order.title || existing.title || "Jobb",
       job_type: order.type || existing.job_type || "service",
+      installation_id: order.installation_id || order.installationId || existing.installation_id || null,
+      location_id: order.location_id || order.locationId || existing.location_id || null,
       work_status: jobWorkStatusFromOrder(order),
       billing_status: jobBillingStatusFromOrder(order),
       payment_status: jobPaymentStatusFromOrder(order),
@@ -4308,6 +4340,7 @@
       job?.title,
       job?.work_status,
       job?.billing_status,
+      orderInstallationText(order, customer, job),
       cleanDisplayName(customer),
       customer.phone,
       customer.email,
@@ -4621,6 +4654,13 @@
 
   async function saveOrderRecord(id, order, options = {}) {
     const nextId = normalizeOrderId(id || order.id) || `order-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const mirrorJob = jobForOrder(order.id || id || nextId);
+    const hasInstallationId = Object.prototype.hasOwnProperty.call(order, "installationId")
+      || Object.prototype.hasOwnProperty.call(order, "installation_id");
+    const hasLocationId = Object.prototype.hasOwnProperty.call(order, "locationId")
+      || Object.prototype.hasOwnProperty.call(order, "location_id");
+    const installationId = hasInstallationId ? (order.installationId ?? order.installation_id ?? "") : (mirrorJob?.installation_id || "");
+    const locationId = hasLocationId ? (order.locationId ?? order.location_id ?? "") : (mirrorJob?.location_id || "");
     const record = {
       ...order,
       id: nextId,
@@ -4628,6 +4668,10 @@
       type: order.type || "service",
       status: order.status || "unscheduled",
       billingStatus: order.billingStatus || order.billing_status || "not_ready",
+      installationId,
+      installation_id: installationId,
+      locationId,
+      location_id: locationId,
       updated_at: new Date().toISOString(),
     };
     setBookingIdsForOrder(record, bookingIdsForOrder(record));
@@ -4852,6 +4896,31 @@
     el.customerDialogMessage.className = "dialog-message hidden";
   }
 
+  function renderOrderInstallationOptions(customer, selectedId = "") {
+    if (!el.orderInstallationSelect) return;
+    const allInstallations = installationsForCustomer(customer);
+    const installations = allInstallations.filter((installation) => (
+      installation.active !== false || String(installation.id || "") === String(selectedId || "")
+    ));
+    const autoId = !selectedId && installations.length === 1 ? String(installations[0].id || "") : "";
+    const current = selectedId || autoId;
+    const rows = [
+      `<option value="">Ikke valgt / gjelder hele kunden</option>`,
+      ...installations.map((installation) => {
+        const location = locationForInstallation(installation, customer);
+        const locationText = locationAddressText(location);
+        const label = [installationDisplayName(installation), locationText].filter(Boolean).join(" - ");
+        return `<option value="${escapeHtml(installation.id || "")}">${escapeHtml(label)}</option>`;
+      }),
+    ];
+    el.orderInstallationSelect.innerHTML = rows.join("");
+    el.orderInstallationSelect.value = current;
+    el.orderInstallationSelect.disabled = installations.length === 0;
+    el.orderInstallationSelect.title = installations.length
+      ? "Velg hvilket anlegg jobben gjelder. Dette brukes videre ved fullføring og servicefrist."
+      : "Kunden har ingen registrerte varmepumper/anlegg ennå.";
+  }
+
   function openOrderDialog(customerId, orderId = "", options = {}) {
     const order = findOrder(orderId);
     const customer = findCustomer(order ? orderCustomerId(order) : customerId);
@@ -4866,6 +4935,7 @@
     el.orderDialogTitle.textContent = order ? "Rediger jobb" : "Ny jobb";
     el.orderCustomerName.value = cleanDisplayName(customer);
     el.orderType.value = serviceWorkType(order?.type || options.type) ? "reparasjon" : (order?.type || options.type || "service");
+    renderOrderInstallationOptions(customer, installationIdForOrder(order || options.order || {}, jobForOrder(order || "")));
     el.orderTitleInput.value = order?.title || defaultOrderTitle(customer, el.orderType.value);
     el.orderBookNow.checked = false;
     el.orderNoteInput.value = order?.note || "";
@@ -4882,11 +4952,18 @@
   function orderFormValues() {
     const customer = findCustomer(orderDialogCustomerId);
     if (!customer) throw new Error("Fant ikke kunden for jobben.");
+    const installationId = el.orderInstallationSelect?.value || "";
+    const installation = installationId
+      ? installationsForCustomer(customer).find((item) => String(item.id || "") === String(installationId))
+      : null;
+    const location = installation ? locationForInstallation(installation, customer) : null;
     return {
       customer,
       type: el.orderType.value || "service",
       title: el.orderTitleInput.value.trim() || defaultOrderTitle(customer, el.orderType.value),
       note: el.orderNoteInput.value.trim(),
+      installationId,
+      locationId: location?.id || "",
       bookNow: Boolean(el.orderBookNow.checked),
     };
   }
@@ -4894,6 +4971,9 @@
   async function saveOrderFromDialog() {
     const values = orderFormValues();
     const existing = findOrder(editingOrderId);
+    const selectedInstallation = values.installationId
+      ? installationsForCustomer(values.customer).find((item) => String(item.id || "") === String(values.installationId))
+      : null;
     const order = await saveOrderRecord(editingOrderId, {
       ...existing,
       customerId: customerKey(values.customer),
@@ -4901,6 +4981,10 @@
       type: values.type,
       status: existing?.status || "unscheduled",
       billingStatus: existing?.billingStatus || existing?.billing_status || "not_ready",
+      installationId: values.installationId,
+      installation_id: values.installationId,
+      locationId: values.locationId,
+      location_id: values.locationId,
       source: existing?.source || "manual",
       note: values.note,
       created_at: existing?.created_at || new Date().toISOString(),
@@ -4908,7 +4992,11 @@
     await saveServiceEvent(values.customer, {
       event_date: isoDate(new Date()),
       event_type: existing ? "Jobb endret" : "Jobb opprettet",
-      note: `${orderTypeLabel(values.type)}-jobb ${existing ? "endret" : "opprettet"} direkte på kundekort.${values.note ? `\n${values.note}` : ""}`,
+      note: [
+        `${orderTypeLabel(values.type)}-jobb ${existing ? "endret" : "opprettet"} direkte på kundekort.`,
+        selectedInstallation ? `Anlegg: ${installationDisplayName(selectedInstallation)}.` : "",
+        values.note,
+      ].filter(Boolean).join("\n"),
     });
     selectedOrderId = order.id;
     const shouldBook = values.bookNow;
@@ -7635,6 +7723,7 @@
     for (const row of visibleRows) {
       const item = document.createElement("article");
       item.className = `order-list-row ${row.id === selectedOrderId ? "active" : ""}`;
+      const installationText = orderInstallationText(row.order, row.customer, row.job);
       item.innerHTML = `
         <label class="order-select" title="Velg jobb for sletting.">
           <input data-order-check="${escapeHtml(row.id)}" type="checkbox" ${selectedOrderIds.has(row.id) ? "checked" : ""} />
@@ -7647,6 +7736,7 @@
       button.innerHTML = `
         <strong>${orderBadgesHtml(row.order, row.job)}${escapeHtml(row.order.title || orderTitleFromBooking(row.customer, row.order))}</strong>
         <small>${escapeHtml(cleanDisplayName(row.customer))} · ${escapeHtml(orderTypeLabel(row.order.type))} · ${escapeHtml(orderDateText(row.order))}</small>
+        ${installationText ? `<small>${escapeHtml(installationText)}</small>` : ""}
         <span>${escapeHtml(row.order.note || addressFor(row.customer) || row.customer.location_tag || "Ingen notat").slice(0, 150)}</span>
       `;
       item.appendChild(button);
@@ -7670,6 +7760,7 @@
     const flow = orderWorkflowState(order, linkedBookings);
     const linkedJob = jobForOrder(order);
     const effectiveBilling = orderEffectiveBillingStatus(order, linkedJob);
+    const installationText = orderInstallationText(order, customer, linkedJob);
     const primaryBooking = linkedBookings[0] || null;
     el.orderDetail.innerHTML = `
       <div class="customer-title">
@@ -7693,6 +7784,7 @@
         <div><dt>Status</dt><dd>${escapeHtml(orderStatusLabel(orderEffectiveStatus(order, linkedJob)))}</dd></div>
         <div><dt>Faktura</dt><dd>${escapeHtml(billingStatusLabel(effectiveBilling))}</dd></div>
         <div><dt>Jobbkobling</dt><dd>${escapeHtml(orderJobSummary(order, linkedJob))}</dd></div>
+        <div><dt>Anlegg</dt><dd>${escapeHtml(installationText || "Ikke valgt")}</dd></div>
         <div><dt>Dato</dt><dd>${escapeHtml(orderDateText(order))}</dd></div>
         <div><dt>Telefon</dt><dd class="copy-field">${phoneField(customer.phone)}</dd></div>
       </dl>
@@ -7723,6 +7815,7 @@
           ${rows.map((order) => {
             const linkedBookings = bookingRows().filter((row) => bookingIdsForOrder(order).includes(row.id) || row.booking.orderId === order.id);
             const linkedJob = jobForOrder(order);
+            const installationText = orderInstallationText(order, customer, linkedJob);
             const bookingLine = linkedBookings.length
               ? linkedBookings.map((row) => `${formatDate(row.booking.date)} ${bookingTimeText(row.booking)} ${row.booking.resource || ""}`.trim()).join(" · ")
               : "Ikke planlagt";
@@ -7731,6 +7824,7 @@
                 <div>
                   <strong>${orderBadgesHtml(order, linkedJob)}${escapeHtml(order.title || orderTypeLabel(order.type))}</strong>
                   <span>${escapeHtml(orderDateText(order))} · ${escapeHtml(billingStatusLabel(orderEffectiveBillingStatus(order, linkedJob)))} · ${escapeHtml(orderJobSummary(order, linkedJob))}</span>
+                  ${installationText ? `<small>${escapeHtml(installationText)}</small>` : ""}
                   <small>${escapeHtml(bookingLine)}</small>
                   ${workflowInlineHtml(orderWorkflowState(order, linkedBookings))}
                 </div>
@@ -8918,6 +9012,8 @@
       const overlap = bookingOverlapForRow(row, sorted);
       const needsMove = bookingNeedsMove(row);
       const paymentMode = bookingPaymentMode(row);
+      const linkedOrder = linkedOrderForBooking(row.id) || findOrder(row.booking.orderId);
+      const installationText = linkedOrder ? orderInstallationText(linkedOrder, row.customer, jobForOrder(linkedOrder)) : "";
       const statusBits = [];
       if (overlap) statusBits.push("Overlapp");
       if (needsMove) statusBits.push("Må flyttes");
@@ -8928,7 +9024,7 @@
       if (paymentMode === "cash") statusBits.push("Betalt på stedet");
       if (bookingNeedsCompletion(row)) statusBits.push("Dato passert");
       const statusText = statusBits.join(" · ");
-      const title = `${statusText ? `${statusText}: ` : ""}${bookingJobLabel(row)} ${timeRangeText(bookingRowStartMinutes(row), bookingRowEndMinutes(row))}: ${cleanDisplayName(row.customer)}`;
+      const title = `${statusText ? `${statusText}: ` : ""}${bookingJobLabel(row)} ${timeRangeText(bookingRowStartMinutes(row), bookingRowEndMinutes(row))}: ${cleanDisplayName(row.customer)}${installationText ? ` - ${installationText}` : ""}`;
       return `
         <article
           class="timeline-event ${escapeHtml(type)} ${done ? "done" : ""} ${needsMove ? "needs-move" : ""} ${overlap ? "overlap" : ""}"
@@ -8940,6 +9036,7 @@
         >
           <strong>${timeRangeText(bookingRowStartMinutes(row), bookingRowEndMinutes(row))}</strong>
           <span>${escapeHtml(bookingJobLabel(row))} · ${escapeHtml(cleanDisplayName(row.customer))}</span>
+          ${installationText ? `<em>${escapeHtml(installationText)}</em>` : ""}
           ${statusText ? `<em>${escapeHtml(statusText)}</em>` : ""}
         </article>
       `;
@@ -8990,6 +9087,7 @@
     const paymentMode = bookingPaymentMode(row);
     const linkedOrder = linkedOrderForBooking(row.id) || findOrder(row.booking.orderId);
     const flow = bookingWorkflowState(row, linkedOrder);
+    const installationText = linkedOrder ? orderInstallationText(linkedOrder, row.customer, jobForOrder(linkedOrder)) : "";
     const paymentActionLabel = row.customer?.pays_cash ? "Betalt" : "Fakturert";
     const paymentActionTitle = row.customer?.pays_cash
       ? "Marker at betaling er mottatt for denne jobben."
@@ -9019,6 +9117,7 @@
       <strong>${customerStarHtml(row.customer)}${customerCashBadgeHtml(row.customer)}${escapeHtml(cleanDisplayName(row.customer))}</strong>
       ${workflowInlineHtml(flow)}
       <span class="job-type-pill ${escapeHtml(type)}">${escapeHtml(bookingJobLabel(row))}</span>
+      ${installationText ? `<small>${escapeHtml(installationText)}</small>` : ""}
       <small>${escapeHtml(addressFor(row.customer) || row.customer.location_tag || row.customer.visit_city || "Adresse mangler")}</small>
       ${overlap ? `<p class="overlap-note">Krasjer med ${escapeHtml(cleanDisplayName(overlap.customer))} kl. ${escapeHtml(bookingTimeText(overlap.booking))}. Flytt en av jobbene.</p>` : ""}
       ${needsMove ? `<p class="move-note">${escapeHtml(moveReason || "Jobben må avtales på nytt.")}</p>` : ""}
@@ -10195,11 +10294,17 @@
     }
     const options = [
       `<option value="">Kundekortets hovedfrist</option>`,
-      ...installations.map((installation) => `<option value="${escapeHtml(installation.id || "")}">${escapeHtml(installationDisplayName(installation))}</option>`),
+      ...installations.map((installation) => {
+        const location = locationForInstallation(installation, row.customer);
+        const label = [installationDisplayName(installation), locationAddressText(location)].filter(Boolean).join(" - ");
+        return `<option value="${escapeHtml(installation.id || "")}">${escapeHtml(label)}</option>`;
+      }),
     ];
     el.completionInstallation.innerHTML = options.join("");
+    const linkedOrder = linkedOrderForBooking(row.id) || findOrder(row.booking.orderId);
+    const linkedInstallationId = linkedOrder ? installationIdForOrder(linkedOrder, jobForOrder(linkedOrder)) : "";
     const dueInstallation = installations.find((installation) => installation.next_service_due === nextServiceDueForCustomer(row.customer)) || installations[0];
-    el.completionInstallation.value = dueInstallation?.id || "";
+    el.completionInstallation.value = linkedInstallationId || dueInstallation?.id || "";
     el.completionInstallationLabel.classList.toggle("hidden", installations.length < 2 && !dueInstallation);
   }
 

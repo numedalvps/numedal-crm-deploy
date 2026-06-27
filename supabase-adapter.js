@@ -354,6 +354,10 @@
       completedAt: row.completed_at || "",
       invoicedAt: row.invoiced_at || "",
       resource: row.resource || "",
+      locationId: row.location_id || "",
+      location_id: row.location_id || "",
+      installationId: row.installation_id || "",
+      installation_id: row.installation_id || "",
       note: isInsulation ? note.replace(/^\[(Blåseisolering|BlÃ¥seisolering|Blaseisolering)\]\s*/i, "").trim() : note,
       created_at: row.created_at || null,
       updated_at: row.updated_at || null,
@@ -423,6 +427,8 @@
     const billingStatus = order.billingStatus || order.billing_status || "not_ready";
     return {
       customer_id: order.customerId || order.customer_id || null,
+      location_id: isUuid(order.location_id || order.locationId) ? (order.location_id || order.locationId) : null,
+      installation_id: isUuid(order.installation_id || order.installationId) ? (order.installation_id || order.installationId) : null,
       title: order.title || "Jobb",
       job_type: jobTypeFor(order.type || order.job_type),
       work_status: workStatusForOrder(order.status),
@@ -828,10 +834,22 @@
       const { data, error } = await query;
       if (error) throw error;
       const saved = orderFromDb(data);
-      const job = await syncJobForOrder(supabase, data.id, saved);
+      const hasInstallationId = Object.prototype.hasOwnProperty.call(order, "installation_id")
+        || Object.prototype.hasOwnProperty.call(order, "installationId");
+      const hasLocationId = Object.prototype.hasOwnProperty.call(order, "location_id")
+        || Object.prototype.hasOwnProperty.call(order, "locationId");
+      const job = await syncJobForOrder(supabase, data.id, {
+        ...saved,
+        installation_id: hasInstallationId ? (order.installation_id ?? order.installationId ?? null) : (saved.installation_id || null),
+        location_id: hasLocationId ? (order.location_id ?? order.locationId ?? null) : (saved.location_id || null),
+      });
       if (job?.id) {
         saved.jobId = job.id;
         saved.job_id = job.id;
+        saved.installationId = job.installation_id || saved.installationId || "";
+        saved.installation_id = job.installation_id || saved.installation_id || "";
+        saved.locationId = job.location_id || saved.locationId || "";
+        saved.location_id = job.location_id || saved.location_id || "";
       }
       return saved;
     },
