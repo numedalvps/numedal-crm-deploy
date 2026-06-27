@@ -792,7 +792,7 @@
       help: "Tilbud er sendt eller muntlig gitt. Følg opp hvis kunden ikke svarer.",
     },
     won: {
-      label: "Vunnet - book avtale",
+      label: "Vunnet - planlegg jobb",
       help: "Kunden har takket ja. Neste steg er installasjon eller jobb i planning.",
     },
     lost: {
@@ -825,7 +825,7 @@
     installasjon: {
       label: "Installasjon / montering",
       eventType: "Hurtigregistrering - installasjon",
-      tags: ["Lead", "Leadstatus: Vunnet - book avtale"],
+      tags: ["Lead", "Leadstatus: Vunnet - planlegg jobb"],
     },
     blaseisolering: {
       label: "Blåseisolering",
@@ -1387,6 +1387,7 @@
     const index = leads.findIndex((lead) => lead.id === saved.id);
     if (index >= 0) leads[index] = saved;
     else leads.unshift(saved);
+    return saved;
   }
 
   async function setLeadStatus(customerId, status) {
@@ -1759,13 +1760,13 @@
       note,
       brand,
       model,
-      action: type === "history" ? "append_existing" : "create_lead",
+      action: type === "history" ? "append_existing" : "create_customer",
     };
   }
 
   function aiRegistrationFormValues() {
     return {
-      action: document.getElementById("aiRegistrationAction")?.value || aiRegistrationDraft?.action || "create_lead",
+      action: document.getElementById("aiRegistrationAction")?.value || aiRegistrationDraft?.action || "create_customer",
       type: document.getElementById("aiRegistrationType")?.value || aiRegistrationDraft?.type || "lead",
       name: document.getElementById("aiRegistrationName")?.value.trim() || "",
       phone: document.getElementById("aiRegistrationPhone")?.value.trim() || "",
@@ -1840,9 +1841,9 @@
     const selectedCustomer = findCustomer(aiRegistrationSelectedCustomerId);
     selected.innerHTML = selectedCustomer
       ? `<strong>Kobles til valgt kunde:</strong> ${escapeHtml(cleanDisplayName(selectedCustomer))} <button data-ai-clear-customer type="button">Fjern kobling</button>`
-      : "<strong>Ingen kunde valgt.</strong> Velg et treff hvis dette skal inn på et eksisterende kundekort.";
+      : "<strong>Ingen kunde valgt.</strong> Velg et treff hvis saken hører til en eksisterende kunde, ellers opprettes nytt kundekort.";
     if (!candidates.length) {
-      list.innerHTML = `<div class="empty-state">Ingen sikre treff. Kan lagres som lead/forespørsel uten kundekort.</div>`;
+      list.innerHTML = `<div class="empty-state">Ingen sikre treff. Lagring oppretter nytt kundekort og kobler henvendelsen dit.</div>`;
       return;
     }
     list.innerHTML = candidates.map(({ customer, score, reasons }) => {
@@ -1861,9 +1862,9 @@
 
   function aiRegistrationActionOptions(selected) {
     const options = [
-      ["create_lead", "Opprett lead / forespørsel"],
+      ["create_customer", "Opprett kundekort + henvendelse"],
       ["append_existing", "Legg på valgt kundekort"],
-      ["create_customer", "Opprett kundekort nå"],
+      ["create_lead", "Bare lead uten kundekort (unntak)"],
       ["history_only", "Kun historikk på valgt kundekort"],
     ];
     return options.map(([value, label]) => `<option value="${value}" ${value === selected ? "selected" : ""}>${escapeHtml(label)}</option>`).join("");
@@ -1913,7 +1914,7 @@
       <div class="ai-draft-grid">
         <div class="ai-draft-form">
           <label>Hva skal lagres?
-            <select id="aiRegistrationAction" data-ai-field>${aiRegistrationActionOptions(aiRegistrationDraft.action || "create_lead")}</select>
+            <select id="aiRegistrationAction" data-ai-field>${aiRegistrationActionOptions(aiRegistrationDraft.action || "create_customer")}</select>
           </label>
           <label>Hva skal opprettes?
             <select id="aiRegistrationType" data-ai-field>${aiRegistrationTypeOptions(aiRegistrationDraft.type)}</select>
@@ -2297,11 +2298,12 @@
         ? `${values.note}\n\nOriginaltekst:\n${values.raw}`.trim()
         : values.note,
     });
-    if (["lead", "befaring", "installasjon", "blaseisolering"].includes(values.type) || isLeadCustomer(saved)) {
-      await syncLeadRecord(saved, leadStatusForCustomer(saved), values.note);
-    }
+    const syncedLead = ["lead", "befaring", "installasjon", "blaseisolering"].includes(values.type) || isLeadCustomer(saved)
+      ? await syncLeadRecord(saved, leadStatusForCustomer(saved), values.note)
+      : null;
     await markIntakeCommitted(sourceIntakeId, {
       linked_customer_id: saved?.id || "",
+      linked_lead_id: syncedLead?.id || null,
       selected_action: values.action,
       final_json: aiRegistrationFinalJson(values),
     });
@@ -2312,7 +2314,7 @@
     if (el.customerSearch) el.customerSearch.value = "";
     clearAiRegistration();
     setView("customers");
-    setSyncStatus(existing ? "Tekst lagret på eksisterende kundekort." : "Nytt kundekort lagret fra hurtigregistrering.", "ok");
+    setSyncStatus(existing ? "Tekst lagret på eksisterende kundekort." : "Nytt kundekort lagret fra hurtigregistrering, med henvendelse koblet der det passer.", "ok");
   }
 
   function starToggleHtml(customer) {
@@ -3236,7 +3238,7 @@
               ${customer.phone ? `<a href="tel:${escapeHtml(phoneForLink(customer.phone))}">Ring</a>${copyPhoneButton(customer.phone, "Kopier")}` : ""}
               ${hasRouteLocation(customer) ? `<a href="${escapeHtml(mapsUrl(customer))}" target="_blank" rel="noreferrer">Kart</a>` : ""}
               ${routeMessageButtons(customer)}
-              <button class="book-primary" data-book-customer="${escapeHtml(customerKey(customer))}" type="button">Book avtale</button>
+              <button class="book-primary" data-book-customer="${escapeHtml(customerKey(customer))}" type="button">Planlegg jobb</button>
             </div>
           </article>
         `;
@@ -3255,7 +3257,7 @@
               <div class="route-overflow-actions">
                 ${row.customer.phone ? `<a href="${escapeHtml(smsUrl())}" target="_blank" rel="noreferrer">SMS</a>${copyPhoneButton(row.customer.phone, "Kopier nr")}` : ""}
                 ${routeMessageButtons(row.customer)}
-                <button data-book-customer="${escapeHtml(customerKey(row.customer))}" type="button">Book avtale</button>
+                <button data-book-customer="${escapeHtml(customerKey(row.customer))}" type="button">Planlegg jobb</button>
                 <button data-route-open-customer="${escapeHtml(customerKey(row.customer))}" type="button">Info</button>
               </div>
             </article>
@@ -3331,7 +3333,7 @@
       actions.push(`<a href="${escapeHtml(mapsUrl(customer))}" target="_blank" rel="noreferrer" title="Åpne anleggsadressen i Google Maps.">Kart</a>`);
     }
     if (isAdmin() && !customer.is_inactive) {
-      actions.push(`<button class="book-primary" data-book-customer="${escapeHtml(key)}" type="button" title="Book service, befaring, installasjon eller annet arbeid i kalenderen.">Book avtale</button>`);
+      actions.push(`<button class="book-primary" data-book-customer="${escapeHtml(key)}" type="button" title="Legg service, befaring, installasjon eller annet arbeid i kalenderen. Dette lager også jobbutkast hvis det mangler.">Planlegg jobb</button>`);
       actions.push(`<button class="order-primary" data-new-order-customer="${escapeHtml(key)}" type="button" title="Lag jobb som kan planlegges, utføres og faktureres.">Ny jobb</button>`);
     }
     actions.push(customerMoreActionsHtml(customer));
@@ -4618,7 +4620,7 @@
     return {
       kind: "unscheduled",
       heading: "Jobb - ikke planlagt",
-      next: "Trykk Book avtale og legg jobben i planen.",
+      next: "Trykk Planlegg jobb og legg jobben i planen.",
       help: "Jobben finnes, men den ligger ikke i kalenderen ennå.",
       steps,
     };
@@ -5355,8 +5357,15 @@
     }
     if (action === "job") {
       setView("orders");
-      setSyncStatus("Velg en kunde eller åpne et kundekort for å lage ny jobb. Book avtale kan brukes direkte fra + Ny.", "ok");
+      setSyncStatus("Velg en kunde eller åpne et kundekort for å lage ny jobb. Planlegg jobb brukes når du vil velge dato og tid med en gang.", "ok");
     }
+  }
+
+  function openBookingFromButton(button) {
+    if (!button) return;
+    openBookingDialog(button.dataset.bookCustomer, "", {
+      type: button.dataset.bookType || "",
+    });
   }
 
   function handleStartAction(action) {
@@ -5661,6 +5670,38 @@
         searchText: text,
       });
     }
+    for (const customer of customers || []) {
+      if (customer?.is_inactive) continue;
+      installationsForCustomer(customer).forEach((installation, index) => {
+        const location = locationForInstallation(installation, customer);
+        const text = [
+          customerHaystack(customer),
+          installation.label,
+          installation.kind,
+          installation.brand,
+          installation.model,
+          installation.serial_number,
+          installation.notes,
+          locationAddressText(location),
+          installation.next_service_due,
+          installation.installed_at,
+        ].filter(Boolean).join(" ");
+        if (!globalSearchMatches(text, query)) return;
+        results.push({
+          id: `installation:${customerKey(customer)}:${installation.id || index}`,
+          kind: "Anlegg",
+          title: installationDisplayName(installation),
+          meta: [
+            cleanDisplayName(customer),
+            locationAddressText(location),
+            installation.next_service_due ? `Neste service ${formatDate(installation.next_service_due)}` : "",
+          ].filter(Boolean).join(" · "),
+          customerId: customerKey(customer),
+          installationId: installation.id || "",
+          searchText: text,
+        });
+      });
+    }
     for (const entry of allLeadEntries()) {
       const customer = entry.customer;
       const text = [
@@ -5734,10 +5775,52 @@
         searchText: text,
       });
     }
-    const rank = { Lead: 0, Kunde: 1, Jobb: 2, Avtale: 3, Faktura: 4 };
+    const rank = { Kunde: 0, Anlegg: 1, Lead: 2, Jobb: 3, Avtale: 4, Faktura: 5 };
     return results
       .sort((a, b) => (rank[a.kind] ?? 9) - (rank[b.kind] ?? 9) || String(a.title || "").localeCompare(String(b.title || ""), "nb"))
       .slice(0, 18);
+  }
+
+  function globalSearchKindLabel(kind) {
+    const labels = {
+      Kunde: "Kundekort",
+      Anlegg: "Anlegg",
+      Lead: "Henvendelse",
+      Jobb: "Jobb",
+      Avtale: "Planlagt",
+      Faktura: "Faktura",
+    };
+    return labels[kind] || kind || "Treff";
+  }
+
+  function globalSearchGroupLabel(kind) {
+    const labels = {
+      Kunde: "Kunder",
+      Anlegg: "Varmepumper og anlegg",
+      Lead: "Henvendelser",
+      Jobb: "Jobber",
+      Avtale: "Planlagte jobber",
+      Faktura: "Fakturaer",
+    };
+    return labels[kind] || "Andre treff";
+  }
+
+  function globalSearchRowsHtml(rows) {
+    let currentGroup = "";
+    return rows.map((row) => {
+      globalSearchResultCache.set(row.id, row);
+      const group = globalSearchGroupLabel(row.kind);
+      const heading = group !== currentGroup ? `<div class="global-search-group-title">${escapeHtml(group)}</div>` : "";
+      currentGroup = group;
+      return `
+        ${heading}
+        <button data-global-search-result="${escapeHtml(row.id)}" type="button" title="Åpne ${escapeHtml(globalSearchKindLabel(row.kind).toLowerCase())}">
+          <span>${escapeHtml(globalSearchKindLabel(row.kind))}</span>
+          <strong>${escapeHtml(row.title || "Uten navn")}</strong>
+          <small>${escapeHtml(row.meta || "Ingen ekstra info")}</small>
+        </button>
+      `;
+    }).join("");
   }
 
   function renderGlobalSearch() {
@@ -5762,23 +5845,14 @@
     }
     el.globalSearchResults.innerHTML = `
       <div class="global-search-count">${rows.length.toLocaleString("nb-NO")} treff</div>
-      ${rows.map((row) => {
-        globalSearchResultCache.set(row.id, row);
-        return `
-          <button data-global-search-result="${escapeHtml(row.id)}" type="button" title="Åpne ${escapeHtml(row.kind.toLowerCase())}">
-            <span>${escapeHtml(row.kind)}</span>
-            <strong>${escapeHtml(row.title || "Uten navn")}</strong>
-            <small>${escapeHtml(row.meta || "Ingen ekstra info")}</small>
-          </button>
-        `;
-      }).join("")}
+      ${globalSearchRowsHtml(rows)}
     `;
   }
 
   function openGlobalSearchResult(id) {
     const row = globalSearchResultCache.get(id);
     if (!row) return;
-    if (row.kind === "Kunde" || row.kind === "Faktura") {
+    if (row.kind === "Kunde" || row.kind === "Anlegg" || row.kind === "Faktura") {
       openCustomerCard(row.customerId);
       return;
     }
@@ -6873,7 +6947,7 @@
       <div class="section-head compact">
         <div>
           <h3>Nye nettskjema</h3>
-          <p title="Kontroller innsendingen. Lag lead for tilbud/befaring, eller servicejobb når kunden ber om hjelp på eksisterende anlegg.">Kontroller og velg neste steg.</p>
+          <p title="Kontroller innsendingen. Lag kundekort + lead for tilbud/befaring, eller servicejobb når kunden ber om hjelp på eksisterende anlegg.">Kontroller og velg neste steg.</p>
         </div>
         <strong>${rows.length.toLocaleString("nb-NO")}</strong>
       </div>
@@ -6901,7 +6975,7 @@
               </div>
               <div class="mini-action-row">
                 ${canCreateServiceOrder ? `<button data-create-website-service-order="${escapeHtml(row.id)}" type="button" title="Opprett kundekort og servicejobb fra denne nettsideinnsendingen.">Lag servicejobb</button>` : ""}
-                <button data-create-website-lead="${escapeHtml(row.id)}" type="button" title="Opprett lead fra denne nettsideinnsendingen.">Lag lead</button>
+                <button data-create-website-lead="${escapeHtml(row.id)}" type="button" title="Opprett eller koble kundekort, og legg henvendelsen som lead på kunden.">Lag kundekort + lead</button>
                 <button class="secondary" data-website-submission-status="read" data-website-submission-id="${escapeHtml(row.id)}" type="button" title="Skjul fra innboksen uten å opprette lead.">Marker lest</button>
                 <button class="secondary" data-website-submission-status="spam" data-website-submission-id="${escapeHtml(row.id)}" type="button" title="Marker som spam/ugyldig og skjul fra innboksen.">Spam</button>
               </div>
@@ -7097,10 +7171,10 @@
     }
     return {
       kind: duplicateCount ? "lead duplicate" : "lead",
-      label: "Anbefalt: Lag lead",
+      label: "Anbefalt: Lag kundekort + lead",
       detail: duplicateCount
         ? "Tilbud/befaring. Behandle én innsending, marker eventuell kopi lest."
-        : "Tilbud, befaring eller ny kundeoppfølging før jobb.",
+        : "Tilbud, befaring eller ny kundeoppfølging før jobb. Kundekort opprettes eller kobles først.",
     };
   }
 
@@ -7170,10 +7244,14 @@
     ].filter(Boolean).join("\n");
   }
 
-  function websiteSubmissionCustomerDraft(row) {
+  function websiteSubmissionCustomerDraft(row, options = {}) {
     const values = websiteSubmissionLeadValues(row);
     const type = websiteSubmissionOrderType(row);
+    const purpose = options.purpose || "order";
     const fallbackName = `Ukjent kunde ${values.phone || values.email || ""}`.trim();
+    const tags = purpose === "lead"
+      ? ["Nettside", "Lead", `Leadstatus: ${leadStatusLabel("followup")}`]
+      : ["Nettside", type === "service" ? "Service" : "Servicearbeid"];
     return {
       source: "Nettside",
       name: values.name || fallbackName || "Ukjent kunde",
@@ -7184,12 +7262,28 @@
       visit_city: values.city || "",
       location_tag: values.city || "",
       model_or_note: values.product_interest || "",
-      tags: uniqueTags(["Nettside", type === "service" ? "Service" : "Servicearbeid"]),
+      tags: uniqueTags(tags),
       local_note: [
-        `${weekdayDate(isoDate(new Date()), { long: true })}: Kundekort opprettet fra nettsideinnsending.`,
+        `${weekdayDate(isoDate(new Date()), { long: true })}: Kundekort opprettet fra ${purpose === "lead" ? "nettsidehenvendelse" : "nettsideinnsending"}.`,
         websiteSubmissionOrderNote(row),
       ].filter(Boolean).join("\n"),
     };
+  }
+
+  async function customerForWebsiteSubmissionLead(row) {
+    const linkedCustomer = row?.created_customer_id ? findCustomer(row.created_customer_id) : null;
+    if (linkedCustomer) return { customer: linkedCustomer, created: false, match: null };
+    const candidate = strongWebsiteSubmissionCustomerCandidate(row);
+    if (candidate?.customer) return { customer: candidate.customer, created: false, match: candidate };
+    const draft = websiteSubmissionCustomerDraft(row, { purpose: "lead" });
+    if (!draft.name && !draft.phone && !draft.email && !draft.visit_street) {
+      throw new Error("Nettsideinnsendingen mangler nok kontaktinfo til å lage kundekort.");
+    }
+    const savedCustomer = await store.saveCustomer(draft);
+    const index = customers.findIndex((customer) => customerKey(customer) === customerKey(savedCustomer));
+    if (index >= 0) customers[index] = savedCustomer;
+    else customers.unshift(savedCustomer);
+    return { customer: savedCustomer, created: true, match: null };
   }
 
   async function customerForWebsiteSubmissionOrder(row) {
@@ -7215,8 +7309,8 @@
   }
 
   async function createLeadFromWebsiteSubmission(id) {
-    if (!store.saveLeadDraft || !store.updateWebsiteSubmission) {
-      throw new Error("Nettsideinnsendinger krever Supabase og oppdatert adapter.");
+    if (!store.saveCustomer || !store.saveLeadDraft || !store.updateWebsiteSubmission) {
+      throw new Error("Nettsideinnsendinger krever Supabase og oppdatert adapter med kundekort og leads.");
     }
     const row = (websiteSubmissions || []).find((item) => item.id === id);
     if (!row) throw new Error("Fant ikke nettsideinnsendingen.");
@@ -7228,22 +7322,38 @@
     if (duplicateRows.length) {
       const ok = await askForConfirmation({
         title: "Mulig duplikat",
-        message: `Fant annen åpen nettsideinnsending som ligner: ${websiteSubmissionDuplicateSummary(row)}. Fortsett og lag lead for valgt innsending?`,
-        confirmLabel: "Lag lead",
+        message: `Fant annen åpen nettsideinnsending som ligner: ${websiteSubmissionDuplicateSummary(row)}. Fortsett og lag kundekort + lead for valgt innsending?`,
+        confirmLabel: "Lag kundekort + lead",
       });
       if (!ok) return;
     }
-    const savedLead = await store.saveLeadDraft(values);
+    const { customer, created, match } = await customerForWebsiteSubmissionLead(row);
+    const linkedCustomerId = isUuid(customer?.id) ? customer.id : "";
+    const savedLead = await store.saveLeadDraft({
+      ...values,
+      action: "create_customer_lead",
+      customer_id: linkedCustomerId || null,
+    });
     leads.unshift(savedLead);
-    const updated = await store.updateWebsiteSubmission(id, {
+    const updatePatch = {
       processing_status: "processed",
       created_lead_id: savedLead.id,
+      created_customer_id: linkedCustomerId || null,
+    };
+    const updated = await store.updateWebsiteSubmission(id, updatePatch);
+    mergeWebsiteSubmission(id, updatePatch, updated);
+    await saveServiceEvent(customer, {
+      event_date: isoDate(new Date()),
+      event_type: created ? "Lead fra nettside - nytt kundekort" : "Lead fra nettside - koblet kundekort",
+      note: [
+        websiteSubmissionOrderNote(row),
+        match?.customer ? `Koblet til eksisterende kundekort: ${cleanDisplayName(match.customer)}.` : "",
+      ].filter(Boolean).join("\n"),
     });
-    mergeWebsiteSubmission(id, { processing_status: "processed", created_lead_id: savedLead.id }, updated);
     selectedLeadId = `lead:${savedLead.id}`;
     setLeadInboxTab("website");
     renderLeads();
-    setSyncStatus("Lead opprettet fra nettsideinnsending.", "ok");
+    setSyncStatus(created ? "Kundekort og lead opprettet fra nettsideinnsending." : "Nettsidelead koblet til kundekort.", "ok");
   }
 
   async function createServiceOrderFromWebsiteSubmission(id) {
@@ -7253,7 +7363,7 @@
     const row = (websiteSubmissions || []).find((item) => item.id === id);
     if (!row) throw new Error("Fant ikke nettsideinnsendingen.");
     if (!websiteSubmissionIsService(row)) {
-      throw new Error("Denne innsendingen ser ikke ut som service. Bruk Lag lead hvis den skal følges opp som salg.");
+      throw new Error("Denne innsendingen ser ikke ut som service. Bruk Lag kundekort + lead hvis den skal følges opp som salg.");
     }
     const values = websiteSubmissionLeadValues(row);
     if (!values.name && !values.phone && !values.email && !values.address && !values.street) {
@@ -7573,7 +7683,7 @@
     }
     if (status === "won") {
       return {
-        heading: "Opprett jobb og book avtale",
+        heading: "Opprett jobb og planlegg tid",
         body: "Saken er vunnet. Lag jobb før avtale, så flyten går videre til utført og fakturert.",
       };
     }
@@ -7599,7 +7709,7 @@
     }
     if (realCustomer && status === "followup") {
       actions.push(`<button class="order-primary" data-lead-set-status="needs_offer" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button" title="Flytt leaden til tilbudskøen når du har nok info til å lage tilbud.">Klar for tilbud</button>`);
-      actions.push(`<button class="secondary" data-book-customer="${escapeHtml(key)}" type="button" title="Book befaring, installasjon eller service direkte på kundekortet.">Book avtale</button>`);
+      actions.push(`<button class="secondary" data-book-customer="${escapeHtml(key)}" data-book-type="befaring" type="button" title="Legg befaring eller annen oppfølging i kalenderen.">Planlegg befaring</button>`);
     }
     if (realCustomer && status === "needs_offer") {
       actions.push(`<button class="order-primary" data-focus-lead-offer="${escapeHtml(leadTarget)}" type="button" title="Hopp til tilbudsfeltet og bruk en tilbudsmal.">Skriv tilbud</button>`);
@@ -7611,7 +7721,7 @@
     }
     if (realCustomer && status === "won") {
       actions.push(`<button class="order-primary" data-create-order-from-lead="${escapeHtml(key)}" type="button" title="Opprett jobb fra vunnet lead, slik at jobben kan planlegges og senere faktureres.">Opprett jobb</button>`);
-      actions.push(`<button class="secondary" data-book-customer="${escapeHtml(key)}" type="button" title="Book avtale hvis jobb allerede finnes eller avtalen er klar.">Book avtale</button>`);
+      actions.push(`<button class="secondary" data-book-customer="${escapeHtml(key)}" data-book-type="installasjon" type="button" title="Velg dato og tid for vunnet sak. Appen lager jobbutkast hvis det mangler.">Planlegg jobb</button>`);
     }
     if (status === "lost") {
       actions.push(`<button class="secondary" data-lead-set-status="followup" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button" title="Gjenåpne leaden hvis kunden tar kontakt igjen.">Gjenåpne</button>`);
@@ -7860,7 +7970,7 @@
       ${workflowHtml(flow, { title: "Hvor er jobben?" })}
       <div class="action-row">
         ${customerActionLinks(customer)}
-        ${primaryBooking ? bookingWorkflowButtons(primaryBooking, { includeEdit: true }) : `<button data-book-order="${escapeHtml(order.id)}" type="button">Book avtale</button>`}
+        ${primaryBooking ? bookingWorkflowButtons(primaryBooking, { includeEdit: true }) : `<button data-book-order="${escapeHtml(order.id)}" type="button">Planlegg jobb</button>`}
         <button data-edit-order="${escapeHtml(order.id)}" type="button">Rediger jobb</button>
         <button class="secondary" data-delete-one-order="${escapeHtml(order.id)}" type="button">Slett jobb</button>
         <button data-open-order-customer="${escapeHtml(key)}" type="button">Åpne kundekort</button>
@@ -11462,7 +11572,7 @@
       clearAiRegistrationMessage();
       aiRegistrationSelectedCustomerId = "";
       const actionSelect = document.getElementById("aiRegistrationAction");
-      if (actionSelect && actionSelect.value === "append_existing") actionSelect.value = "create_lead";
+      if (actionSelect && actionSelect.value === "append_existing") actionSelect.value = "create_customer";
       renderAiRegistrationCandidates();
       return;
     }
@@ -11640,7 +11750,7 @@
     }
     const book = event.target.closest("[data-book-customer]");
     if (book) {
-      openBookingDialog(book.dataset.bookCustomer);
+      openBookingFromButton(book);
       return;
     }
     const openCustomer = event.target.closest("[data-open-customer]");
@@ -11782,7 +11892,7 @@
       return;
     }
     const book = event.target.closest("[data-book-customer]");
-    if (book) openBookingDialog(book.dataset.bookCustomer);
+    if (book) openBookingFromButton(book);
   });
   el.orderDetail?.addEventListener("click", async (event) => {
     const open = event.target.closest("[data-open-order-customer]");
@@ -12074,7 +12184,7 @@
     const book = event.target.closest("[data-book-customer]");
     if (book) {
       el.customerQuickDialog.close();
-      openBookingDialog(book.dataset.bookCustomer);
+      openBookingFromButton(book);
     }
   });
   el.closeCustomerDialog.addEventListener("click", () => el.customerDialog.close());
@@ -12420,7 +12530,7 @@
     }
     const book = event.target.closest("[data-book-customer]");
     if (book) {
-      openBookingDialog(book.dataset.bookCustomer);
+      openBookingFromButton(book);
       return;
     }
     const overflow = event.target.closest("[data-route-overflow-customer]");

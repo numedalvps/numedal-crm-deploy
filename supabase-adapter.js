@@ -1134,7 +1134,7 @@
       const isCompany = /\b(as|asa|enk|ans|da|ba)\b/i.test(name);
       const parts = isCompany ? [] : name.split(/\s+/).filter(Boolean);
       const dbLead = {
-        existing_customer_id: values?.customer_id || null,
+        existing_customer_id: isUuid(values?.customer_id) ? values.customer_id : null,
         first_name: isCompany ? null : parts[0] || null,
         last_name: isCompany ? null : parts.slice(1).join(" ") || null,
         company_name: isCompany ? name : null,
@@ -1146,7 +1146,7 @@
         location_type: values?.location_type || null,
         source: values?.source || "Hurtigregistrering",
         source_detail: values?.source_detail || "Kontrollert hurtigregistrering",
-        product_interest: [values?.brand, values?.model, values?.type].filter(Boolean).join(" ") || values?.note || null,
+        product_interest: values?.product_interest || [values?.brand, values?.model, values?.type].filter(Boolean).join(" ") || values?.note || null,
         preferred_brand: values?.brand || null,
         raw_submission_id: isUuid(values?.raw_submission_id) ? values.raw_submission_id : null,
         status: leadStatusToDb(values?.lead_status || "followup"),
@@ -1158,10 +1158,10 @@
         customer_id: isUuid(values?.customer_id) ? values.customer_id : null,
         lead_id: data.id,
         activity_type: "intake",
-        summary: "Lead opprettet fra hurtigregistrering",
+        summary: values?.source === "Nettside" ? "Lead opprettet fra nettside" : "Lead opprettet fra hurtigregistrering",
         body: values?.note || null,
         metadata: {
-          intake_source: "hurtigregistrering",
+          intake_source: values?.source || "hurtigregistrering",
           action: values?.action || "create_lead",
           parser: values?.parser || "simple_text_recognition",
           source_intake_id: values?.source_intake_id || null,

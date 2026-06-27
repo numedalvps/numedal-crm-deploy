@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260627-07" />
+    <link rel="stylesheet" href="./styles.css?v=20260627-08" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -65,7 +65,7 @@
             <button id="importSeedButton" class="secondary hidden" type="button">Importer startdata</button>
             <div class="top-search">
               <label class="sr-only" for="globalSearchInput">Søk i CRM</label>
-              <input id="globalSearchInput" type="search" placeholder="Søk kunde, telefon, adresse, jobb eller faktura" autocomplete="off" />
+              <input id="globalSearchInput" type="search" placeholder="Søk kunde, anlegg, telefon, adresse, jobb eller faktura" autocomplete="off" />
               <div id="globalSearchResults" class="global-search-results top-search-results"></div>
             </div>
             <div class="new-action-wrap">
@@ -74,7 +74,7 @@
                 <button data-new-action="customer" type="button">Ny kunde</button>
                 <button data-new-action="lead" type="button">Ny henvendelse</button>
                 <button data-new-action="job" type="button">Ny jobb</button>
-                <button data-new-action="booking" type="button">Book avtale</button>
+                <button data-new-action="booking" type="button">Planlegg jobb</button>
                 <button data-new-action="service" type="button">Ny service</button>
                 <button data-new-action="install" type="button">Ny installasjon</button>
                 <button data-new-action="paste" type="button">Lim inn melding</button>
@@ -895,7 +895,7 @@
     <dialog id="bookingDialog" class="modal">
       <form id="bookingForm" method="dialog">
         <div class="modal-head">
-          <h2>Book avtale</h2>
+          <h2>Planlegg jobb</h2>
           <button id="closeBookingDialog" type="button" aria-label="Lukk">×</button>
         </div>
         <div id="bookingDialogMessage" class="dialog-message hidden"></div>
