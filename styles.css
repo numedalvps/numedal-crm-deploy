@@ -1614,6 +1614,12 @@ textarea {
   flex-wrap: wrap;
 }
 
+.mini-action-row .order-primary {
+  border-color: #99f6e4;
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
 .website-duplicate-hint {
   display: inline-block;
   width: fit-content;

@@ -7118,7 +7118,7 @@
       <div class="section-head compact">
         <div>
           <h3>Nye nettskjema</h3>
-          <p title="Kontroller innsendingen. Lag kundekort + lead for tilbud/befaring, eller servicejobb når kunden ber om hjelp på eksisterende anlegg.">Kontroller og velg neste steg.</p>
+          <p title="Kontroller innsendingen. Lag kundekort + salgsmulighet for tilbud/befaring, eller servicejobb når kunden ber om hjelp på eksisterende anlegg.">Kontroller og velg neste steg.</p>
         </div>
         <strong>${rows.length.toLocaleString("nb-NO")}</strong>
       </div>
@@ -7145,10 +7145,15 @@
                 ${customerHint ? `<small class="website-duplicate-hint">${escapeHtml(customerHint)}</small>` : ""}
               </div>
               <div class="mini-action-row">
-                ${canCreateServiceOrder ? `<button data-create-website-service-order="${escapeHtml(row.id)}" type="button" title="Opprett kundekort og servicejobb fra denne nettsideinnsendingen.">Lag servicejobb</button>` : ""}
-                <button data-create-website-lead="${escapeHtml(row.id)}" type="button" title="Opprett eller koble kundekort, og legg henvendelsen som lead på kunden.">Lag kundekort + lead</button>
-                <button class="secondary" data-website-submission-status="read" data-website-submission-id="${escapeHtml(row.id)}" type="button" title="Skjul fra innboksen uten å opprette lead.">Marker lest</button>
-                <button class="secondary" data-website-submission-status="spam" data-website-submission-id="${escapeHtml(row.id)}" type="button" title="Marker som spam/ugyldig og skjul fra innboksen.">Spam</button>
+                ${canCreateServiceOrder ? `<button class="order-primary" data-create-website-service-order="${escapeHtml(row.id)}" type="button" title="Opprett eller koble kundekort, lag servicejobb og legg den klar for booking.">Lag servicejobb</button>` : ""}
+                <button class="${canCreateServiceOrder ? "secondary" : "order-primary"}" data-create-website-lead="${escapeHtml(row.id)}" type="button" title="Opprett eller koble kundekort, og legg henvendelsen som salgsmulighet på kunden.">Lag kundekort + salgsmulighet</button>
+                <details class="inline-more-actions">
+                  <summary title="Vis flere valg for innsendingen.">Mer</summary>
+                  <div>
+                    <button class="secondary" data-website-submission-status="read" data-website-submission-id="${escapeHtml(row.id)}" type="button" title="Skjul fra innboksen uten å opprette salgsmulighet eller jobb.">Marker lest</button>
+                    <button class="secondary danger" data-website-submission-status="spam" data-website-submission-id="${escapeHtml(row.id)}" type="button" title="Marker som spam/ugyldig og skjul fra innboksen.">Spam</button>
+                  </div>
+                </details>
               </div>
             </article>
           `;
@@ -7364,7 +7369,7 @@
     }
     return {
       kind: duplicateCount ? "lead duplicate" : "lead",
-      label: "Anbefalt: Lag kundekort + lead",
+      label: "Anbefalt: Lag kundekort + salgsmulighet",
       detail: duplicateCount
         ? "Tilbud/befaring. Behandle én innsending, marker eventuell kopi lest."
         : "Tilbud, befaring eller ny kundeoppfølging før jobb. Kundekort opprettes eller kobles først.",
@@ -7515,8 +7520,8 @@
     if (duplicateRows.length) {
       const ok = await askForConfirmation({
         title: "Mulig duplikat",
-        message: `Fant annen åpen nettsideinnsending som ligner: ${websiteSubmissionDuplicateSummary(row)}. Fortsett og lag kundekort + lead for valgt innsending?`,
-        confirmLabel: "Lag kundekort + lead",
+        message: `Fant annen åpen nettsideinnsending som ligner: ${websiteSubmissionDuplicateSummary(row)}. Fortsett og lag kundekort + salgsmulighet for valgt innsending?`,
+        confirmLabel: "Lag salgsmulighet",
       });
       if (!ok) return;
     }
@@ -7556,7 +7561,7 @@
     const row = (websiteSubmissions || []).find((item) => item.id === id);
     if (!row) throw new Error("Fant ikke nettsideinnsendingen.");
     if (!websiteSubmissionIsService(row)) {
-      throw new Error("Denne innsendingen ser ikke ut som service. Bruk Lag kundekort + lead hvis den skal følges opp som salg.");
+      throw new Error("Denne innsendingen ser ikke ut som service. Bruk Lag kundekort + salgsmulighet hvis den skal følges opp som salg.");
     }
     const values = websiteSubmissionLeadValues(row);
     if (!values.name && !values.phone && !values.email && !values.address && !values.street) {
