@@ -2611,7 +2611,33 @@
     return parseCoordinateText(customer?.gps_coordinates) || parseCoordinateText(customer?.google_maps);
   }
 
-  function routeLocationText(customer) {
+  function routeAreaTerms() {
+    return normalizeMatch(el.routeArea?.value || "").split(" ").filter(Boolean);
+  }
+
+  function installationAreaText(installation, customer) {
+    const location = locationForInstallation(installation, customer);
+    return [
+      installation?.label,
+      installation?.brand,
+      installation?.model,
+      installation?.notes,
+      location?.location_name,
+      locationAddressText(location),
+      location?.city,
+      location?.postal_code,
+    ].filter(Boolean).join(" ");
+  }
+
+  function installationMatchesRouteArea(installation, customer, areaTerms = routeAreaTerms()) {
+    if (!areaTerms.length) return false;
+    const text = normalizeMatch(installationAreaText(installation, customer));
+    return areaTerms.every((term) => text.includes(term));
+  }
+
+  function routeLocationText(customer, installation = routePrimaryInstallation(customer, { areaTerms: routeAreaTerms() })) {
+    const installationLocation = installation ? locationAddressText(locationForInstallation(installation, customer)) : "";
+    if (installationLocation) return installationLocation;
     const exact = exactCoordinates(customer);
     if (exact) return `${exact.lat},${exact.lon}`;
     return siteLocationText(customer);
@@ -2622,6 +2648,8 @@
   }
 
   function routeLocationLabel(customer) {
+    const installation = routePrimaryInstallation(customer, { areaTerms: routeAreaTerms() });
+    if (installation && locationAddressText(locationForInstallation(installation, customer))) return "Anleggsadresse";
     if (exactCoordinates(customer)) return "Koordinater";
     if (isLikelyHomeAddress(customer)) return "Område/tagg - mulig hytteadresse";
     if (addressFor(customer)) return "Adresse";
@@ -2640,7 +2668,22 @@
     return 2 * radius * Math.asin(Math.sqrt(h));
   }
 
+  function knownPlacePointForText(value) {
+    const text = normalizeMatch(value);
+    if (!text) return null;
+    for (const [key, point] of knownPlacePoints) {
+      if (text.includes(key)) return { ...point, estimated: true };
+    }
+    return null;
+  }
+
   function routePointDetails(customer, areaIndex = routeAreaPointIndex()) {
+    const areaTerms = routeAreaTerms();
+    const routeInstallation = routePrimaryInstallation(customer, { areaTerms });
+    if (routeInstallation && areaTerms.length && installationMatchesRouteArea(routeInstallation, customer, areaTerms)) {
+      const installationKnown = knownPlacePointForText(installationAreaText(routeInstallation, customer));
+      if (installationKnown) return { point: installationKnown, label: "Anleggsområde-estimat", quality: "low" };
+    }
     const exact = exactCoordinates(customer);
     if (exact) return { point: exact, label: "Koordinater", quality: "medium" };
     for (const key of routeAreaKeys(customer)) {
@@ -2713,7 +2756,7 @@
   }
 
   function knownPlacePointForCustomer(customer) {
-    const text = normalizeMatch([
+    return knownPlacePointForText([
       customer.location_tag,
       customer.visit_city,
       customer.visit_zip,
@@ -2721,12 +2764,8 @@
       customer.postal_zip,
       customer.visit_street,
       customer.tags,
+      ...installationsForCustomer(customer).map((installation) => installationAreaText(installation, customer)),
     ].filter(Boolean).join(" "));
-    if (!text) return null;
-    for (const [key, point] of knownPlacePoints) {
-      if (text.includes(key)) return { ...point, estimated: true };
-    }
-    return null;
   }
 
   function routeAreaPointIndex() {
@@ -2921,11 +2960,15 @@
       customer.google_maps,
       customer.local_note,
       customer.latest_deal_name,
+      ...installationsForCustomer(customer).map((installation) => installationAreaText(installation, customer)),
     ].join(" ");
   }
 
   function googleDirectionsUrlForRows(rows) {
-    const points = rows.map((row) => routeLocationText(row.customer)).filter(Boolean);
+    const areaTerms = routeAreaTerms();
+    const points = rows
+      .map((row) => routeLocationText(row.customer, routePrimaryInstallation(row.customer, { areaTerms })))
+      .filter(Boolean);
     if (!points.length) return "";
     if (points.length === 1) {
       return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(points[0])}`;
@@ -2969,9 +3012,11 @@
   }
 
   function routeCandidateScore(customer, areaTerms) {
+    const routeInstallation = routePrimaryInstallation(customer, { areaTerms });
     const statusRank = { red: 0, yellow: 1, green: 3, missing: 8 };
-    const statusScore = statusRank[statusKind(customer)] ?? 5;
-    const due = nextServiceDueForCustomer(customer) || "9999-99-99";
+    const kind = routeInstallation ? statusKindForDueDate(routeInstallation.next_service_due) : statusKind(customer);
+    const statusScore = statusRank[kind] ?? 5;
+    const due = routeInstallation?.next_service_due || nextServiceDueForCustomer(customer) || "9999-99-99";
     const areaText = normalizeMatch(routeAreaText(customer));
     const areaScore = areaTerms.length && areaTerms.every((term) => areaText.includes(term)) ? -4 : 0;
     const reply = routeReplyKind(customer);
@@ -2986,7 +3031,7 @@
   }
 
   function routeCandidates() {
-    const areaTerms = normalizeMatch(el.routeArea?.value || "").split(" ").filter(Boolean);
+    const areaTerms = routeAreaTerms();
     const statusFilter = el.routeStatus?.value || "due";
     const replyFilter = el.routeReplyFilter?.value || "all";
     const requireLocation = el.routeRequireLocation?.checked;
@@ -2994,7 +3039,8 @@
     return customers
       .filter((customer) => !customer.is_inactive)
       .filter((customer) => {
-        const kind = statusKind(customer);
+        const routeInstallation = routePrimaryInstallation(customer, { areaTerms });
+        const kind = routeInstallation ? statusKindForDueDate(routeInstallation.next_service_due) : statusKind(customer);
         if (statusFilter === "due" && !["red", "yellow"].includes(kind)) return false;
         if (statusFilter !== "due" && kind !== statusFilter) return false;
         if (requireLocation && !hasRouteLocation(customer)) return false;
@@ -3086,6 +3132,13 @@
         const text = String(value || "").trim();
         if (text && text.length <= 40) areas.add(text);
       }
+      for (const installation of installationsForCustomer(customer)) {
+        const location = locationForInstallation(installation, customer);
+        for (const value of [installation.label, location?.location_name, location?.city]) {
+          const text = String(value || "").trim();
+          if (text && text.length <= 40) areas.add(text);
+        }
+      }
     }
     el.routeAreaOptions.innerHTML = [...areas]
       .sort((a, b) => a.localeCompare(b, "nb"))
@@ -3097,8 +3150,9 @@
   function routeBookingRows() {
     const date = el.routeBookingDate?.value || isoDate(new Date());
     const duration = Number(el.routeDuration?.value || 60);
+    const areaTerms = routeAreaTerms();
     return routePlannerRows.map((row) => {
-      const installation = routePrimaryInstallation(row.customer);
+      const installation = routePrimaryInstallation(row.customer, { areaTerms });
       const installationNote = installation ? installationBookingNote(installation, row.customer) : "";
       const booking = {
         customerId: customerKey(row.customer),
@@ -3189,6 +3243,7 @@
     if (!el.routeBookingDate.value) el.routeBookingDate.value = isoDate(new Date());
     updateRouteAreaOptions();
     const starredOnly = Boolean(el.routeStarredOnly?.checked);
+    const routeTerms = routeAreaTerms();
     const manual = selectedRouteCustomers().filter((customer) => !starredOnly || isStarredCustomer(customer));
     const maxJobs = Math.max(1, Math.min(10, Number(el.routeMaxJobs?.value || 8)));
     const candidates = manual.length ? manual : routeCandidates().slice(0, maxJobs * 4);
@@ -3201,7 +3256,7 @@
       .filter((customer) => !starredOnly || isStarredCustomer(customer))
       .filter((customer) => !hasRouteLocation(customer))
       .filter((customer) => {
-        const areaTerms = normalizeMatch(el.routeArea?.value || "").split(" ").filter(Boolean);
+        const areaTerms = routeTerms;
         if (!areaTerms.length) return true;
         const areaText = normalizeMatch(routeAreaText(customer));
         return areaTerms.every((term) => areaText.includes(term));
@@ -3222,17 +3277,20 @@
       el.routeResults.innerHTML = routePlannerRows.map((row) => {
         const customer = row.customer;
         const access = accessInfo(customer);
-        const installation = routePrimaryInstallation(customer);
-        const installationLine = routeInstallationLine(customer);
+        const installation = routePrimaryInstallation(customer, { areaTerms: routeTerms });
+        const routeKind = installation ? statusKindForDueDate(installation.next_service_due) : statusKind(customer);
+        const routeStatus = installation ? installationServiceStatusLabel(installation) : statusLabel(customer);
+        const installationLine = routeInstallationLine(customer, { areaTerms: routeTerms });
         const installationLocation = installation ? locationAddressText(locationForInstallation(installation, customer)) : "";
+        const routeMapQuery = routeLocationText(customer, installation);
         return `
           <article class="route-card" data-route-customer="${escapeHtml(customerKey(customer))}">
             <div class="route-number">${row.index}</div>
             <div>
               <div class="route-title">
-                <span class="dot ${statusKind(customer)}"></span>
+                <span class="dot ${routeKind}"></span>
                 <strong>${customerStarHtml(customer)}${customerCashBadgeHtml(customer)}${escapeHtml(cleanDisplayName(customer))}</strong>
-                <em>${escapeHtml(statusLabel(customer))}</em>
+                <em>${escapeHtml(routeStatus)}</em>
               </div>
               <p>${escapeHtml(installationLocation || siteLocationText(customer) || "Adresse mangler")}</p>
               ${installationLine ? `<small>${escapeHtml(installationLine)}</small>` : ""}
@@ -3243,7 +3301,7 @@
             </div>
             <div class="route-card-actions">
               ${customer.phone ? `<a href="tel:${escapeHtml(phoneForLink(customer.phone))}">Ring</a>${copyPhoneButton(customer.phone, "Kopier")}` : ""}
-              ${hasRouteLocation(customer) ? `<a href="${escapeHtml(mapsUrl(customer))}" target="_blank" rel="noreferrer">Kart</a>` : ""}
+              ${routeMapQuery ? `<a href="${escapeHtml(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(routeMapQuery)}`)}" target="_blank" rel="noreferrer">Kart</a>` : ""}
               ${routeMessageButtons(customer)}
               <button class="book-primary" data-book-customer="${escapeHtml(customerKey(customer))}" data-book-type="service" data-book-installation="${escapeHtml(installation?.id || "")}" type="button">Book service</button>
             </div>
@@ -3264,7 +3322,7 @@
               <div class="route-overflow-actions">
                 ${row.customer.phone ? `<a href="${escapeHtml(smsUrl())}" target="_blank" rel="noreferrer">SMS</a>${copyPhoneButton(row.customer.phone, "Kopier nr")}` : ""}
                 ${routeMessageButtons(row.customer)}
-                <button data-book-customer="${escapeHtml(customerKey(row.customer))}" data-book-type="service" data-book-installation="${escapeHtml(routePrimaryInstallation(row.customer)?.id || "")}" type="button">Book service</button>
+                <button data-book-customer="${escapeHtml(customerKey(row.customer))}" data-book-type="service" data-book-installation="${escapeHtml(routePrimaryInstallation(row.customer, { areaTerms: routeTerms })?.id || "")}" type="button">Book service</button>
                 <button data-route-open-customer="${escapeHtml(customerKey(row.customer))}" type="button">Info</button>
               </div>
             </article>
@@ -7240,17 +7298,23 @@
     ].filter(Boolean).join(" ");
   }
 
-  function routePrimaryInstallation(customer) {
+  function routePrimaryInstallation(customer, options = {}) {
     const installations = installationsForCustomer(customer).filter((installation) => installation.active !== false);
     if (!installations.length) return null;
-    const due = nextServiceDueForCustomer(customer);
-    return installations.find((installation) => installation.next_service_due && installation.next_service_due === due)
-      || installations.find((installation) => ["red", "yellow"].includes(statusKindForDueDate(installation.next_service_due)))
-      || installations[0];
+    const areaTerms = Array.isArray(options.areaTerms) ? options.areaTerms : routeAreaTerms();
+    const areaMatches = areaTerms.length
+      ? installations.filter((installation) => installationMatchesRouteArea(installation, customer, areaTerms))
+      : [];
+    const candidates = areaMatches.length ? areaMatches : installations;
+    const candidateDates = candidates.map((installation) => installation.next_service_due).filter(Boolean).sort();
+    const due = candidateDates[0] || nextServiceDueForCustomer(customer);
+    return candidates.find((installation) => installation.next_service_due && installation.next_service_due === due)
+      || candidates.find((installation) => ["red", "yellow"].includes(statusKindForDueDate(installation.next_service_due)))
+      || candidates[0];
   }
 
-  function routeInstallationLine(customer) {
-    const installation = routePrimaryInstallation(customer);
+  function routeInstallationLine(customer, options = {}) {
+    const installation = routePrimaryInstallation(customer, options);
     if (!installation) return "";
     const title = [installation.label || "Anlegg", [installation.brand, installation.model].filter(Boolean).join(" ")].filter(Boolean).join(" - ");
     return title;
