@@ -5892,6 +5892,36 @@
         searchText: text,
       });
     }
+    for (const row of openWebsiteSubmissionRows()) {
+      const values = websiteSubmissionLeadValues(row);
+      const text = [
+        values.name,
+        values.phone,
+        values.email,
+        values.address,
+        values.city,
+        values.product_interest,
+        values.note,
+        row?.public_reference,
+        row?.idempotency_key,
+        websiteSubmissionSourcePage(row),
+      ].filter(Boolean).join(" ");
+      if (!globalSearchMatches(text, query)) continue;
+      results.push({
+        id: `website:${row.id || row.public_reference || results.length}`,
+        kind: "Nettside",
+        title: values.name || row?.public_reference || "Nettsideinnsending",
+        meta: [
+          websiteSubmissionTypeLabel(row),
+          values.phone,
+          values.email,
+          values.address || values.city,
+          row?.public_reference,
+        ].filter(Boolean).join(" · "),
+        websiteSubmissionId: row.id,
+        searchText: text,
+      });
+    }
     for (const row of orderRows()) {
       const text = orderSearchText(row);
       if (!globalSearchMatches(text, query)) continue;
@@ -5945,7 +5975,7 @@
         searchText: text,
       });
     }
-    const rank = { Kunde: 0, Anlegg: 1, Lead: 2, Jobb: 3, Avtale: 4, Faktura: 5 };
+    const rank = { Kunde: 0, Anlegg: 1, Lead: 2, Nettside: 3, Jobb: 4, Avtale: 5, Faktura: 6 };
     return results
       .sort((a, b) => (rank[a.kind] ?? 9) - (rank[b.kind] ?? 9) || String(a.title || "").localeCompare(String(b.title || ""), "nb"))
       .slice(0, 18);
@@ -5956,6 +5986,7 @@
       Kunde: "Kundekort",
       Anlegg: "Anlegg",
       Lead: "Henvendelse",
+      Nettside: "Nettsideinnsending",
       Jobb: "Jobb",
       Avtale: "Planlagt",
       Faktura: "Faktura",
@@ -5968,6 +5999,7 @@
       Kunde: "Kunder",
       Anlegg: "Varmepumper og anlegg",
       Lead: "Henvendelser",
+      Nettside: "Nye nettskjema",
       Jobb: "Jobber",
       Avtale: "Planlagte jobber",
       Faktura: "Fakturaer",
@@ -6031,6 +6063,15 @@
       currentLeadFilter = "all";
       currentLeadSearch = "";
       if (el.leadStatusFilter) el.leadStatusFilter.value = "all";
+      if (el.leadSearch) el.leadSearch.value = "";
+      setView("leads");
+      return;
+    }
+    if (row.kind === "Nettside") {
+      currentLeadFilter = "inbox_tab";
+      currentLeadSearch = "";
+      setLeadInboxTab("website");
+      if (el.leadStatusFilter) el.leadStatusFilter.value = "inbox_tab";
       if (el.leadSearch) el.leadSearch.value = "";
       setView("leads");
       return;
