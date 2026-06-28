@@ -8911,6 +8911,7 @@
         <div class="lead-offer-actions">
           <button class="secondary" data-fill-offer-template="${escapeHtml(target)}" type="button">Bruk mal</button>
           <button class="secondary" data-copy-offer-draft="${escapeHtml(target)}" type="button">Kopier tilbud</button>
+          <button class="secondary" data-open-offer-mailto="${escapeHtml(target)}" type="button" title="Åpne et ferdig e-postutkast i standard e-postprogram. Marker sendt manuelt etter at e-posten faktisk er sendt.">Åpne e-postutkast</button>
           <button class="order-primary" data-send-offer-email="${escapeHtml(target)}" type="button" ${disabled}>Send tilbud</button>
         </div>
       </section>
@@ -8977,6 +8978,17 @@
     const payload = leadOfferPayload(target);
     await copyTextToClipboard(`Emne: ${payload.subject}\n\n${payload.text}`);
     setSyncStatus("Tilbud kopiert.", "ok");
+  }
+
+  function openLeadOfferMailDraft(target) {
+    const payload = leadOfferPayload(target);
+    const url = `mailto:${encodeURIComponent(payload.to)}?subject=${encodeURIComponent(payload.subject)}&body=${encodeURIComponent(payload.text)}`;
+    if (url.length > 7500) {
+      setSyncStatus("Tilbudet er langt. Kopier tilbudet og lim inn teksten manuelt i e-postprogrammet.", "error");
+      return;
+    }
+    window.location.href = url;
+    setSyncStatus("E-postutkast åpnet. Marker tilbud sendt først etter at e-posten er sendt.", "ok");
   }
 
   async function sendLeadOfferEmail(target) {
@@ -12365,6 +12377,15 @@
     if (copyOffer) {
       copyLeadOfferDraft(copyOffer.dataset.copyOfferDraft)
         .catch((error) => setSyncStatus(error.message || "Klarte ikke kopiere tilbud.", "error"));
+      return;
+    }
+    const openOfferMail = event.target.closest("[data-open-offer-mailto]");
+    if (openOfferMail) {
+      try {
+        openLeadOfferMailDraft(openOfferMail.dataset.openOfferMailto);
+      } catch (error) {
+        setSyncStatus(error.message || "Klarte ikke åpne e-postutkast.", "error");
+      }
       return;
     }
     const sendOffer = event.target.closest("[data-send-offer-email]");
