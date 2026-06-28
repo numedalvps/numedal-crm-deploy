@@ -3437,7 +3437,7 @@
       actions.push(`<a href="tel:${escapeHtml(phoneForLink(customer.phone))}" title="Ring kunden med registrert telefonnummer.">Ring</a>`);
     }
     if (isAdmin() && !customer.is_inactive) {
-      actions.push(`<button class="book-primary" data-book-customer="${escapeHtml(key)}" type="button" title="Book jobb i kalenderen. Dette lager jobbutkast hvis det mangler.">Book jobb</button>`);
+      actions.push(`<button class="book-primary" data-book-customer="${escapeHtml(key)}" type="button" title="Book avtale i kalenderen. Dette lager jobbutkast hvis det mangler.">Book avtale</button>`);
     }
     if (mapQuery(customer)) {
       actions.push(`<a href="${escapeHtml(mapsUrl(customer))}" target="_blank" rel="noreferrer" title="Åpne anleggsadressen i Google Maps.">Kart</a>`);
@@ -3452,7 +3452,7 @@
     if (customer.email) actions.push(`<a href="${escapeHtml(emailUrl(customer))}" target="_blank" rel="noreferrer" title="Åpne Gmail med kundens e-postadresse ferdig utfylt.">E-post</a>`);
     if (customer.phone) actions.push(`<a href="${escapeHtml(smsUrl())}" target="_blank" rel="noreferrer" title="Åpne Google Messages for å sende SMS.">SMS</a>`);
     if (isAdmin() && !customer.is_inactive) {
-      actions.push(`<button class="secondary" data-new-order-customer="${escapeHtml(key)}" type="button" title="Lag jobb uten å velge dato nå. Bruk Book jobb hvis tidspunktet skal settes med en gang.">Ny jobb uten dato</button>`);
+      actions.push(`<button class="secondary" data-new-order-customer="${escapeHtml(key)}" type="button" title="Lag jobb uten å velge dato nå. Bruk Book avtale hvis tidspunktet skal settes med en gang.">Ny jobb uten dato</button>`);
       actions.push(`<button class="secondary" data-new-lead-existing-customer="${escapeHtml(key)}" type="button" title="Opprett ny salgsmulighet på eksisterende kunde, f.eks. ekstra varmepumpe, befaring eller blåseisolering.">Ny salgsmulighet</button>`);
       actions.push(`<button class="secondary" data-new-installation-customer="${escapeHtml(key)}" type="button" title="Registrer egen varmepumpe/anlegg med adresse og servicefrist.">Ny varmepumpe/anlegg</button>`);
       actions.push(insulationToggleHtml(customer));
@@ -4786,7 +4786,7 @@
     return {
       kind: "unscheduled",
       heading: "Jobb - ikke planlagt",
-      next: "Trykk Book jobb og legg jobben i kalenderen.",
+      next: "Trykk Book avtale og legg jobben i kalenderen.",
       help: "Jobben finnes, men den ligger ikke i kalenderen ennå.",
       steps,
     };
@@ -5543,7 +5543,7 @@
     }
     if (action === "job") {
       setView("orders");
-      setSyncStatus("Velg en kunde eller åpne et kundekort for å lage ny jobb. Book jobb brukes når du vil velge dato og tid med en gang.", "ok");
+      setSyncStatus("Velg en kunde eller åpne et kundekort for å lage ny jobb. Book avtale brukes når du vil velge dato og tid med en gang.", "ok");
     }
   }
 
@@ -8233,7 +8233,7 @@
     } else if (effectiveBilling === "ready") {
       primary.push(`<button class="order-primary" data-mark-order-invoiced="${escapeHtml(order.id)}" type="button" title="Marker jobben som fakturert når fakturaen er sendt.">Marker fakturert</button>`);
     } else {
-      primary.push(`<button class="book-primary" data-book-order="${escapeHtml(order.id)}" type="button" title="Legg jobben inn i kalenderen med dato, tidspunkt og tekniker.">Book jobb</button>`);
+      primary.push(`<button class="book-primary" data-book-order="${escapeHtml(order.id)}" type="button" title="Legg jobben inn i kalenderen med dato, tidspunkt og tekniker.">Book avtale</button>`);
     }
     if (customer.phone) secondary.push(`<a href="tel:${escapeHtml(phoneForLink(customer.phone))}" title="Ring kunden.">Ring</a>`);
     if (mapQuery(customer)) secondary.push(`<a href="${escapeHtml(mapsUrl(customer))}" target="_blank" rel="noreferrer" title="Åpne anleggsadressen i Google Maps.">Kart</a>`);
