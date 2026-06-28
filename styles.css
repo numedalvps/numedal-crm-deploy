@@ -1164,10 +1164,24 @@ textarea {
   flex-wrap: wrap;
 }
 
-.ai-save-row span {
+.ai-save-row span:not(.compact-help) {
   color: var(--muted);
   font-size: 13px;
   font-weight: 800;
+}
+
+.compact-help {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--teal-dark);
+  font-size: 13px;
+  font-weight: 900;
+  cursor: help;
 }
 
 .ai-match-panel {

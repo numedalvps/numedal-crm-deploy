@@ -1898,15 +1898,16 @@
     const parserLabel = /(server|supabase|edge)/i.test(analysis?.parser || "")
       ? "Serverbasert tekstgjenkjenning"
       : "Enkel lokal tekstgjenkjenning";
+    const summaryText = analysis?.summary || "Forslag laget fra innlimt tekst.";
+    const parserHelp = `${parserLabel}. Anbefalt handling: ${suggestedAction.replaceAll("_", " ")}. Kontroller feltene før lagring.`;
     const originalTextAlreadyStored = Boolean(aiRegistrationDraft.intakeId);
     el.aiRegistrationDraft.classList.remove("hidden");
     el.aiRegistrationDraft.innerHTML = `
       <div id="aiRegistrationMessage" class="dialog-message hidden"></div>
       <div class="ai-draft-summary">
         <div>
-          <span>${escapeHtml(parserLabel)}</span>
-          <h3>${escapeHtml(analysis?.summary || "Forslag laget fra innlimt tekst.")}</h3>
-          <p title="Anbefalt handling fra teksttolkingen: ${escapeHtml(suggestedAction.replaceAll("_", " "))}.">Kontroller feltene før lagring.</p>
+          <span title="${escapeHtml(parserHelp)}">Forslag</span>
+          <h3>${escapeHtml(summaryText)}</h3>
         </div>
         <strong>${escapeHtml(aiRegistrationTypeLabel(aiRegistrationDraft.type))}</strong>
       </div>
@@ -1968,7 +1969,7 @@
           <div class="ai-save-row">
             <button id="aiRegistrationInboxButton" class="secondary" type="button" title="Legg forslaget i CRM-innboks uten å opprette kunde eller lead ennå.">Lagre i CRM-innboks</button>
             <button id="aiRegistrationSaveButton" type="button">Lagre godkjent forslag</button>
-            <span title="CRM-innboks er bare utkast. Lagre godkjent forslag oppretter eller kobler kunde, lead eller historikk.">Innboks = utkast. Lagre = opprett/koble.</span>
+            <span class="compact-help" title="CRM-innboks er bare utkast. Lagre godkjent forslag oppretter eller kobler kunde, lead eller historikk.">?</span>
           </div>
         </div>
         <aside class="ai-match-panel">
@@ -8613,11 +8614,11 @@
           </div>
           <div class="route-card-actions">
             <button data-jump-customer="${escapeHtml(key)}" type="button">Åpne</button>
-            <button data-new-lead-existing-customer="${escapeHtml(key)}" data-lead-kind="blaseisolering" type="button">Lag lead</button>
             <button data-select-insulation-customer="${escapeHtml(key)}" type="button">Tilbud</button>
             <details class="inline-more-actions">
               <summary>Mer</summary>
               <div>
+                <button data-new-lead-existing-customer="${escapeHtml(key)}" data-lead-kind="blaseisolering" type="button">Lag blåseisolering-lead</button>
                 ${customer.phone ? `<a href="tel:${escapeHtml(phoneForLink(customer.phone))}">Ring</a>${copyPhoneButton(customer.phone, "Kopier")}` : ""}
                 ${customer.email ? `<a href="${escapeHtml(emailUrl(customer))}" target="_blank" rel="noreferrer">E-post</a>` : ""}
                 <button data-book-insulation-customer="${escapeHtml(key)}" type="button">Book blåsejobb</button>
@@ -8891,6 +8892,14 @@
     if (fields.template) fields.template.value = id;
     if (fields.subject) fields.subject.value = template.subject;
     if (fields.text) fields.text.value = template.body(customer);
+  }
+
+  function focusLeadOfferFields(target) {
+    const fields = leadOfferFields(target);
+    const focusTarget = fields.text || fields.subject;
+    focusTarget?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setTimeout(() => focusTarget?.focus(), 250);
+    return Boolean(focusTarget);
   }
 
   function leadOfferPayload(target) {
@@ -12274,16 +12283,14 @@
   el.leadDetail?.addEventListener("click", (event) => {
     const focusOffer = event.target.closest("[data-focus-lead-offer]");
     if (focusOffer) {
-      const fields = leadOfferFields(focusOffer.dataset.focusLeadOffer);
-      const target = fields.text || fields.subject;
-      target?.scrollIntoView({ behavior: "smooth", block: "center" });
-      setTimeout(() => target?.focus(), 250);
+      focusLeadOfferFields(focusOffer.dataset.focusLeadOffer);
       setSyncStatus("Tilbudsfeltet er klart. Velg mal eller skriv tilbudstekst.", "ok");
       return;
     }
     const fillOffer = event.target.closest("[data-fill-offer-template]");
     if (fillOffer) {
       fillLeadOfferTemplate(fillOffer.dataset.fillOfferTemplate);
+      focusLeadOfferFields(fillOffer.dataset.fillOfferTemplate);
       setSyncStatus("Tilbudsmal fylt inn.", "ok");
       return;
     }
@@ -12311,6 +12318,7 @@
       const fields = target ? leadOfferFields(target) : {};
       if (fields?.text) {
         fillLeadOfferTemplate(target, template.dataset.copyLeadTemplate);
+        focusLeadOfferFields(target);
         setSyncStatus("Malen er lagt inn i tilbudsfeltet.", "ok");
         return;
       }
