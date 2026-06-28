@@ -2843,6 +2843,18 @@ textarea {
   font-weight: 800;
 }
 
+.installation-meta-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.installation-meta-pills span {
+  border-color: #99f6e4;
+  background: #ecfdf5;
+  color: #0f766e;
+}
+
 .installation-card p,
 .installation-card small {
   margin: 0;

@@ -9024,6 +9024,30 @@
     ].filter(Boolean).join(" · ");
   }
 
+  function installationServicePills(installation, customer) {
+    const rawText = [
+      installation.notes,
+      installation.kind,
+      customer?.tags,
+    ].filter(Boolean).join(" ");
+    const text = normalizeMatch(rawText);
+    const pills = [];
+    const add = (label) => {
+      if (label && !pills.includes(label)) pills.push(label);
+    };
+    if (/\bservice\s*kunde\b|\bservicekunde\b/.test(text)) add("Servicekunde");
+    if (/\bikke\s+(levert|solgt|montert)\s+av\s+oss\b|\blevert\s+av\s+oss\s+(nei|no)\b|\bikke\s+var\s+levert\s+av\s+oss\b/.test(text)) add("Ikke levert av oss");
+    if (/\bmegaflis\b/.test(text)) add("Leverandør: Megaflis");
+    else if (/\bcoop\b/.test(text)) add("Leverandør: Coop");
+    else if (/\bukjent\s+leverandor\b|\bleverandor\s+ukjent\b/.test(text)) add("Leverandør ukjent");
+    else if (/\bannen\s+(leverandor|montor)\b|\bandre\s+montor\b/.test(text)) add("Annen leverandør");
+    else {
+      const supplier = String(rawText || "").match(/leverand(?:ør|or)\s*[:=-]\s*([^\n.;,]+)/i)?.[1]?.trim();
+      if (supplier && !/^(ukjent|nei|no)$/i.test(supplier)) add(`Leverandør: ${supplier.slice(0, 32)}`);
+    }
+    return pills;
+  }
+
   function renderInstallationList(customer, installations) {
     const rows = (installations || []).slice(0, 12);
     const fallback = [];
@@ -9062,6 +9086,7 @@
             const address = locationAddressText(location);
             const access = installationAccessLabel(installation, customer);
             const realInstallation = Boolean(installation.id);
+            const servicePills = installationServicePills(installation, customer);
             return `
               <article class="installation-card ${dueKind} ${installation.active === false ? "inactive" : ""}">
                 <div>
@@ -9069,6 +9094,7 @@
                   <span>${escapeHtml(installation.active === false ? "Inaktiv" : installationServiceStatusLabel(installation))}</span>
                 </div>
                 <p>${escapeHtml(title)}</p>
+                ${servicePills.length ? `<div class="installation-meta-pills">${servicePills.map((pill) => `<span>${escapeHtml(pill)}</span>`).join("")}</div>` : ""}
                 ${address ? `<small>${escapeHtml(location.location_name || "Anleggsadresse")}: ${escapeHtml(address)}</small>` : `<small>Anleggsadresse ikke registrert</small>`}
                 ${dates.length ? `<small>${escapeHtml(dates.join(" · "))}</small>` : `<small>Datoer mangler</small>`}
                 <small>Serviceintervall: ${escapeHtml(installationServiceIntervalLabel(installation))}</small>
