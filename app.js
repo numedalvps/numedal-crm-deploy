@@ -6685,13 +6685,13 @@
     ].filter(Boolean).join(" "));
   }
 
-  function qualityIssueForCustomer(customer, issue, duplicateKeys = duplicateNameKeys()) {
+  function qualityIssueForCustomer(customer, issue, duplicateData = null) {
     if (!customer) return false;
     if (customer.is_inactive) return false;
     if (issue === "quality_phone") return !compactPhone(customer.phone);
     if (issue === "quality_email") return !String(customer.email || "").includes("@");
     if (issue === "quality_address") return !addressFor(customer) && !exactCoordinates(customer);
-    if (issue === "quality_duplicate") return duplicateIdentityParts(customer).some((part) => duplicateKeys.has(part));
+    if (issue === "quality_duplicate") return duplicateMatchesForCustomer(customer, duplicateData || duplicateIndex()).length > 0;
     if (issue === "quality_home_address") return looksLikeHomeAddressOnCabinCustomer(customer);
     if (issue === "quality_multi_pump") return hasMultiplePumpSignal(customer) && !hasConfirmedMultiplePumps(customer);
     if (issue === "quality_due") return statusKind(customer) === "missing" || !nextServiceDueForCustomer(customer);
@@ -6699,7 +6699,7 @@
   }
 
   function dataQualityRows() {
-    const duplicateKeys = duplicateNameKeys();
+    const duplicateData = duplicateIndex();
     const definitions = [
       ["quality_phone", "Mangler telefon", "Fint å rydde før SMS eller ringelister."],
       ["quality_email", "Mangler e-post", "Påvirker tilbud, utsendelse og fakturahistorikk."],
@@ -6710,7 +6710,7 @@
       ["quality_due", "Usikker servicefrist", "Mangler tydelig neste service eller status."],
     ];
     return definitions.map(([id, label, help]) => {
-      const matches = customers.filter((customer) => qualityIssueForCustomer(customer, id, duplicateKeys));
+      const matches = customers.filter((customer) => qualityIssueForCustomer(customer, id, duplicateData));
       return { id, label, help, count: matches.length };
     }).filter((row) => row.count > 0);
   }
@@ -6923,7 +6923,7 @@
   function filteredCustomers() {
     const filter = el.statusFilter?.value || currentCustomerFilter || "all";
     const search = el.customerSearch?.value || currentSearch || "";
-    const duplicateKeys = duplicateNameKeys();
+    const duplicateData = duplicateIndex();
     return customers
       .filter((customer) => {
         if (filter === "inactive") return Boolean(customer.is_inactive);
@@ -6934,7 +6934,7 @@
           || (filter === "due" && ["red", "yellow"].includes(kind))
           || (filter === "missing" && kind === "missing")
           || (filter === "insulation" && isInsulationCustomer(customer))
-          || qualityIssueForCustomer(customer, filter, duplicateKeys);
+          || qualityIssueForCustomer(customer, filter, duplicateData);
       })
       .filter((customer) => matchesSearchText(customer, search))
       .sort((a, b) => {
