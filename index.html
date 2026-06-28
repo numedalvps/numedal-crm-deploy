@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260627-10" />
+    <link rel="stylesheet" href="./styles.css?v=20260628-01" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -74,7 +74,7 @@
                 <button data-new-action="customer" type="button">Ny kunde</button>
                 <button data-new-action="lead" type="button">Ny henvendelse</button>
                 <button data-new-action="job" type="button">Ny jobb</button>
-                <button data-new-action="booking" type="button">Planlegg jobb</button>
+                <button data-new-action="booking" type="button">Book jobb</button>
                 <button data-new-action="service" type="button">Ny service</button>
                 <button data-new-action="install" type="button">Ny installasjon</button>
                 <button data-new-action="paste" type="button">Lim inn melding</button>
@@ -96,9 +96,9 @@
           </section>
           <div class="dashboard-focus-grid compact-dashboard-metrics">
             <button data-dashboard-action="service" type="button">
-              <span>Service</span>
+              <span>Serviceoppfølging</span>
               <strong id="dashboardServiceCount">0</strong>
-              <small>Kunder som bør kontaktes eller bookes</small>
+              <small>Kunder/anlegg som kan kontaktes</small>
             </button>
             <button data-dashboard-action="leads" type="button">
               <span>Innboks</span>
@@ -122,9 +122,9 @@
             </button>
           </div>
           <div class="metric-grid compact-service-metrics">
-            <button data-filter-shortcut="red"><strong id="redMetric">0</strong><span>Service nå</span></button>
-            <button data-filter-shortcut="yellow"><strong id="yellowMetric">0</strong><span>Snart service</span></button>
-            <button data-filter-shortcut="green"><strong id="greenMetric">0</strong><span>Service ok</span></button>
+            <button data-filter-shortcut="red"><strong id="redMetric">0</strong><span>Forfalt service</span></button>
+            <button data-filter-shortcut="yellow"><strong id="yellowMetric">0</strong><span>Aktuell for service</span></button>
+            <button data-filter-shortcut="green"><strong id="greenMetric">0</strong><span>Neste service senere</span></button>
             <button data-filter-shortcut="booked"><strong id="bookedMetric">0</strong><span>Booket</span></button>
           </div>
           <div class="dashboard-grid">
@@ -144,8 +144,8 @@
             </section>
             <section class="panel">
               <div class="section-head">
-                <h2>Serviceklar</h2>
-                <button data-view-jump="customers" type="button">Åpne kunder</button>
+                <h2>Serviceoppfølging</h2>
+                <button data-view-jump="routeplanner" type="button">Åpne servicerute</button>
               </div>
               <div id="dueCustomers" class="compact-list"></div>
             </section>
@@ -182,13 +182,13 @@
                 <input id="customerSearch" type="search" placeholder="Søk navn, telefon, adresse, merke" />
                 <select id="statusFilter">
                   <option value="all">Alle</option>
-                  <option value="due">Service nå + snart service</option>
-                  <option value="red">Service nå</option>
-                  <option value="yellow">Snart service</option>
-                  <option value="green">Service ok</option>
+                  <option value="due">Forfalt + aktuell service</option>
+                  <option value="red">Forfalt service</option>
+                  <option value="yellow">Aktuell for service</option>
+                  <option value="green">Neste service senere</option>
                   <option value="insulation">Blåseisolering</option>
                   <option value="inactive">Inaktive</option>
-                  <option value="missing">Mangler data</option>
+                  <option value="missing">Mangler serviceinfo</option>
                   <option value="quality_phone">Mangler telefon</option>
                   <option value="quality_email">Mangler e-post</option>
                   <option value="quality_address">Mangler adresse/kart</option>
@@ -330,7 +330,7 @@
               <div class="section-head">
                 <div>
                   <h2>Blåseisolering tilbud</h2>
-                  <p>Velg kunde, velg tilbudstype og lag tekst fra kalkyle eller utleiepriser.</p>
+                  <p>Blåseisolering er egen arbeidstype. Taggen brukes bare for å finne aktuelle kunder.</p>
                 </div>
                 <div class="insulation-head-actions">
                   <button id="insulationCreateOfferButton" data-insulation-action-mode="insulation" type="button">Lag isolasjonstilbud</button>
@@ -431,7 +431,7 @@
               <div class="section-head">
                 <div>
                   <h2>Blåseisolering kunder</h2>
-                  <p>Kunder og leads tagget med blåseisolering / iSOBYGG.</p>
+                  <p>Taggen betyr aktuell/interessert. Faktiske salgsmuligheter og jobber håndteres som leads og jobber.</p>
                 </div>
               </div>
               <div class="search-row">
@@ -492,7 +492,7 @@
             <div class="section-head">
               <div>
                 <h2>Servicerute</h2>
-                <p>Finn kunder i samme område, lag kjørbar rekkefølge og book servicedag.</p>
+                <p>Serviceoppfølging er potensielle jobber. Book først når kunden har sagt ja eller du har avtale/adkomst.</p>
               </div>
               <button id="routeOpenMapsButton" type="button">Åpne rute i Google Maps</button>
             </div>
@@ -529,10 +529,10 @@
                 <div class="route-controls">
                   <label>Status
                     <select id="routeStatus">
-                      <option value="due">Service nå + snart service</option>
-                      <option value="red">Service nå</option>
-                      <option value="yellow">Snart service</option>
-                      <option value="green">Service ok</option>
+                      <option value="due">Forfalt + aktuell service</option>
+                      <option value="red">Forfalt service</option>
+                      <option value="yellow">Aktuell for service</option>
+                      <option value="green">Neste service senere</option>
                     </select>
                   </label>
                   <label>Bookingklar
@@ -565,7 +565,7 @@
                   </label>
                   <label class="check-label">
                     <input id="routeStarredOnly" type="checkbox" />
-                    Kun stjernemerkede kunder
+                    Prioriterte servicekunder ★
                   </label>
                 </div>
               </details>
@@ -741,7 +741,7 @@
           <label class="check-row"><input id="formInsulation" type="checkbox" /> Blåseisolering / Isobygg</label>
         </div>
         <label>Servicehistorikk<textarea id="formServiceDates" rows="2" placeholder="2024-05-10; 2026-05-10"></textarea></label>
-        <label>Tags<textarea id="formTags" rows="2" placeholder="Gullkunde; Vegglifjell; Blåseisolering"></textarea></label>
+        <label>Tags<textarea id="formTags" rows="2" placeholder="Prioritert servicekunde; Vegglifjell; Blåseisolering"></textarea></label>
         <div id="formTagCatalog" class="tag-catalog"></div>
         <label>Notat<textarea id="formNote" rows="4"></textarea></label>
         <div class="modal-actions">
@@ -816,7 +816,7 @@
             <select id="orderInstallationSelect"></select>
           </label>
           <label class="form-wide">Tittel<input id="orderTitleInput" required /></label>
-          <label class="check-row form-wide"><input id="orderBookNow" type="checkbox" /> Planlegg i kalender etterpå</label>
+          <label class="check-row form-wide"><input id="orderBookNow" type="checkbox" /> Book i kalender etterpå</label>
         </div>
         <label>Notat<textarea id="orderNoteInput" rows="4" placeholder="Hva kunden ringte om, avtalt arbeid, pumpeinfo, adkomst eller annet."></textarea></label>
         <div class="modal-actions">
@@ -895,7 +895,7 @@
     <dialog id="bookingDialog" class="modal">
       <form id="bookingForm" method="dialog">
         <div class="modal-head">
-          <h2>Planlegg jobb</h2>
+          <h2>Book jobb</h2>
           <button id="closeBookingDialog" type="button" aria-label="Lukk">×</button>
         </div>
         <div id="bookingDialogMessage" class="dialog-message hidden"></div>
@@ -1061,10 +1061,10 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260627-10"></script>
-    <script src="./supabase-adapter.js?v=20260627-10"></script>
-    <script src="./intake-parser.js?v=20260627-10"></script>
-    <script src="./app.js?v=20260627-10"></script>
+    <script src="./supabase-config.js?v=20260628-01"></script>
+    <script src="./supabase-adapter.js?v=20260628-01"></script>
+    <script src="./intake-parser.js?v=20260628-01"></script>
+    <script src="./app.js?v=20260628-01"></script>
   </body>
 </html>
 

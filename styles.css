@@ -417,6 +417,10 @@ small {
   justify-content: flex-start;
 }
 
+.inline-more-actions .danger {
+  color: var(--red);
+}
+
 .customer-star {
   display: inline-flex;
   align-items: center;
@@ -2535,6 +2539,24 @@ textarea {
   margin: 16px 0;
 }
 
+.context-hint {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.tag-row,
+.tag-details > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag-details > div {
+  min-width: min(320px, 80vw);
+}
+
 .facts.compact {
   margin: 10px 0 0;
 }
@@ -2832,6 +2854,19 @@ textarea {
   min-height: 34px;
   padding: 7px 10px;
   font-size: 12px;
+}
+
+.installation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-start;
+}
+
+.installation-card .access-inline,
+.job-card .access-inline {
+  color: #9a3412;
+  font-weight: 900;
 }
 
 .installation-card details {
