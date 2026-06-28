@@ -1515,6 +1515,22 @@
     return saveLeadNote(target, note);
   }
 
+  function leadNoteTimestamp() {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = String(now.getMinutes()).padStart(2, "0");
+    return `${formatDate(isoDate(now))} kl. ${hh}:${mm}`;
+  }
+
+  async function appendLeadNoteTarget(target, note) {
+    const clean = String(note || "").trim();
+    if (!clean) throw new Error("Skriv et kort notat først.");
+    const entry = leadEntryForTarget(target);
+    const existing = leadNoteForEntry(entry).trim();
+    const next = [`${leadNoteTimestamp()}: ${clean}`, existing].filter(Boolean).join("\n\n");
+    return saveLeadNoteTarget(target, next);
+  }
+
   async function setLeadInactive(customerId) {
     const customer = findCustomer(customerId);
     if (!customer) return;
@@ -8015,16 +8031,18 @@
   }
 
   function leadQuickNoteHtml(leadTarget, note, canEditLead) {
+    const hasNote = Boolean(String(note || "").trim());
     return `
       <section class="detail-section lead-quick-note">
         <div class="section-title-row">
-          <div>
-            <h3>Samtalenotat</h3>
-            <p>Skriv kort hva kunden sa, hva som mangler, og hva neste avtale er.</p>
+          <h3>Samtalenotat</h3>
+          <div class="section-actions">
+            ${canEditLead ? `<button data-append-lead-note="${escapeHtml(leadTarget)}" type="button" title="Legg teksten inn som datert samtalenotat øverst.">Legg til</button>
+            <button class="secondary" data-save-lead-note="${escapeHtml(leadTarget)}" type="button" title="Erstatt leadnotatet med teksten i feltet.">Erstatt</button>` : ""}
           </div>
-          ${canEditLead ? `<button data-save-lead-note="${escapeHtml(leadTarget)}" type="button" title="Lagre siste samtalenotat på leaden.">Lagre notat</button>` : ""}
         </div>
-        <textarea data-lead-note-text="${escapeHtml(leadTarget)}" rows="3" placeholder="Eksempel: Snakket med kunde. Ønsker tilbud på to modeller og varmepumpehus. Ring tilbake tirsdag.">${escapeHtml(note || "")}</textarea>
+        ${hasNote ? `<div class="lead-note-current">${escapeHtml(note).replaceAll("\n", "<br>")}</div>` : ""}
+        <textarea data-lead-note-text="${escapeHtml(leadTarget)}" rows="2" placeholder="Snakket med kunde, mangler info, neste steg..."></textarea>
       </section>
     `;
   }
@@ -12509,6 +12527,14 @@
       const textarea = el.leadDetail.querySelector(`[data-lead-note-text="${CSS.escape(customerId)}"]`);
       saveLeadNoteTarget(customerId, textarea?.value || "")
         .catch((error) => setSyncStatus(error.message || "Klarte ikke lagre leadnotat.", "error"));
+      return;
+    }
+    const appendNote = event.target.closest("[data-append-lead-note]");
+    if (appendNote) {
+      const customerId = appendNote.dataset.appendLeadNote;
+      const textarea = el.leadDetail.querySelector(`[data-lead-note-text="${CSS.escape(customerId)}"]`);
+      appendLeadNoteTarget(customerId, textarea?.value || "")
+        .catch((error) => setSyncStatus(error.message || "Klarte ikke legge til leadnotat.", "error"));
       return;
     }
     const inactivate = event.target.closest("[data-inactivate-lead]");

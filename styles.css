@@ -2386,15 +2386,22 @@ textarea {
   align-items: flex-start;
 }
 
-.lead-quick-note .section-title-row p {
-  margin-top: 4px;
-  color: var(--muted);
-}
-
 .lead-quick-note textarea {
   width: 100%;
-  min-height: 88px;
+  min-height: 68px;
   resize: vertical;
+  line-height: 1.45;
+}
+
+.lead-note-current {
+  max-height: 160px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #f8fafc;
+  color: var(--ink);
+  font-size: 13px;
   line-height: 1.45;
 }
 
