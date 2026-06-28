@@ -10987,14 +10987,23 @@
     }
     const type = bookingDisplayType(row);
     const relevant = ["service", "installasjon"].includes(type);
-    const installations = relevant ? installationsForCustomer(row.customer) : [];
+    const linkedOrder = linkedOrderForBooking(row.id) || findOrder(row.booking.orderId);
+    const linkedInstallationId = linkedOrder ? installationIdForOrder(linkedOrder, jobForOrder(linkedOrder)) : "";
+    const installations = relevant
+      ? installationsForCustomer(row.customer).filter((installation) => (
+        installation.active !== false || String(installation.id || "") === String(linkedInstallationId)
+      ))
+      : [];
     el.completionInstallation.innerHTML = "";
     if (!installations.length) {
       el.completionInstallationLabel.classList.add("hidden");
       return;
     }
+    const activeInstallations = installations.filter((installation) => installation.active !== false);
+    const singleActiveInstallation = activeInstallations.length === 1 ? activeInstallations[0] : null;
+    const needsExplicitInstallation = activeInstallations.length > 1 && !linkedInstallationId;
     const options = [
-      `<option value="">Kundekortets hovedfrist</option>`,
+      `<option value="">${needsExplicitInstallation ? "Velg anlegg før servicefrist lagres" : "Kundekortets hovedfrist"}</option>`,
       ...installations.map((installation) => {
         const location = locationForInstallation(installation, row.customer);
         const label = [installationDisplayName(installation), locationAddressText(location)].filter(Boolean).join(" - ");
@@ -11002,11 +11011,11 @@
       }),
     ];
     el.completionInstallation.innerHTML = options.join("");
-    const linkedOrder = linkedOrderForBooking(row.id) || findOrder(row.booking.orderId);
-    const linkedInstallationId = linkedOrder ? installationIdForOrder(linkedOrder, jobForOrder(linkedOrder)) : "";
-    const dueInstallation = installations.find((installation) => installation.next_service_due === nextServiceDueForCustomer(row.customer)) || installations[0];
-    el.completionInstallation.value = linkedInstallationId || dueInstallation?.id || "";
-    el.completionInstallationLabel.classList.toggle("hidden", installations.length < 2 && !dueInstallation);
+    el.completionInstallation.value = linkedInstallationId || singleActiveInstallation?.id || "";
+    el.completionInstallation.title = needsExplicitInstallation
+      ? "Kunden har flere anlegg. Velg riktig varmepumpe før ny servicefrist lagres."
+      : "Velg hvilket anlegg service eller installasjon gjelder.";
+    el.completionInstallationLabel.classList.toggle("hidden", installations.length < 2 && !singleActiveInstallation);
   }
 
   function completionCanHavePayment(type) {
