@@ -1220,11 +1220,16 @@
       generalOfferSubject: String(saved.generalOfferSubject || "Pristilbud på varmepumpe og tilleggsarbeid"),
       generalOfferBody: String(saved.generalOfferBody || defaultGeneralOfferBody()),
       priceTermsText: String(saved.priceTermsText || defaultOfferPriceTermsText()),
+      autoEmailEnabled: Boolean(saved.autoEmailEnabled),
     };
   }
 
   function offerPriceTermsText() {
     return offerSettings().priceTermsText;
+  }
+
+  function offerAutoEmailEnabled() {
+    return Boolean(offerSettings().autoEmailEnabled && store.isConfigured && store.sendOfferEmail);
   }
 
   function renderOfferTextTemplate(templateText, customer) {
@@ -6148,6 +6153,8 @@
           </div>
         </div>
         ${canSave ? "" : `<p class="form-hint">Lagring av maler krever Supabase og crm_settings-tabellen.</p>`}
+        <label class="check-row"><input data-offer-settings-auto-email type="checkbox" ${settings.autoEmailEnabled ? "checked" : ""} ${disabled} /> Aktiver direkte sending fra CRM</label>
+        <p class="form-hint">La denne være av til e-postbroen er bekreftet. Bruk e-postutkast og marker sendt manuelt imens.</p>
         <label>Emne for generelt pristilbud
           <input data-offer-settings-subject value="${escapeHtml(settings.generalOfferSubject)}" ${disabled} />
         </label>
@@ -6281,6 +6288,7 @@
       generalOfferSubject: container?.querySelector("[data-offer-settings-subject]")?.value?.trim() || "Pristilbud på varmepumpe og tilleggsarbeid",
       generalOfferBody: container?.querySelector("[data-offer-settings-body]")?.value || defaultGeneralOfferBody(),
       priceTermsText: container?.querySelector("[data-offer-settings-prices]")?.value || defaultOfferPriceTermsText(),
+      autoEmailEnabled: Boolean(container?.querySelector("[data-offer-settings-auto-email]")?.checked),
     };
     const saved = await store.saveCrmSetting("offer_settings", next);
     crmSettings.offer_settings = saved?.value || next;
@@ -6294,6 +6302,8 @@
     const subject = container?.querySelector("[data-offer-settings-subject]");
     const body = container?.querySelector("[data-offer-settings-body]");
     const prices = container?.querySelector("[data-offer-settings-prices]");
+    const autoEmail = container?.querySelector("[data-offer-settings-auto-email]");
+    if (autoEmail) autoEmail.checked = false;
     if (subject) subject.value = "Pristilbud på varmepumpe og tilleggsarbeid";
     if (body) body.value = defaultGeneralOfferBody();
     if (prices) prices.value = defaultOfferPriceTermsText();
@@ -8885,7 +8895,11 @@
     const templateId = defaultLeadOfferTemplateId(entry);
     const template = leadTemplates[templateId] || leadTemplates.heatpump_standard_offer;
     const body = template.body(customer);
-    const disabled = store.isConfigured && store.sendOfferEmail ? "" : "disabled";
+    const autoSendEnabled = offerAutoEmailEnabled();
+    const autoSendDisabled = autoSendEnabled ? "" : "disabled";
+    const autoSendTitle = autoSendEnabled
+      ? "Send tilbud direkte fra CRM."
+      : "Direkte CRM-sending er av til e-postbroen er bekreftet. Bruk e-postutkast og marker sendt manuelt.";
     return `
       <section class="detail-section lead-offer-section">
         <h3>Tilbud</h3>
@@ -8912,7 +8926,8 @@
           <button class="secondary" data-fill-offer-template="${escapeHtml(target)}" type="button">Bruk mal</button>
           <button class="secondary" data-copy-offer-draft="${escapeHtml(target)}" type="button">Kopier tilbud</button>
           <button class="secondary" data-open-offer-mailto="${escapeHtml(target)}" type="button" title="Åpne et ferdig e-postutkast i standard e-postprogram. Marker sendt manuelt etter at e-posten faktisk er sendt.">Åpne e-postutkast</button>
-          <button class="order-primary" data-send-offer-email="${escapeHtml(target)}" type="button" ${disabled}>Send tilbud</button>
+          <button class="order-primary" data-mark-offer-sent-manual="${escapeHtml(target)}" type="button" title="Bruk etter at tilbudet er sendt utenfor CRM. Lagrer historikk og flytter leaden til venter svar.">Marker sendt manuelt</button>
+          <button class="secondary" data-send-offer-email="${escapeHtml(target)}" type="button" title="${escapeHtml(autoSendTitle)}" ${autoSendDisabled}>Send fra CRM</button>
         </div>
       </section>
     `;
@@ -8989,6 +9004,73 @@
     }
     window.location.href = url;
     setSyncStatus("E-postutkast åpnet. Marker tilbud sendt først etter at e-posten er sendt.", "ok");
+  }
+
+  async function markLeadOfferSentManually(target) {
+    const payload = leadOfferPayload(target);
+    const entry = leadEntryForTarget(target);
+    if (!entry) throw new Error("Fant ikke leaden.");
+    const ok = await askForConfirmation({
+      title: "Marker tilbud sendt",
+      message: `Marker at tilbudet til ${payload.to} er sendt utenfor CRM?`,
+      confirmLabel: "Marker sendt",
+    });
+    if (!ok) return;
+    setSyncStatus("Lagrer tilbud som sendt...", "");
+    const customer = entry.customer ? (findCustomer(leadEntryCustomerKey(entry)) || entry.customer) : null;
+    const customerId = customer ? customerKey(customer) : leadCustomerId(entry.lead);
+    const body = [
+      "Tilbud sendt manuelt utenfor CRM.",
+      `Mottaker: ${payload.to}`,
+      `Avsender: ${payload.from}`,
+      `Emne: ${payload.subject}`,
+    ].join("\n");
+
+    if (entry.lead?.id) {
+      const updatedLead = store.isConfigured && store.updateLead
+        ? updateLeadInMemory(await store.updateLead(entry.lead.id, { status: "offer_sent" }))
+        : updateLeadInMemory(saveLocalLeadPatch(entry.lead.id, { status: "offer_sent" }));
+      selectedLeadId = `lead:${updatedLead.id}`;
+    }
+
+    if (customer) {
+      const saved = await saveCustomerInline(customer, { tags: nextTagsWithLeadStatus(customer, "offer_sent") }, "");
+      await saveServiceEvent(saved || customer, {
+        event_date: isoDate(new Date()),
+        event_type: "Tilbud sendt",
+        note: `Tilbud sendt manuelt til ${payload.to}. Emne: ${payload.subject}`,
+      });
+      selectedCustomerId = customerKey(saved || customer);
+      if (!entry.lead?.id) {
+        await syncLeadRecord(saved || customer, "offer_sent", `Tilbud sendt manuelt: ${payload.subject}`);
+        selectedLeadId = target;
+      }
+    }
+
+    await saveActivityRecord({
+      customer_id: customerId || null,
+      lead_id: entry.lead?.id || null,
+      activity_type: "email_offer_sent",
+      summary: "Tilbud sendt manuelt",
+      body,
+      metadata: {
+        direction: "outgoing",
+        manual: true,
+        source: "mailto",
+        from: payload.from,
+        to: payload.to,
+        subject: payload.subject,
+        template_id: payload.template_id,
+        customer_id: customerId || null,
+        customer_lime_id: customer?.lime_id || null,
+      },
+    });
+
+    currentLeadFilter = "offer_sent";
+    if (el.leadStatusFilter) el.leadStatusFilter.value = currentLeadFilter;
+    renderAll();
+    setView("leads");
+    setSyncStatus("Tilbud markert sendt og lagret i historikken.", "ok");
   }
 
   async function sendLeadOfferEmail(target) {
@@ -9588,6 +9670,7 @@
   function activityTypeLabel(type) {
     const value = String(type || "").toLowerCase();
     if (value === "email_history") return "E-post";
+    if (value === "email_offer_sent") return "Tilbud sendt";
     if (value === "website_submission") return "Nettside";
     if (value === "note") return "Notat";
     if (value === "job_completed") return "Jobb fullført";
@@ -12392,6 +12475,12 @@
     if (sendOffer) {
       sendLeadOfferEmail(sendOffer.dataset.sendOfferEmail)
         .catch((error) => setSyncStatus(error.message || "Klarte ikke sende tilbud.", "error"));
+      return;
+    }
+    const markOfferManual = event.target.closest("[data-mark-offer-sent-manual]");
+    if (markOfferManual) {
+      markLeadOfferSentManually(markOfferManual.dataset.markOfferSentManual)
+        .catch((error) => setSyncStatus(error.message || "Klarte ikke markere tilbud sendt.", "error"));
       return;
     }
     const statusButton = event.target.closest("[data-lead-set-status]");
