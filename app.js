@@ -3431,6 +3431,7 @@
       actions.push(`<button class="secondary" data-new-order-customer="${escapeHtml(key)}" type="button" title="Lag jobb uten å velge dato nå. Bruk Book jobb hvis tidspunktet skal settes med en gang.">Ny jobb uten dato</button>`);
       actions.push(`<button class="secondary" data-new-lead-existing-customer="${escapeHtml(key)}" type="button" title="Opprett ny salgsmulighet på eksisterende kunde, f.eks. ekstra varmepumpe, befaring eller blåseisolering.">Ny salgsmulighet</button>`);
       actions.push(`<button class="secondary" data-new-installation-customer="${escapeHtml(key)}" type="button" title="Registrer egen varmepumpe/anlegg med adresse og servicefrist.">Ny varmepumpe/anlegg</button>`);
+      actions.push(insulationToggleHtml(customer));
       if (isInsulationCustomer(customer)) actions.push(`<button class="secondary" data-new-lead-existing-customer="${escapeHtml(key)}" data-lead-kind="blaseisolering" type="button" title="Lag egen salgsmulighet for blåseisolering på denne kunden.">Lag blåseisolering-lead</button>`);
     }
     if (isAdmin()) {
@@ -8148,17 +8149,17 @@
       const done = primaryBooking.booking.status === "done" || doneJobs.has(primaryBooking.id);
       const needsMove = bookingNeedsMove(primaryBooking);
       const paymentActionLabel = primaryBooking.customer?.pays_cash ? "Marker betalt" : "Marker fakturert";
-      if (!done) primary.push(`<button data-complete-booking="${escapeHtml(primaryBooking.id)}" type="button">Fullfør jobb</button>`);
-      else if (bookingNeedsPaymentAction(primaryBooking)) primary.push(`<button data-billing-booking="${escapeHtml(primaryBooking.id)}" type="button">${escapeHtml(paymentActionLabel)}</button>`);
+      if (!done) primary.push(`<button class="order-primary" data-complete-booking="${escapeHtml(primaryBooking.id)}" type="button" title="Marker jobben som utført når arbeidet er ferdig.">Fullfør jobb</button>`);
+      else if (bookingNeedsPaymentAction(primaryBooking)) primary.push(`<button class="order-primary" data-billing-booking="${escapeHtml(primaryBooking.id)}" type="button" title="Lukk faktura- eller betalingssteget for ferdig jobb.">${escapeHtml(paymentActionLabel)}</button>`);
       if (!done && !needsMove) secondary.push(`<button class="secondary" data-move-booking="${escapeHtml(primaryBooking.id)}" type="button">Må flyttes</button>`);
       more.push(`<button class="secondary" data-edit-booking="${escapeHtml(primaryBooking.id)}" type="button">Endre avtale</button>`);
     } else if (effectiveBilling === "ready") {
-      primary.push(`<button data-mark-order-invoiced="${escapeHtml(order.id)}" type="button">Marker fakturert</button>`);
+      primary.push(`<button class="order-primary" data-mark-order-invoiced="${escapeHtml(order.id)}" type="button" title="Marker jobben som fakturert når fakturaen er sendt.">Marker fakturert</button>`);
     } else {
-      primary.push(`<button data-book-order="${escapeHtml(order.id)}" type="button">Book jobb</button>`);
+      primary.push(`<button class="book-primary" data-book-order="${escapeHtml(order.id)}" type="button" title="Legg jobben inn i kalenderen med dato, tidspunkt og tekniker.">Book jobb</button>`);
     }
-    if (customer.phone) secondary.push(`<a href="tel:${escapeHtml(phoneForLink(customer.phone))}">Ring</a>`);
-    if (mapQuery(customer)) secondary.push(`<a href="${escapeHtml(mapsUrl(customer))}" target="_blank" rel="noreferrer">Kart</a>`);
+    if (customer.phone) secondary.push(`<a href="tel:${escapeHtml(phoneForLink(customer.phone))}" title="Ring kunden.">Ring</a>`);
+    if (mapQuery(customer)) secondary.push(`<a href="${escapeHtml(mapsUrl(customer))}" target="_blank" rel="noreferrer" title="Åpne anleggsadressen i Google Maps.">Kart</a>`);
     more.push(`<button data-edit-order="${escapeHtml(order.id)}" type="button">Rediger jobb</button>`);
     more.push(`<button data-open-order-customer="${escapeHtml(key)}" type="button">Åpne kundekort</button>`);
     if (orderMissingJobMirror({ order, job: linkedJob }) && store.repairOrderJobMirror && isAdmin()) {
@@ -10027,7 +10028,6 @@
       <div class="action-row">${customerPrimaryActionsHtml(customer)}</div>
       ${lookupMissingDataSection(customer, true)}
       ${isLikelyHomeAddress(customer) ? `<section class="quick-block attention"><strong>Mulig hjemmeadresse</strong><p>Tagg/område tyder på hytte/anlegg, men adressen kan være hjemmeadresse. Kontroller koordinater for rute.</p></section>` : ""}
-      ${isAdmin() ? `<div class="customer-controls compact">${insulationToggleHtml(customer)}</div>` : ""}
       <dl class="quick-facts">
         <div><dt>Telefon</dt><dd class="copy-field">${phoneField(customer.phone)}</dd></div>
         <div><dt>E-post</dt><dd class="copy-field">${emailField(customer.email)}</dd></div>
@@ -10041,7 +10041,6 @@
       ${customer.local_note ? `<section class="quick-block"><strong>Notat</strong><p>${escapeHtml(customer.local_note)}</p></section>` : ""}
       <div class="quick-actions">
         <button data-jump-customer="${escapeHtml(key)}" type="button">Åpne kundekort</button>
-        ${isAdmin() && !customer.is_inactive ? customerMoreActionsHtml(customer) : ""}
         ${bookingId && isAdmin() ? `<button class="secondary" data-edit-booking="${escapeHtml(bookingId)}" type="button">Endre avtale</button>` : ""}
       </div>
     `;
