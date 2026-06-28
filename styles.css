@@ -3290,6 +3290,14 @@ textarea {
   display: block;
 }
 
+.drop-hint[data-drop-label]::after {
+  content: attr(data-drop-label);
+  display: block;
+  margin-top: 3px;
+  color: #7c2d12;
+  font-size: 11px;
+}
+
 .day-timeline-wrap,
 .day-overview {
   display: grid;

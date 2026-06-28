@@ -9793,6 +9793,27 @@
     return zones.join("");
   }
 
+  function planningRowsForDropDate(dayIso, draggedRow) {
+    const resource = String(draggedRow?.booking?.resource || "").trim();
+    return bookingRows()
+      .filter((row) => row.id !== draggedRow?.id && row.booking.date === dayIso)
+      .filter((row) => !resource || String(row.booking.resource || "").trim() === resource)
+      .sort((a, b) => bookingRowStartMinutes(a) - bookingRowStartMinutes(b));
+  }
+
+  function planningFallbackDropPlacement(dayIso, draggedRow) {
+    const duration = draggedRow ? bookingDurationMinutes(draggedRow) : 60;
+    const rows = planningRowsForDropDate(dayIso, draggedRow);
+    const slots = freeSlotsForDay(rows);
+    const fittingSlot = slots.find((slot) => slot.end - slot.start >= Math.min(duration, 30)) || slots[0];
+    if (fittingSlot) {
+      const time = timeFromMinutes(clampPlanningMinutes(fittingSlot.start));
+      return { time, label: `første ledige kl. ${time}` };
+    }
+    const time = "09:00";
+    return { time, label: `kl. ${time}` };
+  }
+
   function planningDayTimeline(rows, dayIso = "") {
     const workStart = minutesFromTime("08:00");
     const workEnd = minutesFromTime("18:00");
@@ -11401,7 +11422,7 @@
 
   function planningDropPlacement(event, bookingId, day) {
     const draggedRow = bookingRows().find((item) => item.id === bookingId);
-    const targetEvent = event.target.closest(".timeline-event[data-booking-id]");
+    const targetEvent = event.target.closest(".timeline-event[data-booking-id], .job-card[data-booking-id]");
     if (targetEvent && targetEvent.dataset.bookingId !== bookingId) {
       const targetRow = bookingRows().find((item) => item.id === targetEvent.dataset.bookingId);
       if (targetRow) {
@@ -11428,7 +11449,7 @@
       const time = timeFromMinutes(clampPlanningMinutes(Math.round(minutes / 60) * 60));
       return { time, label: `kl. ${time}` };
     }
-    return { time: "", label: "" };
+    return planningFallbackDropPlacement(day?.dataset?.planningDate, draggedRow);
   }
 
   async function moveBookingToDate(id, targetDate, options = {}) {
@@ -13101,6 +13122,16 @@
     if (!button) return;
     openCustomerQuickPanel(button.dataset.routeMissingCustomer, "");
   });
+  function clearPlanningDropUi(keepDay = null) {
+    el.planningBoard.querySelectorAll(".planning-day.drag-over").forEach((day) => {
+      if (day !== keepDay) day.classList.remove("drag-over");
+    });
+    el.planningBoard.querySelectorAll(".timeline-drop-zone.active").forEach((slot) => slot.classList.remove("active"));
+    el.planningBoard.querySelectorAll(".drop-hint[data-drop-label]").forEach((hint) => {
+      if (!keepDay || !keepDay.contains(hint)) delete hint.dataset.dropLabel;
+    });
+  }
+
   let draggedBookingId = "";
   el.planningBoard.addEventListener("dragstart", (event) => {
     const card = event.target.closest(".job-card[data-booking-id], .timeline-event[data-booking-id]");
@@ -13112,8 +13143,7 @@
   });
   el.planningBoard.addEventListener("dragend", (event) => {
     event.target.closest(".job-card, .timeline-event")?.classList.remove("dragging");
-    el.planningBoard.querySelectorAll(".planning-day.drag-over").forEach((day) => day.classList.remove("drag-over"));
-    el.planningBoard.querySelectorAll(".timeline-drop-zone.active").forEach((slot) => slot.classList.remove("active"));
+    clearPlanningDropUi();
     draggedBookingId = "";
   });
   el.planningBoard.addEventListener("dragover", (event) => {
@@ -13122,25 +13152,28 @@
     if (!day) return;
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
-    el.planningBoard.querySelectorAll(".planning-day.drag-over").forEach((item) => {
-      if (item !== day) item.classList.remove("drag-over");
-    });
-    el.planningBoard.querySelectorAll(".timeline-drop-zone.active").forEach((slot) => slot.classList.remove("active"));
+    clearPlanningDropUi(day);
     const slot = event.target.closest("[data-planning-time]");
     if (slot && day.contains(slot)) slot.classList.add("active");
+    const placement = planningDropPlacement(event, draggedBookingId, day);
+    const hint = day.querySelector(".drop-hint");
+    if (hint) hint.dataset.dropLabel = placement.label ? `Slipp: ${placement.label}` : "Slipp her";
     day.classList.add("drag-over");
   });
   el.planningBoard.addEventListener("dragleave", (event) => {
     const day = event.target.closest(".planning-day[data-planning-date]");
-    if (day && !day.contains(event.relatedTarget)) day.classList.remove("drag-over");
+    if (day && !day.contains(event.relatedTarget)) {
+      day.classList.remove("drag-over");
+      const hint = day.querySelector(".drop-hint");
+      if (hint) delete hint.dataset.dropLabel;
+    }
   });
   el.planningBoard.addEventListener("drop", async (event) => {
     const day = event.target.closest(".planning-day[data-planning-date]");
     const bookingId = draggedBookingId || event.dataTransfer.getData("text/plain");
     if (!day || !bookingId) return;
     event.preventDefault();
-    day.classList.remove("drag-over");
-    el.planningBoard.querySelectorAll(".timeline-drop-zone.active").forEach((slot) => slot.classList.remove("active"));
+    clearPlanningDropUi();
     try {
       const placement = planningDropPlacement(event, bookingId, day);
       await moveBookingToDate(bookingId, day.dataset.planningDate, {
