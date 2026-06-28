@@ -4436,6 +4436,12 @@ textarea {
   color: #166534;
 }
 
+.dialog-message.info {
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #1e40af;
+}
+
 .completion-summary {
   display: grid;
   gap: 4px;

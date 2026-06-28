@@ -5144,6 +5144,7 @@
       openBookingDialog(customerId, "", {
         orderId: order.id,
         type: values.type === "annet" ? "service" : values.type,
+        installationId: values.installationId,
         note: values.note,
       });
     }
@@ -10310,6 +10311,11 @@
     bookingPendingOrderId = options.orderId || booking?.orderId || linkedOrderForBooking(bookingId)?.id || "";
     clearBookingDialogMessage();
     setSyncStatus("", "");
+    const linkedOrder = bookingPendingOrderId ? findOrder(bookingPendingOrderId) : linkedOrderForBooking(bookingId);
+    const linkedInstallationId = options.installationId || (linkedOrder ? installationIdForOrder(linkedOrder, jobForOrder(linkedOrder)) : "");
+    const linkedInstallation = selectedCustomer && linkedInstallationId
+      ? installationsForCustomer(selectedCustomer).find((installation) => String(installation.id || "") === String(linkedInstallationId))
+      : null;
     el.bookingCustomerSearch.value = selectedCustomer ? searchDisplayText(selectedCustomer) : "";
     setBookingCustomerSelection(selectedCustomer);
     closeBookingCustomerResults();
@@ -10322,7 +10328,22 @@
     const defaultAccessNote = !booking && selectedCustomer && accessInfo(selectedCustomer)
       ? `Kodeboks/nøkkel/adkomst: ${accessInfo(selectedCustomer)}`
       : "";
-    el.bookingNote.value = cleanBookingNote(booking?.note || options.note || defaultAccessNote);
+    const installationNote = !booking && linkedInstallation ? installationBookingNote(linkedInstallation, selectedCustomer) : "";
+    const baseBookingNote = booking?.note || options.note || "";
+    const accessNoteNeeded = !booking
+      && !installationNote
+      && defaultAccessNote
+      && Boolean(baseBookingNote)
+      && !/kodeboks|nøkkel|nokkel|adkomst/i.test(baseBookingNote);
+    const bookingNote = [
+      baseBookingNote || defaultAccessNote,
+      accessNoteNeeded ? defaultAccessNote : "",
+      installationNote && !String(booking?.note || options.note || "").includes("Anlegg:") ? installationNote : "",
+    ].filter(Boolean).join("\n");
+    el.bookingNote.value = cleanBookingNote(bookingNote);
+    if (!booking && selectedCustomer && !linkedInstallation && installationsForCustomer(selectedCustomer).filter((installation) => installation.active !== false).length > 1) {
+      showBookingDialogMessage("Kunden har flere anlegg. Book helst fra riktig anlegg på kundekortet, eller skriv hvilket anlegg avtalen gjelder i notatet.", "info");
+    }
     el.deleteBookingButton.classList.toggle("hidden", !booking);
     syncBookingDialogTypeStyle();
     el.bookingDialog.showModal();
@@ -12309,6 +12330,7 @@
       openBookingDialog(customerKey(customer), "", {
         orderId: order.id,
         type: order.type || "service",
+        installationId: installationIdForOrder(order, jobForOrder(order)),
         note: order.note || "",
       });
       return;
