@@ -1894,7 +1894,7 @@
   function aiRegistrationWarningsHtml(analysis) {
     const warnings = analysis?.warnings || [];
     if (!warnings.length) {
-      return `<div class="ai-warning-list ok"><strong>Ingen kritiske advarsler funnet.</strong><span>Kontroller likevel navn, telefon og adresse før lagring.</span></div>`;
+      return `<div class="ai-warning-list ok" title="Kontroller navn, telefon og adresse før lagring."><strong>Ingen kritiske advarsler</strong></div>`;
     }
     return `<div class="ai-warning-list">${warnings.map((warning) => `
       <article class="${escapeHtml(warning.severity || "warning")}">
@@ -1906,7 +1906,9 @@
 
   function aiFieldMetaHtml(label, field) {
     if (!field?.evidence && !field?.confidence) return "";
-    return `<small class="ai-field-meta">${escapeHtml(label)}: ${escapeHtml(intakeConfidenceLabel(intakeFieldConfidence(field)))}${field?.evidence ? ` · "${escapeHtml(String(field.evidence).slice(0, 120))}"` : ""}</small>`;
+    const confidence = intakeConfidenceLabel(intakeFieldConfidence(field));
+    const evidence = field?.evidence ? `Kilde: ${String(field.evidence).slice(0, 180)}` : `${label}: ${confidence}`;
+    return `<small class="ai-field-meta" title="${escapeHtml(evidence)}">${escapeHtml(confidence)}</small>`;
   }
 
   function renderAiRegistrationDraft() {
@@ -1917,9 +1919,9 @@
     const equipment = analysis?.equipment?.[0] || {};
     const suggestedAction = analysis?.recommendedAction || "manual_review";
     const parserLabel = /(server|supabase|edge)/i.test(analysis?.parser || "")
-      ? "Serverbasert tekstgjenkjenning"
-      : "Enkel lokal tekstgjenkjenning";
-    const summaryText = analysis?.summary || "Forslag laget fra innlimt tekst.";
+      ? "Serveranalyse"
+      : "Lokal analyse";
+    const summaryText = analysis?.summary || "Forslag klart.";
     const parserHelp = `${parserLabel}. Anbefalt handling: ${suggestedAction.replaceAll("_", " ")}. Kontroller feltene før lagring.`;
     const originalTextAlreadyStored = Boolean(aiRegistrationDraft.intakeId);
     el.aiRegistrationDraft.classList.remove("hidden");
@@ -1995,7 +1997,7 @@
         </div>
         <aside class="ai-match-panel">
           <h3>Mulige eksisterende kunder</h3>
-          <p title="Appen foreslår treff, men du velger selv riktig kunde før lagring.">Velg kunde ved treff.</p>
+          <p title="Appen foreslår treff, men du velger selv riktig kunde før lagring.">Velg ved treff.</p>
           <div id="aiRegistrationSelectedCustomer" class="ai-selected-customer"></div>
           <div id="aiRegistrationCandidates" class="ai-candidate-list"></div>
           <details class="ai-original-source">
