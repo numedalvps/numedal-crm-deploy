@@ -2348,8 +2348,27 @@
     return splitTags(customer?.tags).filter((tag) => !isLegacyImportTag(tag));
   }
 
+  function customerTagDisplayLabel(tag) {
+    const normalized = normalizeMatch(tag);
+    if (/^(gullkunde|stjerne|favoritt|prioritert servicekunde)$/.test(normalized)) return "Prioritert servicekunde";
+    if (/^(ikke stjerne|ikke gullkunde|skjul stjerne)$/.test(normalized)) return "Ikke prioritert servicekunde";
+    return tag;
+  }
+
+  function customerDisplayTags(tags) {
+    const seen = new Set();
+    return (tags || [])
+      .map(customerTagDisplayLabel)
+      .filter((tag) => {
+        const key = normalizeMatch(tag);
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  }
+
   function customerTagFactText(customer) {
-    const visible = customerVisibleTags(customer);
+    const visible = customerDisplayTags(customerVisibleTags(customer));
     if (visible.length) return visible.join("; ");
     return splitTags(customer?.tags).length ? "Gamle importtagger skjult" : "Ikke registrert";
   }
@@ -9241,18 +9260,19 @@
 
   function importantCustomerTags(customer) {
     const wanted = /(blåseisolering|blaseisolering|isobygg|servicekunde|hytte|vegglifjell|blefjell|fagerfjell|nøkkelboks|nokkelboks|kodeboks|prioritert|gullkunde|stjerne)/i;
-    return customerVisibleTags(customer).filter((tag) => wanted.test(tag)).slice(0, 6);
+    return customerDisplayTags(customerVisibleTags(customer).filter((tag) => wanted.test(tag))).slice(0, 6);
   }
 
   function renderCustomerTagsSection(customer) {
     const visible = importantCustomerTags(customer);
     const all = splitTags(customer.tags);
+    const allDisplay = customerDisplayTags(all);
     if (!visible.length && !all.length) return "";
     return `
       <section class="detail-section compact-tags-section">
         <div class="section-title-row">
           <h3>Tagger</h3>
-          ${all.length > visible.length ? `<details class="inline-more-actions tag-details"><summary>Vis alle tagger</summary><div>${all.map((tag) => `<span class="soft-pill">${escapeHtml(tag)}</span>`).join("")}</div></details>` : ""}
+          ${all.length > visible.length ? `<details class="inline-more-actions tag-details"><summary>Vis alle tagger</summary><div>${allDisplay.map((tag) => `<span class="soft-pill">${escapeHtml(tag)}</span>`).join("")}</div></details>` : ""}
         </div>
         ${visible.length ? `<div class="tag-row">${visible.map((tag) => `<span class="soft-pill">${escapeHtml(tag)}</span>`).join("")}</div>` : `<p class="muted">Gamle importtagger er skjult fra hovedvisningen.</p>`}
       </section>
