@@ -3587,11 +3587,13 @@
 
   function customerEmailLinkHtml(customer, label = "E-post") {
     if (!customer?.email) return "";
-    return `<a href="${escapeHtml(emailUrl(customer))}" data-open-customer-email="${escapeHtml(customerKey(customer))}" title="Åpne standard e-postprogram. CRM-ref legges i emne og logges på kundekortet.">${escapeHtml(label)}</a>`;
+    const draft = customerEmailDraftParts(customer);
+    return `<a href="${escapeHtml(emailUrl(customer, draft.reference))}" data-open-customer-email="${escapeHtml(customerKey(customer))}" data-email-reference="${escapeHtml(draft.reference)}" title="Åpne standard e-postprogram. CRM-ref legges i emne og logges på kundekortet.">${escapeHtml(label)}</a>`;
   }
 
-  function emailUrl(customer) {
-    return mailtoUrl(customer.email || "");
+  function emailUrl(customer, reference = "") {
+    const draft = customerEmailDraftParts(customer, reference);
+    return mailtoUrl(draft.to, draft.subject, draft.body);
   }
 
   function smsUrl() {
@@ -9423,10 +9425,8 @@
     return draft;
   }
 
-  async function openCustomerEmailDraft(customerId) {
-    const customer = findCustomer(customerId);
-    if (!customer) throw new Error("Fant ikke kunden.");
-    if (!isEmailAddress(customer.email)) throw new Error("Kunden mangler gyldig e-postadresse.");
+  function customerEmailDraftParts(customer, reference = "") {
+    const emailReference = reference || createEmailReference("MAIL");
     const name = firstName(customer);
     const body = [
       name ? `Hei ${name}!` : "Hei!",
@@ -9436,13 +9436,29 @@
       "Gunnar",
       "Numedal Varmepumpeservice",
       "93436855",
+      "",
+      "---",
+      `CRM-ref: ${emailReference}`,
     ].join("\n");
+    return {
+      reference: emailReference,
+      to: customer.email || "",
+      subject: `Numedal Varmepumpeservice - ${cleanDisplayName(customer) || "oppfølging"} [${emailReference}]`,
+      body,
+    };
+  }
+
+  async function openCustomerEmailDraft(customerId, reference = "") {
+    const customer = findCustomer(customerId);
+    if (!customer) throw new Error("Fant ikke kunden.");
+    if (!isEmailAddress(customer.email)) throw new Error("Kunden mangler gyldig e-postadresse.");
+    const draft = customerEmailDraftParts(customer, reference);
     await openReferencedEmailDraft({
       customer,
-      to: customer.email,
+      to: draft.to,
       from: "post@numedalvps.no",
-      subject: `Numedal Varmepumpeservice - ${cleanDisplayName(customer) || "oppfølging"}`,
-      body,
+      subject: draft.subject,
+      body: draft.body,
       referencePrefix: "MAIL",
       source: "customer_email",
       summary: "E-postutkast åpnet fra kundekort",
@@ -12870,7 +12886,7 @@
     const emailLink = event.target.closest("[data-open-customer-email]");
     if (!emailLink) return;
     event.preventDefault();
-    openCustomerEmailDraft(emailLink.dataset.openCustomerEmail)
+    openCustomerEmailDraft(emailLink.dataset.openCustomerEmail, emailLink.dataset.emailReference || "")
       .catch((error) => setSyncStatus(error.message || "Klarte ikke åpne e-postutkast.", "error"));
   });
   document.addEventListener("click", (event) => {
