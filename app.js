@@ -4084,6 +4084,11 @@
       ["#completionNextAction", "Velg hva som skal skje etter fullført jobb, for eksempel ny servicepåminnelse om 1 eller 2 år."],
       ["#completionInterval", "Standard er 2 år. Bruk 1 år bare for kunder som ønsker årlig service."],
       ["#completionNextDate", "Dato for neste oppfølging/service etter at jobben er fullført."],
+      ["#completionPricePreset", "Velg et vanlig tillegg fra prislisten. Linjen kan redigeres før jobben fullføres."],
+      ["#completionPriceQuantity", "Antall meter, timer eller stykk for valgt tillegg."],
+      ["#completionAddPriceLine", "Legger valgt tillegg inn i prisgrunnlaget for jobben."],
+      ["#completionPriceLines", "Prisgrunnlag som følger jobben videre til fakturering. Kontroller teksten før faktura sendes."],
+      ["#billingPriceBasis", "Prisgrunnlag hentet fra fullført jobb. Kan redigeres før faktura eller betaling markeres."],
       ["#technicianDate", "Velg datoen du vil se dagsplan for."],
       ["#technicianRouteButton", "Åpner dagens jobber som kjørerute i Google Maps."],
     ];
