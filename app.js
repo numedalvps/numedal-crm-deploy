@@ -13522,6 +13522,8 @@
     if (bookings[id]) {
       bookings[id].status = done ? "done" : "booked";
       bookings[id].done_at = done ? options.completedAt || new Date().toISOString() : null;
+      if (done) bookings[id].needs_move = false;
+      if ("bookingNote" in options) bookings[id].note = options.bookingNote || "";
     }
     if (!done) {
       const order = linkedOrderForBooking(id);
@@ -13859,9 +13861,11 @@
     const useAdminCompletionRpc = store.isConfigured && isAdmin() && store.completeBookingAsAdmin;
 
     if (store.isConfigured && !isAdmin()) {
+      const technicianBookingNote = noteWithJobPriceBasis(noteWithoutMoveMarker(row.booking.note), priceBasis);
       await setBookingDone(completingBookingId, true, {
         completedAt: doneDate,
         note: eventLines.join("\n"),
+        bookingNote: technicianBookingNote,
       });
       el.completionDialog.close();
       completingBookingId = "";
