@@ -8275,17 +8275,59 @@
 
   function websiteSubmissionCustomer(row) {
     const payload = websiteSubmissionPayload(row);
-    return plainObject(payload.customer);
+    const nested = plainObject(payload.customer);
+    const direct = plainObject(row?.customer);
+    const merged = { ...nested, ...direct };
+    const postalCode = firstFilled(
+      direct.postal_code,
+      direct.zip,
+      row?.postal_code,
+      row?.zip,
+      nested.postal_code,
+      nested.zip,
+      payload.postal_code,
+      payload.zip,
+    );
+    return {
+      ...merged,
+      name: firstFilled(direct.name, row?.customer_name, row?.name, nested.name, payload.customer_name, payload.name, payload.navn, payload.fullName),
+      phone: firstFilled(direct.phone, row?.phone, row?.normalized_phone, nested.phone, payload.phone),
+      email: firstFilled(direct.email, row?.email, row?.normalized_email, nested.email, payload.email),
+      address: firstFilled(direct.address, direct.street, row?.address, row?.street, nested.address, nested.street, payload.address, payload.adresse),
+      postal_code: postalCode,
+      zip: postalCode,
+      city: firstFilled(direct.city, row?.city, nested.city, payload.city, postalCityByZip[postalCode]),
+    };
   }
 
   function websiteSubmissionRequest(row) {
     const payload = websiteSubmissionPayload(row);
-    return plainObject(payload.request);
+    const nested = plainObject(payload.request);
+    const direct = plainObject(row?.request);
+    const merged = { ...nested, ...direct };
+    return {
+      ...merged,
+      request_type: firstFilled(direct.request_type, row?.request_type, nested.request_type, payload.request_type),
+      service_reason: firstFilled(direct.service_reason, row?.service_reason, nested.service_reason, payload.service_reason),
+      preferred_contact_method: firstFilled(direct.preferred_contact_method, row?.preferred_contact_method, nested.preferred_contact_method, payload.preferred_contact_method),
+      address: firstFilled(direct.address, row?.address, nested.address, payload.address, payload.adresse),
+      message: firstFilled(direct.message, row?.message, nested.message, payload.message, payload.melding),
+    };
   }
 
   function websiteSubmissionSupport(row) {
     const payload = websiteSubmissionPayload(row);
-    return plainObject(payload.support);
+    const nested = plainObject(payload.support);
+    const direct = plainObject(row?.support);
+    return {
+      ...nested,
+      ...direct,
+      symptom_slug: firstFilled(direct.symptom_slug, row?.symptom_slug, nested.symptom_slug, payload.symptom_slug),
+      severity: firstFilled(direct.severity, row?.severity, nested.severity, payload.severity),
+      preferred_contact_method: firstFilled(direct.preferred_contact_method, row?.preferred_contact_method, nested.preferred_contact_method, payload.preferred_contact_method),
+      message: firstFilled(direct.message, row?.message, nested.message, payload.message, payload.melding),
+      billable: direct.billable ?? row?.billable ?? nested.billable ?? payload.billable,
+    };
   }
 
   function websiteSubmissionAttribution(row) {
@@ -8302,14 +8344,14 @@
   function websiteSubmissionName(row) {
     const payload = websiteSubmissionPayload(row);
     const customer = websiteSubmissionCustomer(row);
-    return firstFilled(customer.name, payload.name, payload.navn, payload.fullName, row?.normalized_email, row?.normalized_phone, row?.public_reference);
+    return firstFilled(customer.name, row?.customer_name, row?.name, payload.name, payload.navn, payload.fullName, row?.normalized_email, row?.normalized_phone, row?.public_reference);
   }
 
   function websiteSubmissionMessage(row) {
     const payload = websiteSubmissionPayload(row);
     const request = websiteSubmissionRequest(row);
     const support = websiteSubmissionSupport(row);
-    return firstFilled(request.message, support.message, payload.message, payload.melding, payload.note, payload.notes, payload.comment, payload.kommentar);
+    return firstFilled(request.message, support.message, row?.message, row?.note, payload.message, payload.melding, payload.note, payload.notes, payload.comment, payload.kommentar);
   }
 
   function readableSubmissionValue(value) {
@@ -8456,7 +8498,7 @@
     const customer = websiteSubmissionCustomer(row);
     const request = websiteSubmissionRequest(row);
     const support = websiteSubmissionSupport(row);
-    const postalCode = firstFilled(customer.postal_code, customer.zip, payload.postal_code, payload.zip);
+    const postalCode = firstFilled(customer.postal_code, customer.zip, row?.postal_code, row?.zip, payload.postal_code, payload.zip);
     const sourcePage = websiteSubmissionSourcePage(row);
     const productInterest = [
       websiteSubmissionTypeLabel(row),
@@ -8474,13 +8516,13 @@
     ].filter(Boolean).join("\n");
     return {
       name: websiteSubmissionName(row),
-      phone: firstFilled(customer.phone, payload.phone, row?.normalized_phone),
-      email: firstFilled(customer.email, payload.email, row?.normalized_email),
+      phone: firstFilled(customer.phone, row?.phone, payload.phone, row?.normalized_phone),
+      email: firstFilled(customer.email, row?.email, payload.email, row?.normalized_email),
       postal_code: postalCode,
       zip: postalCode,
-      address: firstFilled(customer.address, payload.address, request.address),
-      street: firstFilled(customer.address, payload.address, request.address),
-      city: firstFilled(customer.city, payload.city, postalCityByZip[postalCode]),
+      address: firstFilled(customer.address, row?.address, row?.street, payload.address, request.address),
+      street: firstFilled(customer.address, row?.address, row?.street, payload.address, request.address),
+      city: firstFilled(customer.city, row?.city, payload.city, postalCityByZip[postalCode]),
       source: "Nettside",
       source_detail: [row?.public_reference, sourcePage].filter(Boolean).join(" · ") || "Nettsideinnsending",
       product_interest: productInterest,
