@@ -1591,7 +1591,7 @@
 
   async function setLeadRecordStatus(entryKey, status) {
     const entry = leadEntryForTarget(entryKey);
-    if (!entry?.lead?.id) throw new Error("Fant ikke leaden.");
+    if (!entry?.lead?.id) throw new Error("Fant ikke henvendelsen.");
     let updatedLead = null;
     const realCustomer = entry.customer ? findCustomer(leadEntryCustomerKey(entry)) : null;
     if (store.isConfigured && store.updateLead) {
@@ -1607,7 +1607,7 @@
     focusLeadQueueForStatus(status || "followup");
     renderAll();
     setView("leads");
-    setSyncStatus(`Lead satt til: ${leadStatusLabel(status)}.`, "ok");
+    setSyncStatus(`Henvendelse satt til: ${leadStatusLabel(status)}.`, "ok");
   }
 
   async function setLeadStatusTarget(target, status) {
@@ -1632,7 +1632,7 @@
 
   async function saveLeadRecordNote(entryKey, note) {
     const entry = leadEntryForTarget(entryKey);
-    if (!entry?.lead?.id) throw new Error("Fant ikke leaden.");
+    if (!entry?.lead?.id) throw new Error("Fant ikke henvendelsen.");
     const customerId = leadCustomerId(entry.lead) || "";
     if (store.isConfigured) {
       await saveActivityRecord({
@@ -9333,10 +9333,10 @@
   }
 
   async function linkLeadToExistingCustomer(entryKey, customerId) {
-    if (store.isConfigured && !store.updateLead) throw new Error("Kobling av lead krever oppdatert Supabase-adapter.");
+    if (store.isConfigured && !store.updateLead) throw new Error("Kobling av henvendelse krever oppdatert Supabase-adapter.");
     if (!store.isConfigured) requireLocalDemoStorage();
     const entry = allLeadEntries().find((item) => leadEntryKey(item) === entryKey);
-    if (!entry?.lead) throw new Error("Fant ikke leaden.");
+    if (!entry?.lead) throw new Error("Fant ikke henvendelsen.");
     const customer = findCustomer(customerId);
     if (!customer) throw new Error("Fant ikke kundekortet som skulle kobles.");
     const updatedLead = store.isConfigured
@@ -9348,8 +9348,8 @@
     await linkWebsiteSubmissionToCustomerFromLead(updatedLead, customerKey(customer));
     await saveServiceEvent(customer, {
       event_date: isoDate(new Date()),
-      event_type: "Lead koblet til kundekort",
-      note: leadNoteForEntry({ ...entry, lead: updatedLead, customer }) || "Lead koblet til eksisterende kundekort.",
+      event_type: "Henvendelse koblet til kundekort",
+      note: leadNoteForEntry({ ...entry, lead: updatedLead, customer }) || "Henvendelse koblet til eksisterende kundekort.",
     });
     selectedLeadId = `lead:${updatedLead.id}`;
     selectedCustomerId = customerKey(customer);
@@ -9357,19 +9357,19 @@
     if (el.leadStatusFilter) el.leadStatusFilter.value = currentLeadFilter;
     renderAll();
     setView("leads");
-    setSyncStatus("Lead koblet til eksisterende kundekort. Du kan nå sette status, booke avtale eller opprette jobb.", "ok");
+    setSyncStatus("Henvendelse koblet til eksisterende kundekort. Du kan nå sette status, booke avtale eller opprette jobb.", "ok");
   }
 
   async function createCustomerFromLead(entryKey) {
     if (store.isConfigured && (!store.saveCustomer || !store.updateLead)) throw new Error("Opprett kundekort fra henvendelse krever oppdatert Supabase-adapter.");
     if (!store.isConfigured) requireLocalDemoStorage();
     const entry = allLeadEntries().find((item) => leadEntryKey(item) === entryKey);
-    if (!entry?.lead) throw new Error("Fant ikke leaden.");
+    if (!entry?.lead) throw new Error("Fant ikke henvendelsen.");
     const existingCustomerId = leadCustomerId(entry.lead);
     if (existingCustomerId && findCustomer(existingCustomerId)) {
       selectedCustomerId = existingCustomerId;
       setView("customers");
-      setSyncStatus("Leaden er allerede koblet til kundekort.", "ok");
+      setSyncStatus("Henvendelsen er allerede koblet til kundekort.", "ok");
       return;
     }
     const strongCandidate = strongLeadCustomerCandidate(entry);
@@ -9379,7 +9379,7 @@
       return;
     }
     const draft = leadCustomerDraft(entry);
-    if (!draft.name && !draft.phone && !draft.email) throw new Error("Leaden mangler nok kontaktinfo til å opprette kundekort.");
+    if (!draft.name && !draft.phone && !draft.email) throw new Error("Henvendelsen mangler nok kontaktinfo til å opprette kundekort.");
     const savedCustomer = store.isConfigured
       ? await store.saveCustomer(draft)
       : { ...draft, lime_id: draft.lime_id || `lead-customer-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` };
@@ -9402,7 +9402,7 @@
 
     await saveServiceEvent(savedCustomer, {
       event_date: isoDate(new Date()),
-      event_type: "Lead konvertert til kundekort",
+      event_type: "Henvendelse konvertert til kundekort",
       note: leadNoteForEntry({ ...entry, lead: updatedLead, customer: savedCustomer }) || "Kundekort opprettet fra henvendelse.",
     });
     selectedLeadId = `lead:${updatedLead.id}`;
@@ -14792,7 +14792,7 @@
     const select = event.target.closest("[data-lead-status-customer]");
     if (!select) return;
     setLeadStatusTarget(select.dataset.leadStatusCustomer, select.value)
-      .catch((error) => setSyncStatus(error.message || "Klarte ikke endre leadstatus.", "error"));
+      .catch((error) => setSyncStatus(error.message || "Klarte ikke endre henvendelsesstatus.", "error"));
   });
   el.leadDetail?.addEventListener("change", (event) => {
     const offerTemplate = event.target.closest("[data-offer-template-select]");
@@ -14815,7 +14815,7 @@
     const select = event.target.closest("[data-lead-status-customer]");
     if (!select) return;
     setLeadStatusTarget(select.dataset.leadStatusCustomer, select.value)
-      .catch((error) => setSyncStatus(error.message || "Klarte ikke endre leadstatus.", "error"));
+      .catch((error) => setSyncStatus(error.message || "Klarte ikke endre henvendelsesstatus.", "error"));
   });
   el.leadDetail?.addEventListener("input", (event) => {
     const lines = event.target.closest("[data-offer-lines]");
@@ -14887,7 +14887,7 @@
     const statusButton = event.target.closest("[data-lead-set-status]");
     if (statusButton) {
       setLeadStatusTarget(statusButton.dataset.leadStatusCustomer, statusButton.dataset.leadSetStatus)
-        .catch((error) => setSyncStatus(error.message || "Klarte ikke endre leadstatus.", "error"));
+        .catch((error) => setSyncStatus(error.message || "Klarte ikke endre henvendelsesstatus.", "error"));
       return;
     }
     const deleteLead = event.target.closest("[data-delete-lead-entry]");
