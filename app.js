@@ -194,6 +194,7 @@
   let currentLeadInboxTab = "new";
   let currentLeadSearch = "";
   let selectedLeadId = "";
+  let selectedWebsiteSubmissionId = "";
   let currentOrderFilter = "all";
   let currentOrderSearch = "";
   let selectedOrderId = "";
@@ -7119,6 +7120,14 @@
     return true;
   }
 
+  function scrollSelectedWebsiteSubmissionIntoView() {
+    if (!selectedWebsiteSubmissionId || !el.websiteSubmissionInbox) return;
+    const card = el.websiteSubmissionInbox.querySelector(`[data-website-submission-card="${CSS.escape(selectedWebsiteSubmissionId)}"]`);
+    if (!card) return;
+    card.scrollIntoView({ block: "center", behavior: "smooth" });
+    card.focus({ preventScroll: true });
+  }
+
   function handleGlobalSearchKeydown(event) {
     if (event.key === "Escape") {
       if (globalSearchQuery || el.globalSearchInput?.value || !el.globalSearchResults?.classList.contains("hidden")) {
@@ -7153,9 +7162,12 @@
       currentLeadFilter = "inbox_tab";
       currentLeadSearch = "";
       setLeadInboxTab("website");
+      selectedWebsiteSubmissionId = row.websiteSubmissionId || "";
       if (el.leadStatusFilter) el.leadStatusFilter.value = "inbox_tab";
       if (el.leadSearch) el.leadSearch.value = "";
       setView("leads");
+      requestAnimationFrame(scrollSelectedWebsiteSubmissionIntoView);
+      if (selectedWebsiteSubmissionId) setSyncStatus(`Åpnet nettsideinnsending for ${row.title || "valgt treff"}.`, "ok");
       return;
     }
     if (row.kind === "Jobb") {
@@ -8307,6 +8319,7 @@
   function setLeadInboxTab(tab = "new") {
     currentLeadInboxTab = ["new", "email", "website", "followup", "archive"].includes(tab) ? tab : "new";
     currentLeadFilter = "inbox_tab";
+    if (currentLeadInboxTab !== "website") selectedWebsiteSubmissionId = "";
     if (el.leadStatusFilter) el.leadStatusFilter.value = "inbox_tab";
   }
 
@@ -8394,6 +8407,11 @@
     if (!el.websiteSubmissionInbox) return;
     const rows = websiteSubmissionRowsForInboxTab();
     const hiddenRows = websiteSubmissionHiddenRowsForInboxTab();
+    const selectedOpenRow = selectedWebsiteSubmissionId ? rows.find((row) => row.id === selectedWebsiteSubmissionId) : null;
+    const selectedVisible = selectedOpenRow && rows.slice(0, 6).some((row) => row.id === selectedWebsiteSubmissionId);
+    const visibleRows = selectedOpenRow && !selectedVisible
+      ? [selectedOpenRow, ...rows.filter((row) => row.id !== selectedWebsiteSubmissionId).slice(0, 5)]
+      : rows.slice(0, 6);
     el.websiteSubmissionInbox.classList.toggle("hidden", !rows.length && !hiddenRows.length);
     if (!rows.length && !hiddenRows.length) {
       el.websiteSubmissionInbox.innerHTML = "";
@@ -8408,7 +8426,7 @@
         <strong>${rows.length.toLocaleString("nb-NO")}</strong>
       </div>
       <div class="website-submission-list">
-        ${rows.slice(0, 6).map((row) => {
+        ${visibleRows.map((row) => {
           const name = websiteSubmissionName(row);
           const message = websiteSubmissionMessage(row);
           const date = row.received_at ? formatDate(isoDate(new Date(row.received_at))) : "";
@@ -8418,6 +8436,7 @@
           const canCreateServiceOrder = websiteSubmissionCanCreateServiceOrder(row);
           const workflowHint = websiteSubmissionWorkflowHint(row, duplicateHints.length);
           const leadActionLabel = websiteSubmissionLeadActionLabel(row);
+          const isSelected = selectedWebsiteSubmissionId && row.id === selectedWebsiteSubmissionId;
           const primaryAction = canCreateServiceOrder
             ? `<button class="order-primary" data-create-website-service-order="${escapeHtml(row.id)}" type="button" title="Opprett eller koble kundekort, og lag en ikke-planlagt servicejobb som kan bookes etter kontakt med kunden.">Lag serviceforespørsel</button>`
             : `<button class="order-primary" data-create-website-lead="${escapeHtml(row.id)}" type="button" title="Oppretter eller kobler kundekort hvis nødvendig, og legger saken som salgsmulighet/lead.">${escapeHtml(leadActionLabel)}</button>`;
@@ -8425,7 +8444,7 @@
             ? `<button class="secondary" data-create-website-lead="${escapeHtml(row.id)}" type="button" title="Bruk hvis innsendingen egentlig gjelder tilbud, befaring eller ny varmepumpe.">${escapeHtml(leadActionLabel)}</button>`
             : "";
           return `
-            <article title="Rå innsending beholdes uendret til den behandles server-side.">
+            <article class="${isSelected ? "selected" : ""}" data-website-submission-card="${escapeHtml(row.id)}" tabindex="-1" title="${isSelected ? "Valgt fra søket. " : ""}Rå innsending beholdes uendret til den behandles server-side.">
               <div>
                 <strong>${escapeHtml(name || "Ukjent innsending")}</strong>
                 <span>${escapeHtml(text || "Ny innsending")}</span>

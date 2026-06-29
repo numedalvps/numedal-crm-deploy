@@ -1648,6 +1648,12 @@ textarea {
   background: #fff;
 }
 
+.website-submission-list article.selected {
+  border-color: var(--teal);
+  background: #f0fdfa;
+  box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.14);
+}
+
 .website-submission-list.compact article {
   border-color: var(--line);
   background: #fff;
