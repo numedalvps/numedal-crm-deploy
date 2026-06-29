@@ -2470,6 +2470,34 @@ textarea {
   resize: vertical;
 }
 
+.lead-offer-documents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.lead-offer-documents .check-row {
+  margin: 0;
+  flex: 1 1 320px;
+}
+
+.lead-offer-documents small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.lead-offer-documents a {
+  white-space: nowrap;
+}
+
 .lead-offer-actions {
   display: flex;
   flex-wrap: wrap;

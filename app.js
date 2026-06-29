@@ -8,6 +8,7 @@
   const demoEnabled = appEnv === "development" && (runtimeConfig.enableDemo === true || runtimeConfig.ENABLE_DEMO === true);
   const browserImportEnabled = appEnv === "development" && runtimeConfig.enableBrowserImport === true;
   const databaseUnavailableMessage = "CRM-et fikk ikke kontakt med databasen. Ingen endringer er lagret. Prøv igjen eller kontakt administrator.";
+  const appPublicBaseUrl = "https://app.numedalvps.no/";
   const users = {
     admin: { name: "Gunnar", role: "Admin", view: "dashboard", key: "admin" },
     tech: { name: "Hubert", role: "Tekniker", view: "technician", key: "tech" },
@@ -72,6 +73,13 @@
       note: "Egne vilkår og info for utleie av støvsuger, henger, slanger og ramper.",
     },
   ];
+  const priceListDocument = {
+    id: "price_list",
+    title: "Prisliste Numedal Varmepumpeservice",
+    href: "./documents/priser/Prisliste_Numedal_Varmepumpeservice.pdf",
+    note: "Veiledende prisgrunnlag for standard montering og tilleggstjenester.",
+  };
+  const offerDocuments = [priceListDocument];
   const rentalImages = [
     { title: "Industristøvsuger 15 hk", href: "./documents/isobygg/vac/industristovsuger-15hk.jpg" },
     { title: "Front", href: "./documents/isobygg/vac/industristovsuger-front.jpg" },
@@ -6453,7 +6461,7 @@
         <label>Prisgrunnlag / standard montering og tillegg
           <textarea data-offer-settings-prices rows="16" ${disabled}>${escapeHtml(settings.priceTermsText)}</textarea>
         </label>
-        <p class="form-hint">Plassholdere: {fornavn}, {navn}, {adresse}, {prisgrunnlag}. Produktdatablad/PDF-vedlegg kommer som egen tilbudsmodul senere.</p>
+        <p class="form-hint">Plassholdere: {fornavn}, {navn}, {adresse}, {prisgrunnlag}. Aktiv prisliste kan hukes av i tilbudsboksen og legges inn som PDF-lenke i e-postteksten.</p>
       </section>
     `;
   }
@@ -8725,7 +8733,8 @@
 
   function renderInsulationDocuments() {
     if (!el.insulationDocuments) return;
-    el.insulationDocuments.innerHTML = insulationDocuments.map((doc) => `
+    const docs = [priceListDocument, ...insulationDocuments];
+    el.insulationDocuments.innerHTML = docs.map((doc) => `
       <a href="${escapeHtml(doc.href)}" target="_blank" rel="noreferrer" download>
         <strong>${escapeHtml(doc.title)}</strong>
         <span>${escapeHtml(doc.note)}</span>
@@ -9192,6 +9201,38 @@
     return `mailto:${encodeURIComponent(String(to || "").trim())}${params.length ? `?${params.join("&")}` : ""}`;
   }
 
+  function publicDocumentUrl(doc) {
+    return new URL(String(doc?.href || "").replace(/^\.\//, ""), appPublicBaseUrl).href;
+  }
+
+  function offerTemplateUsesPriceList(templateId) {
+    return ["heatpump_standard_offer", "general_price_offer", "fujitsu_floor", "norgespumpa_black"].includes(String(templateId || ""));
+  }
+
+  function offerPriceListBlock() {
+    return [
+      "",
+      "---",
+      "Prisliste / prisgrunnlag:",
+      `${priceListDocument.title}: ${publicDocumentUrl(priceListDocument)}`,
+      "Prislisten er veiledende og oppdateres løpende. Endelig pris avklares i tilbud/ordre før utførelse.",
+      "---",
+    ].join("\n");
+  }
+
+  function stripOfferDocumentBlock(text) {
+    return String(text || "")
+      .replace(/\n*\n---\nPrisliste \/ prisgrunnlag:[\s\S]*?\n---(?=\n|$)/g, "")
+      .trimEnd();
+  }
+
+  function applyOfferDocumentSelection(text, includePriceList) {
+    const clean = stripOfferDocumentBlock(text);
+    if (!includePriceList) return clean;
+    const url = publicDocumentUrl(priceListDocument);
+    return clean.includes(url) ? clean : `${clean}\n${offerPriceListBlock()}`.trimEnd();
+  }
+
   function emailReferenceSuffix(length = 6) {
     const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     const values = new Uint32Array(length);
@@ -9388,7 +9429,8 @@
     const target = leadEntryKey(entry);
     const templateId = defaultLeadOfferTemplateId(entry);
     const template = leadTemplates[templateId] || leadTemplates.heatpump_standard_offer;
-    const body = template.body(customer);
+    const includePriceList = offerTemplateUsesPriceList(templateId);
+    const body = applyOfferDocumentSelection(template.body(customer), includePriceList);
     const autoSendEnabled = offerAutoEmailEnabled();
     const autoSendDisabled = autoSendEnabled ? "" : "disabled";
     const autoSendTitle = autoSendEnabled
@@ -9415,6 +9457,16 @@
             <input data-offer-subject="${escapeHtml(target)}" value="${escapeHtml(template.subject)}" />
           </label>
         </div>
+        <div class="lead-offer-documents">
+          <label class="check-row">
+            <input data-offer-pricelist="${escapeHtml(target)}" type="checkbox" ${includePriceList ? "checked" : ""} />
+            <span>
+              <strong>Legg ved prisliste som lenke</strong>
+              <small>Legger PDF-lenke i e-postteksten. Selve PDF-en kan lastes ned her og legges ved manuelt ved behov.</small>
+            </span>
+          </label>
+          <a href="${escapeHtml(priceListDocument.href)}" target="_blank" rel="noreferrer" download title="Last ned aktiv prisliste-PDF.">${escapeHtml(priceListDocument.title)}</a>
+        </div>
         <textarea data-offer-text="${escapeHtml(target)}" rows="12">${escapeHtml(body)}</textarea>
         <div class="lead-offer-actions">
           <button class="secondary" data-fill-offer-template="${escapeHtml(target)}" type="button">Bruk mal</button>
@@ -9435,6 +9487,7 @@
       template: el.leadDetail.querySelector(`[data-offer-template-select="${safe}"]`),
       subject: el.leadDetail.querySelector(`[data-offer-subject="${safe}"]`),
       text: el.leadDetail.querySelector(`[data-offer-text="${safe}"]`),
+      priceList: el.leadDetail.querySelector(`[data-offer-pricelist="${safe}"]`),
     };
   }
 
@@ -9447,7 +9500,14 @@
     if (!template) return;
     if (fields.template) fields.template.value = id;
     if (fields.subject) fields.subject.value = template.subject;
-    if (fields.text) fields.text.value = template.body(customer);
+    if (fields.priceList) fields.priceList.checked = offerTemplateUsesPriceList(id);
+    if (fields.text) fields.text.value = applyOfferDocumentSelection(template.body(customer), Boolean(fields.priceList?.checked));
+  }
+
+  function syncLeadOfferDocuments(target) {
+    const fields = leadOfferFields(target);
+    if (!fields.text) return;
+    fields.text.value = applyOfferDocumentSelection(fields.text.value, Boolean(fields.priceList?.checked));
   }
 
   function focusLeadOfferFields(target) {
@@ -9465,7 +9525,7 @@
     const customer = entry.customer || {};
     const to = String(fields.to?.value || "").trim();
     const subject = String(fields.subject?.value || "").trim();
-    const text = String(fields.text?.value || "").trim();
+    const text = applyOfferDocumentSelection(String(fields.text?.value || "").trim(), Boolean(fields.priceList?.checked));
     if (!isEmailAddress(to)) throw new Error("Mottaker mangler eller har ugyldig e-postadresse.");
     if (!subject) throw new Error("Emne mangler.");
     if (!text) throw new Error("Tilbudstekst mangler.");
@@ -9479,6 +9539,8 @@
       customer_id: isUuid(customerId) ? customerId : null,
       lead_id: isUuid(entry.lead?.id) ? entry.lead.id : null,
       template_id: fields.template?.value || "",
+      include_price_list: Boolean(fields.priceList?.checked),
+      price_list_url: Boolean(fields.priceList?.checked) ? publicDocumentUrl(priceListDocument) : "",
       source: "lead_detail",
     };
   }
@@ -13040,6 +13102,11 @@
     const offerTemplate = event.target.closest("[data-offer-template-select]");
     if (offerTemplate) {
       fillLeadOfferTemplate(offerTemplate.dataset.offerTemplateSelect, offerTemplate.value);
+      return;
+    }
+    const offerPriceList = event.target.closest("[data-offer-pricelist]");
+    if (offerPriceList) {
+      syncLeadOfferDocuments(offerPriceList.dataset.offerPricelist);
       return;
     }
     const select = event.target.closest("[data-lead-status-customer]");
