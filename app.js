@@ -11994,7 +11994,7 @@
   function setupCompletionPriceFields(row) {
     if (!el.completionPriceDetails || !el.completionPricePreset || !el.completionPriceLines) return;
     const type = bookingDisplayType(row);
-    const show = isAdmin() && completionCanHavePayment(type);
+    const show = completionCanHavePayment(type);
     el.completionPriceDetails.classList.toggle("hidden", !show);
     if (!show) {
       el.completionPriceLines.value = "";
