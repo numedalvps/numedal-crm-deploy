@@ -1601,6 +1601,62 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.website-submission-message {
+  display: grid;
+  gap: 4px;
+  margin-top: 4px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 8px;
+  background: #f8fbff;
+}
+
+.website-submission-message strong {
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.website-submission-message p {
+  margin: 0;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.website-submission-fields {
+  display: grid;
+  gap: 5px;
+  margin: 4px 0 0;
+}
+
+.website-submission-fields div {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 6px;
+  align-items: start;
+}
+
+.website-submission-fields dt,
+.website-submission-fields dd {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.website-submission-fields dt {
+  color: var(--muted);
+  font-weight: 950;
+}
+
+.website-submission-fields dd {
+  color: #334155;
+  font-weight: 800;
+}
+
 .website-submission-list strong {
   min-width: 0;
   overflow-wrap: anywhere;

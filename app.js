@@ -8151,7 +8151,7 @@
               <div>
                 <strong>${escapeHtml(name || "Ukjent innsending")}</strong>
                 <span>${escapeHtml(text || "Ny innsending")}</span>
-                ${message ? `<small>${escapeHtml(message).slice(0, 180)}</small>` : ""}
+                ${websiteSubmissionDetailsHtml(row)}
                 <div class="website-workflow-hint ${escapeHtml(workflowHint.kind)}">
                   <strong title="${escapeHtml(workflowHint.detail)}">${escapeHtml(workflowHint.label)}</strong>
                 </div>
@@ -8308,7 +8308,131 @@
   function websiteSubmissionMessage(row) {
     const payload = websiteSubmissionPayload(row);
     const request = websiteSubmissionRequest(row);
-    return firstFilled(request.message, payload.message, payload.melding, payload.note, payload.notes);
+    const support = websiteSubmissionSupport(row);
+    return firstFilled(request.message, support.message, payload.message, payload.melding, payload.note, payload.notes, payload.comment, payload.kommentar);
+  }
+
+  function readableSubmissionValue(value) {
+    if (value === true) return "Ja";
+    if (value === false) return "Nei";
+    if (Array.isArray(value)) return value.map(readableSubmissionValue).filter(Boolean).join(", ");
+    if (value && typeof value === "object") {
+      const named = firstFilled(value.name, value.file_name, value.filename, value.url, value.href, value.label, value.title);
+      if (named) return named;
+      return "";
+    }
+    const text = String(value || "").replace(/\s+/g, " ").trim();
+    const labels = {
+      new_installation: "Ny montering",
+      replacement: "Bytte gammel pumpe",
+      site_visit: "Befaring",
+      quote_request: "Tilbud",
+      phone: "Telefon",
+      phone_consultation: "Telefon",
+      home_visit: "Hjemmebesøk",
+      email: "E-post",
+      regular_service: "Vanlig service",
+      poor_heating: "Varmer dårlig",
+      error_code: "Feilkode",
+      other: "Annet",
+    };
+    return labels[text.toLowerCase()] || text.replaceAll("_", " ");
+  }
+
+  function uniqueReadableSubmissionValues(values) {
+    const seen = new Set();
+    return values
+      .map(readableSubmissionValue)
+      .filter(Boolean)
+      .filter((value) => {
+        const key = normalizeMatch(value);
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  }
+
+  function websiteSubmissionAttachments(row) {
+    const payload = websiteSubmissionPayload(row);
+    const request = websiteSubmissionRequest(row);
+    const support = websiteSubmissionSupport(row);
+    return [
+      payload.attachments,
+      payload.photos,
+      payload.files,
+      request.attachments,
+      request.photos,
+      support.attachments,
+      support.photos,
+    ].flatMap((value) => Array.isArray(value) ? value : value ? [value] : []);
+  }
+
+  function websiteSubmissionDetailRows(row) {
+    const payload = websiteSubmissionPayload(row);
+    const customer = websiteSubmissionCustomer(row);
+    const request = websiteSubmissionRequest(row);
+    const support = websiteSubmissionSupport(row);
+    const product = plainObject(payload.product_interest);
+    const address = [
+      firstFilled(customer.address, request.address, payload.address, payload.adresse),
+      firstFilled(customer.postal_code, request.postal_code, payload.postal_code),
+      firstFilled(customer.city, request.city, payload.city),
+    ].filter(Boolean).join(", ");
+    const productText = uniqueReadableSubmissionValues([
+      request.request_type,
+      request.preferred_product_name,
+      request.preferred_product_slug,
+      request.preferred_brand,
+      product.preferred_product_name,
+      product.preferred_brand,
+    ]).join(" · ");
+    const serviceText = uniqueReadableSubmissionValues([
+      request.service_reason,
+      request.error_code,
+      request.heat_pump_brand,
+      request.heat_pump_model,
+      request.serial_number,
+      request.approximate_installation_year,
+      support.symptom_slug,
+      support.severity,
+      support.billable ? "Fakturerbar hjelp" : "",
+    ]).join(" · ");
+    const contactText = firstFilled(request.preferred_contact_method, support.preferred_contact_method, payload.preferred_contact_method);
+    const sourceText = firstFilled(row?.public_reference, websiteSubmissionSourcePage(row));
+    const attachments = websiteSubmissionAttachments(row);
+    const attachmentText = attachments.length
+      ? attachments.map(readableSubmissionValue).filter(Boolean).slice(0, 4).join(", ") || `${attachments.length} vedlegg`
+      : "";
+    return [
+      ["Adresse", address],
+      ["Ønske", productText],
+      ["Serviceinfo", serviceText],
+      ["Kontaktmåte", readableSubmissionValue(contactText)],
+      ["Vedlegg", attachmentText],
+      ["Kilde", sourceText],
+    ].filter(([, value]) => String(value || "").trim());
+  }
+
+  function websiteSubmissionDetailsHtml(row) {
+    const message = websiteSubmissionMessage(row);
+    const details = websiteSubmissionDetailRows(row);
+    const messageHtml = message ? `
+      <div class="website-submission-message">
+        <strong>Kunden skrev</strong>
+        <p>${escapeHtml(message.slice(0, 900))}${message.length > 900 ? " ..." : ""}</p>
+      </div>
+    ` : "";
+    const rowsHtml = details.length ? `
+      <dl class="website-submission-fields">
+        ${details.slice(0, 6).map(([label, value]) => `
+          <div>
+            <dt>${escapeHtml(label)}</dt>
+            <dd>${escapeHtml(String(value).slice(0, 260))}${String(value).length > 260 ? " ..." : ""}</dd>
+          </div>
+        `).join("")}
+      </dl>
+    ` : "";
+    return `${messageHtml}${rowsHtml}`;
   }
 
   function websiteSubmissionTypeLabel(row) {
@@ -8405,6 +8529,9 @@
   function websiteSubmissionIsService(row) {
     const type = String(row?.submission_type || websiteSubmissionPayload(row).submission_type || "").toLowerCase();
     if (["service_request", "support_request"].includes(type)) return true;
+    const requestType = String(websiteSubmissionRequest(row).request_type || "").toLowerCase();
+    if (["lead", "new_heat_pump", "quote_request", "site_visit_request"].includes(type)) return false;
+    if (["new_installation", "replacement", "site_visit", "business_system"].includes(requestType)) return false;
     const text = websiteSubmissionServiceText(row);
     return /\b(service|support|reparasjon|reklamasjon|garanti|feil|hjelp|problem|problemer|lekker|lekkasje|drypp|støy|lyd|lukter|fungerer ikke|is|vann|rens|vedlikehold|timejobb|flytte|demonter|monter)\b/i.test(text);
   }
@@ -11392,7 +11519,7 @@
     const duration = draggedRow ? bookingDurationMinutes(draggedRow) : 60;
     const rows = planningRowsForDropDate(dayIso, draggedRow);
     const slots = freeSlotsForDay(rows);
-    const fittingSlot = slots.find((slot) => slot.end - slot.start >= Math.min(duration, 30)) || slots[0];
+    const fittingSlot = slots.find((slot) => slot.end - slot.start >= duration) || slots[0];
     if (fittingSlot) {
       const time = timeFromMinutes(clampPlanningMinutes(fittingSlot.start));
       return { time, label: `første ledige kl. ${time}` };
@@ -12329,6 +12456,41 @@
     }) || null;
   }
 
+  function bookingRowsForSameResource(values, ignoreId = "") {
+    return bookingRows()
+      .filter((row) => row.id !== ignoreId)
+      .filter((row) => row.booking.date === values?.date)
+      .filter((row) => resourcesOverlap(row.booking.resource || "", values?.resource || ""))
+      .sort((a, b) => bookingRowStartMinutes(a) - bookingRowStartMinutes(b));
+  }
+
+  function fittingSlotsForBooking(values, ignoreId = "") {
+    if (!values?.date || !values?.time) return [];
+    const duration = Math.max(1, bookingTimeWindow(values).end - bookingTimeWindow(values).start);
+    return freeSlotsForDay(bookingRowsForSameResource(values, ignoreId))
+      .filter((slot) => slot.end - slot.start >= duration);
+  }
+
+  function slotSuggestionText(slot, duration) {
+    const latestStart = slot.end - duration;
+    if (latestStart <= slot.start) return timeRangeText(slot.start, slot.end);
+    return `${timeRangeText(slot.start, slot.end)} (start senest ${timeFromMinutes(latestStart)})`;
+  }
+
+  function bookingConflictMessage(prefix, values, conflict, ignoreId = "") {
+    const window = bookingTimeWindow(values);
+    const duration = Math.max(1, window.end - window.start);
+    const attempted = `${formatDate(values.date)} kl. ${timeRangeText(window.start, window.end)} (${formatDuration(duration)})`;
+    const conflictStart = bookingRowStartMinutes(conflict);
+    const conflictEnd = bookingRowEndMinutes(conflict);
+    const conflictText = `${conflict.booking.resource || "Ansatt"} er allerede booket ${formatDate(conflict.booking.date)} kl. ${timeRangeText(conflictStart, conflictEnd)} hos ${cleanDisplayName(conflict.customer)}.`;
+    const slots = fittingSlotsForBooking(values, ignoreId);
+    const suggestion = slots.length
+      ? `Ledig for ${formatDuration(duration)}: ${slots.slice(0, 3).map((slot) => slotSuggestionText(slot, duration)).join(", ")}.`
+      : `Ingen ledige hull for ${formatDuration(duration)} på ${values.resource || conflict.booking.resource || "valgt ansatt"} denne dagen. Endre varighet, ansatt eller dag.`;
+    return `${prefix}: forsøkte ${attempted}. ${conflictText} ${suggestion}`;
+  }
+
   function bookingOverlapForRow(row, rows = bookingRows()) {
     if (!row?.booking?.date) return null;
     const rowWindow = bookingTimeWindow(row.booking);
@@ -12561,7 +12723,7 @@
     if (!values.customerId) throw new Error("Velg en kunde før du lagrer avtale.");
     const conflict = bookingConflict(values, editingBookingId);
     if (conflict) {
-      throw new Error(`Konflikt: ${conflict.booking.resource || "Ansatt"} er allerede planlagt ${formatDate(conflict.booking.date)} kl. ${bookingTimeText(conflict.booking)} hos ${cleanDisplayName(conflict.customer)}.`);
+      throw new Error(bookingConflictMessage("Konflikt", values, conflict, editingBookingId));
     }
     const savedMessage = store.isConfigured ? "Avtale lagret i Supabase." : "Avtale lagret i lokal utviklingsdemo.";
     let savedId = editingBookingId;
@@ -13271,7 +13433,7 @@
     };
     const conflict = bookingConflict(updated, id);
     if (conflict) {
-      throw new Error(`Kan ikke flytte: ${conflict.booking.resource || "Ansatt"} er allerede booket ${formatDate(conflict.booking.date)} kl. ${bookingTimeText(conflict.booking)} hos ${cleanDisplayName(conflict.customer)}.`);
+      throw new Error(bookingConflictMessage("Kan ikke flytte", updated, conflict, id));
     }
     const saved = await saveBookingRecord(id, updated);
     const savedId = saved.id || id;
