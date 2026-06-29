@@ -4920,7 +4920,10 @@
 
   async function refreshData(message) {
     try {
-      if (store.isConfigured) await supabaseLoad();
+      if (store.isConfigured) {
+        setSyncStatus("Laster CRM-data fra Supabase. På tregt nett kan dette ta litt tid.", "");
+        await supabaseLoad();
+      }
       else if (canUseLocalDemo()) localLoad();
       else throw new Error(databaseUnavailableMessage);
       const repairedOrders = await ensureOrdersForLoadedBookings();

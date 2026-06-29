@@ -693,10 +693,18 @@
     return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
   }
 
+  function slowNetworkMessage(action) {
+    return `Supabase brukte for lang tid på å ${action}. Dette kan skyldes dårlig mobilnett. Sjekk dekning og prøv igjen.`;
+  }
+
+  function withDbTimeout(promise, action, ms = 20000) {
+    return withTimeout(promise, slowNetworkMessage(action), ms);
+  }
+
   async function fetchAllRows(queryFactory, pageSize = 1000, maxRows = 20000) {
     const rows = [];
     for (let from = 0; from < maxRows; from += pageSize) {
-      const { data, error } = await queryFactory().range(from, from + pageSize - 1);
+      const { data, error } = await withDbTimeout(queryFactory().range(from, from + pageSize - 1), "laste CRM-data");
       if (error) return { data: rows, error };
       rows.push(...(data || []));
       if (!data || data.length < pageSize) break;
@@ -794,7 +802,7 @@
         intakeResult,
         attachmentResult,
         settingsResult,
-      ] = await Promise.all([
+      ] = await withDbTimeout(Promise.all([
         fetchAllRows(() => supabase.from("customers").select("*").order("name")),
         fetchAllRows(() => supabase.from("bookings").select("*").neq("status", "cancelled").order("starts_at")),
         fetchAllRows(() => supabase.from("invoice_metadata").select("*").order("invoice_date", { ascending: false }), 1000, 10000),
@@ -812,7 +820,7 @@
         supabase.from("intake_items").select("*").in("status", ["draft", "needs_review", "ready", "failed"]).order("created_at", { ascending: false }).limit(100),
         supabase.from("crm_attachments").select("*").is("deleted_at", null).order("created_at", { ascending: false }).limit(2000),
         supabase.from("crm_settings").select("*"),
-      ]);
+      ]), "laste CRM-data", 45000);
       if (customerError) throw customerError;
       if (bookingError) throw bookingError;
       if (invoiceError) throw invoiceError;
@@ -860,11 +868,11 @@
       const supabase = await requireClient();
       const cleanKey = String(key || "").trim();
       if (!/^[a-z0-9_:-]{2,80}$/i.test(cleanKey)) throw new Error("Ugyldig innstillingsnøkkel.");
-      const { data, error } = await supabase
+      const { data, error } = await withDbTimeout(supabase
         .from("crm_settings")
         .upsert({ key: cleanKey, value, updated_at: new Date().toISOString() }, { onConflict: "key" })
         .select("*")
-        .single();
+        .single(), "lagre innstillinger");
       if (error) throw error;
       return data;
     },
@@ -879,7 +887,10 @@
       if ("active" in patch) dbPatch.active = Boolean(patch.active);
       dbPatch.updated_at = new Date().toISOString();
       if (!dbPatch.display_name && "display_name" in dbPatch) throw new Error("Navn kan ikke være tomt.");
-      const { data, error } = await supabase.from("profiles").update(dbPatch).eq("id", id).select("*").single();
+      const { data, error } = await withDbTimeout(
+        supabase.from("profiles").update(dbPatch).eq("id", id).select("*").single(),
+        "lagre brukerprofil",
+      );
       if (error) throw error;
       return data;
     },
@@ -889,7 +900,7 @@
       const query = id && !String(id).startsWith("order-")
         ? supabase.from("orders").update(dbOrder).eq("id", id).select("*").single()
         : supabase.from("orders").insert(dbOrder).select("*").single();
-      const { data, error } = await query;
+      const { data, error } = await withDbTimeout(query, "lagre jobb");
       if (error) throw error;
       const saved = orderFromDb(data);
       const hasInstallationId = Object.prototype.hasOwnProperty.call(order, "installation_id")
@@ -919,7 +930,7 @@
     async deleteOrder(id) {
       const supabase = await requireClient();
       await cancelJobForOrder(supabase, id);
-      const { error } = await supabase.from("orders").delete().eq("id", id);
+      const { error } = await withDbTimeout(supabase.from("orders").delete().eq("id", id), "slette jobb");
       if (error) throw error;
     },
     async saveCustomer(customer) {
@@ -937,23 +948,29 @@
       } else {
         query = supabase.from("customers").insert(dbCustomer).select("*").single();
       }
-      const { data, error } = await query;
+      const { data, error } = await withDbTimeout(query, "lagre kunde");
       if (error) {
         if (isDuplicateLegacyLimeError(error) && dbCustomer.legacy_lime_id) {
-          const { data: existing, error: lookupError } = await supabase
-            .from("customers")
-            .select("id")
-            .eq("legacy_lime_id", dbCustomer.legacy_lime_id)
-            .maybeSingle();
+          const { data: existing, error: lookupError } = await withDbTimeout(
+            supabase
+              .from("customers")
+              .select("id")
+              .eq("legacy_lime_id", dbCustomer.legacy_lime_id)
+              .maybeSingle(),
+            "finne eksisterende kunde",
+          );
           if (!lookupError && existing?.id) {
             const updateCustomer = { ...dbCustomer };
             delete updateCustomer.legacy_lime_id;
-            const { data: retryData, error: retryError } = await supabase
-              .from("customers")
-              .update(updateCustomer)
-              .eq("id", existing.id)
-              .select("*")
-              .single();
+            const { data: retryData, error: retryError } = await withDbTimeout(
+              supabase
+                .from("customers")
+                .update(updateCustomer)
+                .eq("id", existing.id)
+                .select("*")
+                .single(),
+              "lagre kunde",
+            );
             if (retryError) throw retryError;
             await syncAccessNote(supabase, retryData.id, dbCustomer.access_note);
             return customerFromDb(retryData);
@@ -967,7 +984,7 @@
     async deleteCustomer(customer) {
       const supabase = await requireClient();
       const id = customer.id || customer.lime_id;
-      const { error } = await supabase.from("customers").update({ is_inactive: true }).eq("id", id);
+      const { error } = await withDbTimeout(supabase.from("customers").update({ is_inactive: true }).eq("id", id), "arkivere kunde");
       if (error) throw error;
     },
     async saveBooking(id, booking) {
@@ -976,7 +993,7 @@
       const query = id && !String(id).startsWith("booking-")
         ? supabase.from("bookings").update(dbBooking).eq("id", id).select("*").single()
         : supabase.from("bookings").insert(dbBooking).select("*").single();
-      const { data, error } = await query;
+      const { data, error } = await withDbTimeout(query, "lagre booking");
       if (error) {
         if (isBookingOverlapError(error)) throw new Error(bookingOverlapMessage(error));
         throw error;
@@ -991,7 +1008,7 @@
       const query = isUuid(id)
         ? supabase.from("customer_locations").update(dbLocation).eq("id", id).select("*").single()
         : supabase.from("customer_locations").insert(dbLocation).select("*").single();
-      const { data, error } = await query;
+      const { data, error } = await withDbTimeout(query, "lagre anleggsadresse");
       if (error) throw error;
       return data;
     },
@@ -1003,7 +1020,7 @@
       const query = isUuid(id)
         ? supabase.from("installations").update(dbInstallation).eq("id", id).select("*").single()
         : supabase.from("installations").insert(dbInstallation).select("*").single();
-      const { data, error } = await query;
+      const { data, error } = await withDbTimeout(query, "lagre varmepumpe/anlegg");
       if (error) throw error;
       return data;
     },
@@ -1029,18 +1046,21 @@
       if ("notes" in patch) dbPatch.notes = patch.notes || null;
       dbPatch.updated_at = new Date().toISOString();
       if (!Object.keys(dbPatch).length) return { id };
-      const { data, error } = await supabase
-        .from("installations")
-        .update(dbPatch)
-        .eq("id", id)
-        .select("*")
-        .single();
+      const { data, error } = await withDbTimeout(
+        supabase
+          .from("installations")
+          .update(dbPatch)
+          .eq("id", id)
+          .select("*")
+          .single(),
+        "lagre varmepumpe/anlegg",
+      );
       if (error) throw error;
       return data;
     },
     async cancelBooking(id) {
       const supabase = await requireClient();
-      const { error } = await supabase.from("bookings").update({ status: "cancelled" }).eq("id", id);
+      const { error } = await withDbTimeout(supabase.from("bookings").update({ status: "cancelled" }).eq("id", id), "avbestille booking");
       if (error) throw error;
       await cancelAppointmentsForBooking(supabase, id);
     },
@@ -1048,37 +1068,52 @@
       const supabase = await requireClient();
       const completedAt = options.completedAt || new Date().toISOString();
       if (done) {
-        const { error } = await supabase.rpc("complete_job", {
-          p_booking_id: id,
-          p_note: options.note || null,
-          p_completed_at: completedAt,
-        });
+        const { error } = await withDbTimeout(
+          supabase.rpc("complete_job", {
+            p_booking_id: id,
+            p_note: options.note || null,
+            p_completed_at: completedAt,
+          }),
+          "fullføre jobb",
+        );
         if (!error) return;
         if (!/function .*complete_job/i.test(error.message || "")) throw error;
       }
-      const { error } = await supabase.from("bookings").update({
-        status: done ? "done" : "booked",
-        done_at: done ? completedAt : null,
-      }).eq("id", id);
+      const { error } = await withDbTimeout(
+        supabase.from("bookings").update({
+          status: done ? "done" : "booked",
+          done_at: done ? completedAt : null,
+        }).eq("id", id),
+        done ? "fullføre booking" : "gjenåpne booking",
+      );
       if (error) throw error;
       const status = done ? "done" : "planned";
-      const { data: appointmentRows, error: appointmentError } = await supabase
-        .from("appointments")
-        .select("id, job_id")
-        .eq("source_table", "bookings")
-        .eq("source_id", id);
+      const { data: appointmentRows, error: appointmentError } = await withDbTimeout(
+        supabase
+          .from("appointments")
+          .select("id, job_id")
+          .eq("source_table", "bookings")
+          .eq("source_id", id),
+        "oppdatere bookingstatus",
+      );
       if (appointmentError) throw appointmentError;
       for (const appointment of appointmentRows || []) {
-        const { error: updateAppointmentError } = await supabase
-          .from("appointments")
-          .update({ status, updated_at: new Date().toISOString() })
-          .eq("id", appointment.id);
+        const { error: updateAppointmentError } = await withDbTimeout(
+          supabase
+            .from("appointments")
+            .update({ status, updated_at: new Date().toISOString() })
+            .eq("id", appointment.id),
+          "oppdatere kalenderavtale",
+        );
         if (updateAppointmentError) throw updateAppointmentError;
         if (appointment.job_id) {
-          const { error: updateJobError } = await supabase
-            .from("jobs")
-            .update({ work_status: done ? "completed" : "planned", completed_at: done ? completedAt : null })
-            .eq("id", appointment.job_id);
+          const { error: updateJobError } = await withDbTimeout(
+            supabase
+              .from("jobs")
+              .update({ work_status: done ? "completed" : "planned", completed_at: done ? completedAt : null })
+              .eq("id", appointment.job_id),
+            "oppdatere jobbstatus",
+          );
           if (updateJobError) throw updateJobError;
         }
       }
@@ -1162,27 +1197,27 @@
       const supabase = await requireClient();
       if (!customer?.id || !isUuid(customer.id)) return null;
       const dbLead = leadFromCustomerToDb(customer, status, note);
-      const { data: existingRows, error: existingError } = await supabase
+      const { data: existingRows, error: existingError } = await withDbTimeout(supabase
         .from("leads")
         .select("*")
         .eq("existing_customer_id", customer.id)
         .order("updated_at", { ascending: false })
-        .limit(1);
+        .limit(1), "finne eksisterende lead");
       if (existingError) throw existingError;
       const existing = existingRows?.[0] || null;
       const query = existing
         ? supabase.from("leads").update(dbLead).eq("id", existing.id).select("*").single()
         : supabase.from("leads").insert(dbLead).select("*").single();
-      const { data, error } = await query;
+      const { data, error } = await withDbTimeout(query, "lagre lead");
       if (error) throw error;
-      const { error: activityError } = await supabase.from("activities").insert({
+      const { error: activityError } = await withDbTimeout(supabase.from("activities").insert({
         customer_id: customer.id,
         lead_id: data.id,
         activity_type: "status_change",
         summary: `Lead: ${data.status}`,
         body: note || null,
         metadata: { crm_status: status || "new" },
-      });
+      }), "lagre leadhistorikk");
       if (activityError) throw activityError;
       return data;
     },
@@ -1210,9 +1245,12 @@
         status: leadStatusToDb(values?.lead_status || "followup"),
         last_contact_at: new Date().toISOString(),
       };
-      const { data, error } = await supabase.from("leads").insert(dbLead).select("*").single();
+      const { data, error } = await withDbTimeout(
+        supabase.from("leads").insert(dbLead).select("*").single(),
+        "lagre lead",
+      );
       if (error) throw error;
-      const { error: activityError } = await supabase.from("activities").insert({
+      const { error: activityError } = await withDbTimeout(supabase.from("activities").insert({
         customer_id: isUuid(values?.customer_id) ? values.customer_id : null,
         lead_id: data.id,
         activity_type: "intake",
@@ -1226,7 +1264,7 @@
           original_kept: Boolean(values?.keepOriginal),
           original_text: values?.keepOriginal ? values?.raw || null : null,
         },
-      });
+      }), "lagre leadhistorikk");
       if (activityError) throw activityError;
       return data;
     },
@@ -1245,7 +1283,10 @@
         metadata: activity.metadata && typeof activity.metadata === "object" ? activity.metadata : {},
         occurred_at: activity.occurred_at || activity.occurredAt || new Date().toISOString(),
       };
-      const { data, error } = await supabase.from("activities").insert(dbActivity).select("*").single();
+      const { data, error } = await withDbTimeout(
+        supabase.from("activities").insert(dbActivity).select("*").single(),
+        "lagre aktivitet",
+      );
       if (error) throw error;
       return data;
     },
@@ -1264,14 +1305,17 @@
       if ("source_detail" in patch) dbPatch.source_detail = patch.source_detail || null;
       if (!Object.keys(dbPatch).length) throw new Error("Ingen lead-endringer å lagre.");
       dbPatch.updated_at = new Date().toISOString();
-      const { data, error } = await supabase.from("leads").update(dbPatch).eq("id", id).select("*").single();
+      const { data, error } = await withDbTimeout(
+        supabase.from("leads").update(dbPatch).eq("id", id).select("*").single(),
+        "oppdatere lead",
+      );
       if (error) throw error;
       return data;
     },
     async deleteLead(id) {
       const supabase = await requireClient();
       if (!isUuid(id)) throw new Error("Ugyldig lead-id.");
-      const { error } = await supabase.from("leads").delete().eq("id", id);
+      const { error } = await withDbTimeout(supabase.from("leads").delete().eq("id", id), "slette henvendelse");
       if (error) throw error;
       return true;
     },
@@ -1287,12 +1331,12 @@
         if (key in patch) dbPatch[key] = isUuid(patch[key]) ? patch[key] : null;
       }
       if (!Object.keys(dbPatch).length) return null;
-      const { data, error } = await supabase
+      const { data, error } = await withDbTimeout(supabase
         .from("website_submissions")
         .update(dbPatch)
         .eq("id", id)
         .select("*")
-        .single();
+        .single(), "oppdatere nettsideinnsending");
       if (error) throw error;
       return data;
     },
@@ -1406,7 +1450,7 @@
     async deleteWebsiteSubmission(id) {
       const supabase = await requireClient();
       if (!isUuid(id)) throw new Error("Ugyldig nettsideinnsending-id.");
-      const { error } = await supabase.from("website_submissions").delete().eq("id", id);
+      const { error } = await withDbTimeout(supabase.from("website_submissions").delete().eq("id", id), "slette nettsideinnsending");
       if (error) throw error;
       return true;
     },
