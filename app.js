@@ -6253,11 +6253,49 @@
     `;
   }
 
+  function hideGlobalSearchResults() {
+    el.globalSearchResults?.classList.add("hidden");
+  }
+
+  function clearGlobalSearch() {
+    globalSearchQuery = "";
+    if (el.globalSearchInput) el.globalSearchInput.value = "";
+    if (el.globalSearchResults) el.globalSearchResults.innerHTML = "";
+    hideGlobalSearchResults();
+  }
+
+  function openFirstGlobalSearchResult() {
+    const query = globalSearchQuery || el.globalSearchInput?.value?.trim() || "";
+    if (normalizeMatch(query).length < 2) return false;
+    const rows = globalSearchRows(query);
+    rows.forEach((row) => globalSearchResultCache.set(row.id, row));
+    const first = rows[0];
+    if (!first) return false;
+    openGlobalSearchResult(first.id);
+    hideGlobalSearchResults();
+    el.globalSearchInput?.blur();
+    return true;
+  }
+
+  function handleGlobalSearchKeydown(event) {
+    if (event.key === "Escape") {
+      if (globalSearchQuery || el.globalSearchInput?.value || !el.globalSearchResults?.classList.contains("hidden")) {
+        event.preventDefault();
+        clearGlobalSearch();
+      }
+      return;
+    }
+    if (event.key === "Enter") {
+      if (openFirstGlobalSearchResult()) event.preventDefault();
+    }
+  }
+
   function openGlobalSearchResult(id) {
     const row = globalSearchResultCache.get(id);
     if (!row) return;
     if (row.kind === "Kunde" || row.kind === "Anlegg" || row.kind === "Faktura") {
       openCustomerCard(row.customerId);
+      if (row.kind === "Anlegg") setSyncStatus(`Åpnet kundekort for ${row.title}.`, "ok");
       return;
     }
     if (row.kind === "Lead") {
@@ -12292,14 +12330,15 @@
     globalSearchQuery = el.globalSearchInput.value.trim();
     renderGlobalSearch();
   });
+  el.globalSearchInput?.addEventListener("keydown", handleGlobalSearchKeydown);
   el.globalSearchResults?.addEventListener("click", (event) => {
     const button = event.target.closest("[data-global-search-result]");
     if (!button) return;
     openGlobalSearchResult(button.dataset.globalSearchResult);
-    el.globalSearchResults.classList.add("hidden");
+    hideGlobalSearchResults();
   });
   document.addEventListener("click", (event) => {
-    if (!event.target.closest(".top-search")) el.globalSearchResults?.classList.add("hidden");
+    if (!event.target.closest(".top-search")) hideGlobalSearchResults();
     if (!event.target.closest(".new-action-wrap") && !event.target.closest(".more-nav-wrap")) closeFloatingMenus();
   });
 

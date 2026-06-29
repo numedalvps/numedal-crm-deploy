@@ -5,6 +5,7 @@
   "description": "Intern CRM-webapp for Numedal Varmepumpeservice.",
   "scripts": {
     "test:intake": "node tests/intake.test.js",
+    "test:data-quality": "node tests/private-data-quality-report.test.js",
     "eval:intake": "node tests/intake-eval.js",
     "test:production": "node tests/production-healthcheck.js",
     "demo": "node tools/demo-server.js",
