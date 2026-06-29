@@ -7537,8 +7537,7 @@
 
   function focusLeadQueueForStatus(status) {
     if (["won", "lost"].includes(status)) {
-      currentLeadFilter = status;
-      if (el.leadStatusFilter) el.leadStatusFilter.value = status;
+      setLeadInboxTab("archive");
       return;
     }
     setLeadInboxTab(leadInboxTabForStatus(status));

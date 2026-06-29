@@ -1442,6 +1442,9 @@ textarea {
 .inbox-tabs button,
 .job-tabs button,
 .insulation-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   min-height: 34px;
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -1673,6 +1676,10 @@ textarea {
 }
 
 .lead-metrics.inbox-filter-cards button {
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 4px;
   min-height: 58px;
 }
 
@@ -1684,6 +1691,10 @@ textarea {
 
 .lead-metrics.inbox-filter-cards strong {
   font-size: 20px;
+}
+
+.lead-metrics.inbox-filter-cards span {
+  margin-top: 0;
 }
 
 .insulation-layout {
