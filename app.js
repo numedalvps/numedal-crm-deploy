@@ -5836,7 +5836,7 @@
     }, { quiet: true });
   }
 
-  async function createOrderFromLead(customerId) {
+  async function createOrderFromLead(customerId, options = {}) {
     const customer = findCustomer(customerId);
     if (!customer) throw new Error("Fant ikke lead/kunde.");
     const note = leadNoteForCustomer(customer);
@@ -5876,6 +5876,16 @@
       note: `${orderTypeLabel(type)} opprettet fra vunnet lead. ${note || ""}`.trim(),
     });
     selectedOrderId = order.id;
+    if (options.bookAfter) {
+      renderAll();
+      openBookingDialog(customerKey(customer), "", {
+        orderId: order.id,
+        type: type === "blaseisolering" ? "blaseisolering" : type,
+        note: orderNote,
+      });
+      setSyncStatus("Jobb opprettet. Velg dato og tid for avtalen.", "ok");
+      return;
+    }
     setView("orders");
     setSyncStatus("Jobb opprettet fra lead.", "ok");
   }
@@ -9267,7 +9277,8 @@
       actions.push(`<button class="secondary" data-lead-set-status="lost" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button" title="Kunden har takket nei eller saken skal avsluttes.">Tapt</button>`);
     }
     if (realCustomer && status === "won") {
-      actions.push(`<button class="order-primary" data-create-order-from-lead="${escapeHtml(key)}" type="button" title="Opprett jobb fra vunnet lead, slik at jobben kan planlegges og senere faktureres.">Opprett jobb</button>`);
+      actions.push(`<button class="order-primary" data-create-order-and-book-from-lead="${escapeHtml(key)}" type="button" title="Opprett jobb fra vunnet lead og åpne kalenderbooking med en gang.">Opprett og book</button>`);
+      actions.push(`<button class="secondary" data-create-order-from-lead="${escapeHtml(key)}" type="button" title="Opprett jobb uten dato hvis tidspunktet ikke er avklart ennå.">Opprett jobb uten dato</button>`);
     }
     if (status === "lost") {
       actions.push(`<button class="secondary" data-lead-set-status="followup" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button" title="Gjenåpne leaden hvis kunden tar kontakt igjen.">Gjenåpne</button>`);
@@ -11255,7 +11266,8 @@
                   <span>${escapeHtml(note || "Ingen notat").slice(0, 140)}</span>
                 </div>
                 <button data-open-lead-entry="${escapeHtml(target)}" type="button">Åpne</button>
-                ${status === "won" ? `<button class="secondary" data-create-order-from-lead="${escapeHtml(key)}" type="button">Opprett jobb</button>` : ""}
+                ${status === "won" ? `<button class="order-primary" data-create-order-and-book-from-lead="${escapeHtml(key)}" type="button">Opprett og book</button>
+                <button class="secondary" data-create-order-from-lead="${escapeHtml(key)}" type="button">Uten dato</button>` : ""}
               </article>
             `;
           }).join("")}
@@ -14442,6 +14454,12 @@
       setView("leads");
       return;
     }
+    const createOrderAndBook = event.target.closest("[data-create-order-and-book-from-lead]");
+    if (createOrderAndBook) {
+      createOrderFromLead(createOrderAndBook.dataset.createOrderAndBookFromLead, { bookAfter: true })
+        .catch((error) => setSyncStatus(error.message || "Klarte ikke opprette og booke jobb.", "error"));
+      return;
+    }
     const createOrder = event.target.closest("[data-create-order-from-lead]");
     if (createOrder) {
       createOrderFromLead(createOrder.dataset.createOrderFromLead)
@@ -14626,6 +14644,12 @@
     if (inactivate) {
       setLeadInactive(inactivate.dataset.inactivateLead)
         .catch((error) => setSyncStatus(error.message || "Klarte ikke sette lead inaktiv.", "error"));
+      return;
+    }
+    const createOrderAndBook = event.target.closest("[data-create-order-and-book-from-lead]");
+    if (createOrderAndBook) {
+      createOrderFromLead(createOrderAndBook.dataset.createOrderAndBookFromLead, { bookAfter: true })
+        .catch((error) => setSyncStatus(error.message || "Klarte ikke opprette og booke jobb.", "error"));
       return;
     }
     const createOrder = event.target.closest("[data-create-order-from-lead]");
