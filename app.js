@@ -8292,10 +8292,10 @@
       </div>
     ` : "";
     const hiddenHtml = hiddenRows.length ? `
-      <details class="website-hidden-submissions">
-        <summary>Skjulte/spam (${hiddenRows.length.toLocaleString("nb-NO")})</summary>
+      <details class="website-hidden-submissions" ${rows.length ? "" : "open"}>
+        <summary>Skjulte/spam (${hiddenRows.length.toLocaleString("nb-NO")}) - gjenåpne eller slett</summary>
         <div class="website-submission-list compact">
-          ${hiddenRows.slice(0, 12).map((row) => {
+          ${hiddenRows.slice(0, 30).map((row) => {
             const status = row.processing_status || "read";
             const date = row.received_at ? formatDate(isoDate(new Date(row.received_at))) : "";
             return `
