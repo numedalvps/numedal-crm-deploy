@@ -5615,6 +5615,49 @@
     });
   }
 
+  function legacyInstallationPrefill(customer) {
+    if (!customer) return {};
+    const serviceDates = [
+      customer.last_service_date,
+      ...(String(customer.service_dates || "").match(/\d{4}-\d{2}-\d{2}/g) || []),
+    ].filter(Boolean).sort();
+    const lastService = serviceDates.at(-1) || "";
+    const intervalText = `${customer.service_interval || ""} ${customer.tags || ""}`;
+    const serviceIntervalMonths = /årlig|arlig|1\s*år|1\s*ar/i.test(intervalText) ? 12 : 24;
+    const fallbackLocation = fallbackCustomerLocation(customer) || {};
+    const hasLocations = customerLocationsForCustomer(customer).length > 0;
+    const notes = [
+      "Opprettet fra gammel importinfo på kundekortet. Kontroller modell, datoer og adresse før lagring.",
+      customer.service_interval ? `Serviceintervall fra import: ${customer.service_interval}` : "",
+      customer.service_dates ? `Tidligere servicedatoer: ${customer.service_dates}` : "",
+    ].filter(Boolean);
+    return {
+      label: "Hovedanlegg",
+      brand: customer.brand || "",
+      model: customer.model_or_note || "",
+      installed_at: customer.first_install_date || "",
+      last_service_at: lastService,
+      next_service_due: customer.next_service_due || addMonthsIsoDate(lastService, serviceIntervalMonths),
+      service_interval_months: serviceIntervalMonths,
+      notes: notes.join("\n"),
+      forceNewLocation: !hasLocations,
+      location_name: fallbackLocation.location_name || "Kundeadresse",
+      address: fallbackLocation.address || "",
+      postal_code: fallbackLocation.postal_code || "",
+      city: fallbackLocation.city || "",
+    };
+  }
+
+  function openInstallationFromButton(button) {
+    if (!button) return;
+    const customerId = button.dataset.newInstallationCustomer || "";
+    const customer = findCustomer(customerId);
+    const prefill = button.dataset.installationPrefill === "legacy"
+      ? legacyInstallationPrefill(customer)
+      : {};
+    openInstallationDialog(customerId, "", Object.keys(prefill).length ? { prefill } : {});
+  }
+
   function handleStartAction(action) {
     if (action === "inbox" || action === "followup") {
       setLeadInboxTab(action === "followup" ? "followup" : "new");
@@ -8133,7 +8176,6 @@
       ${renderServiceHistory(events, customer)}
       ${renderCustomerActivities(customer)}
       ${renderInvoiceList(invoices, customer)}
-      ${renderCustomerLegacyServiceInfo(customer, installations)}
       ${renderNoteSection(customer)}
     `;
   }
@@ -9395,6 +9437,13 @@
             const access = installationAccessLabel(installation, customer);
             const realInstallation = Boolean(installation.id);
             const servicePills = installationServicePills(installation, customer);
+            const installationActions = [];
+            if (isAdmin() && realInstallation) {
+              installationActions.push(`<button data-book-customer="${escapeHtml(key)}" data-book-type="service" data-book-installation="${escapeHtml(installation.id || "")}" type="button" title="Book service på akkurat dette anlegget. Anlegg, adresse og adkomst legges i notatet.">Book service på dette anlegget</button>`);
+              installationActions.push(`<button class="secondary" data-edit-installation="${escapeHtml(installation.id)}" data-installation-customer="${escapeHtml(key)}" type="button">Rediger anlegg</button>`);
+            } else if (isAdmin() && !customer?.is_inactive) {
+              installationActions.push(`<button data-new-installation-customer="${escapeHtml(key)}" data-installation-prefill="legacy" type="button" title="Åpner anleggsdialogen med gammel pumpe-/serviceinfo ferdig utfylt. Ingenting lagres før du trykker Lagre.">Gjør til anlegg</button>`);
+            }
             return `
               <article class="installation-card ${dueKind} ${installation.active === false ? "inactive" : ""}">
                 <div>
@@ -9409,8 +9458,7 @@
                 ${access ? `<small class="access-inline">Adkomst finnes</small>` : ""}
                 ${note ? `<details><summary>Notat / leverandør</summary><p>${escapeHtml(note).replaceAll("\n", "<br>")}</p></details>` : ""}
                 <div class="installation-actions">
-                  ${isAdmin() ? `<button data-book-customer="${escapeHtml(key)}" data-book-type="service" data-book-installation="${escapeHtml(installation.id || "")}" type="button" title="Book service på akkurat dette anlegget. Anlegg, adresse og adkomst legges i notatet.">Book service på dette anlegget</button>` : ""}
-                  ${isAdmin() && realInstallation ? `<button class="secondary" data-edit-installation="${escapeHtml(installation.id)}" data-installation-customer="${escapeHtml(key)}" type="button">Rediger anlegg</button>` : ""}
+                  ${installationActions.join("")}
                 </div>
               </article>
             `;
@@ -9459,7 +9507,6 @@
       ${renderServiceHistory(events, customer)}
       ${renderCustomerActivities(customer)}
       ${renderInvoiceList(invoices, customer)}
-      ${renderCustomerLegacyServiceInfo(customer, installations)}
       ${renderNoteSection(customer)}
     `;
   }
@@ -9559,23 +9606,6 @@
             `;
           }).join("")}
         </div>
-      </section>
-    `;
-  }
-
-  function renderCustomerLegacyServiceInfo(customer, installations) {
-    if ((installations || []).length || !(customer.brand || customer.model_or_note || customer.first_install_date || customer.last_service_date || customer.next_service_due)) return "";
-    return `
-      <section class="detail-section legacy-service-section">
-        <details>
-          <summary>Gammel importinfo</summary>
-          <dl class="facts compact">
-            <div><dt>Merke</dt><dd>${escapeHtml(customer.brand || "Ukjent")}</dd></div>
-            <div><dt>Modell</dt><dd>${escapeHtml(customer.model_or_note || "Ikke registrert")}</dd></div>
-            <div><dt>Installert</dt><dd>${formatDate(customer.first_install_date)}</dd></div>
-            <div><dt>Neste service</dt><dd>${formatDate(nextServiceDueForCustomer(customer))}</dd></div>
-          </dl>
-        </details>
       </section>
     `;
   }
@@ -12498,7 +12528,7 @@
     }
     const newInstallation = event.target.closest("[data-new-installation-customer]");
     if (newInstallation) {
-      openInstallationDialog(newInstallation.dataset.newInstallationCustomer);
+      openInstallationFromButton(newInstallation);
       return;
     }
     const editInstallation = event.target.closest("[data-edit-installation]");
@@ -12652,7 +12682,7 @@
     }
     const newInstallation = event.target.closest("[data-new-installation-customer]");
     if (newInstallation) {
-      openInstallationDialog(newInstallation.dataset.newInstallationCustomer);
+      openInstallationFromButton(newInstallation);
       return;
     }
     const installationFromEvent = event.target.closest("[data-installation-from-event]");
@@ -12920,7 +12950,7 @@
     const newInstallation = event.target.closest("[data-new-installation-customer]");
     if (newInstallation) {
       el.customerQuickDialog.close();
-      openInstallationDialog(newInstallation.dataset.newInstallationCustomer);
+      openInstallationFromButton(newInstallation);
       return;
     }
     const editInstallation = event.target.closest("[data-edit-installation]");
