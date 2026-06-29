@@ -6,9 +6,10 @@
   "scripts": {
     "test:intake": "node tests/intake.test.js",
     "test:data-quality": "node tests/private-data-quality-report.test.js",
+    "test:ui-flow": "node tests/ui-flow.test.js",
     "eval:intake": "node tests/intake-eval.js",
     "test:production": "node tests/production-healthcheck.js",
     "demo": "node tools/demo-server.js",
-    "check": "node --check app.js && node --check supabase-adapter.js && node --check intake-parser.js && node tests/intake.test.js"
+    "check": "node --check app.js && node --check supabase-adapter.js && node --check intake-parser.js && node tests/intake.test.js && node tests/ui-flow.test.js"
   }
 }

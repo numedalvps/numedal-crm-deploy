@@ -7598,18 +7598,43 @@
     ].filter(Boolean).join(" · ") || String(row?.raw_text || row?.extracted_text || "").slice(0, 140);
   }
 
+  function openIntakeRows() {
+    return (intakeItems || []).filter((row) => ["draft", "needs_review", "ready", "failed"].includes(row.status || "needs_review"));
+  }
+
+  function intakeItemSourceKind(row) {
+    const text = normalizeMatch([
+      row?.source_channel,
+      row?.source_subject,
+      row?.raw_text,
+      row?.extracted_text,
+    ].filter(Boolean).join(" "));
+    if (/e-post|e post|epost|email|gmail|mail|innboks/i.test(text)) return "email";
+    if (/nettside|website|webskjema|skjema|contact form|kontaktform|kontaktskjema/i.test(text)) return "website";
+    return "manual";
+  }
+
+  function intakeRowsForInboxTab(tab = currentLeadInboxTab) {
+    const rows = openIntakeRows();
+    if (currentLeadFilter !== "inbox_tab") return [];
+    if (tab === "new") return rows;
+    if (tab === "email") return rows.filter((row) => intakeItemSourceKind(row) === "email");
+    return [];
+  }
+
   function renderIntakeInbox() {
     if (!el.intakeInbox) return;
-    const rows = (intakeItems || []).filter((row) => ["draft", "needs_review", "ready", "failed"].includes(row.status || "needs_review"));
+    const rows = intakeRowsForInboxTab();
     el.intakeInbox.classList.toggle("hidden", !rows.length);
     if (!rows.length) {
       el.intakeInbox.innerHTML = "";
       return;
     }
+    const sourceTitle = currentLeadInboxTab === "email" ? "Utkast fra e-post" : "Utkast fra hurtigregistrering";
     el.intakeInbox.innerHTML = `
       <div class="section-head compact">
         <div>
-          <h3>Utkast fra hurtigregistrering</h3>
+          <h3>${sourceTitle}</h3>
           <p title="Dette er lagrede utkast. Åpne og godkjenn før de blir kunde, lead eller historikk.">Åpne og godkjenn.</p>
         </div>
         <strong>${rows.length.toLocaleString("nb-NO")}</strong>
@@ -8282,22 +8307,26 @@
 
   function renderLeads() {
     if (!el.leadList || !el.leadDetail) return;
-    renderWebsiteSubmissionInbox();
-    renderIntakeInbox();
     const selectedFilter = el.leadStatusFilter?.value || "";
     currentLeadFilter = selectedFilter || (currentLeadFilter === "inbox_tab" || currentLeadFilter === "all" || leadStatuses[currentLeadFilter] ? currentLeadFilter : "inbox_tab");
     if (el.leadStatusFilter && !selectedFilter) el.leadStatusFilter.value = currentLeadFilter;
     currentLeadSearch = el.leadSearch?.value?.trim() || "";
+    renderWebsiteSubmissionInbox();
+    renderIntakeInbox();
     const all = allLeadEntries();
-    if (el.leadFollowupMetric) el.leadFollowupMetric.textContent = all.filter((entry) => leadEntryMatchesInboxTab(entry, "new")).length.toLocaleString("nb-NO");
-    if (el.leadEmailMetric) el.leadEmailMetric.textContent = all.filter((entry) => leadEntryMatchesInboxTab(entry, "email")).length.toLocaleString("nb-NO");
-    if (el.leadWebsiteMetric) el.leadWebsiteMetric.textContent = (openWebsiteSubmissionRows().length + all.filter((entry) => leadEntryMatchesInboxTab(entry, "website")).length).toLocaleString("nb-NO");
+    const openWebsiteCount = openWebsiteSubmissionRows().length;
+    const openIntake = openIntakeRows();
+    const emailIntakeCount = openIntake.filter((row) => intakeItemSourceKind(row) === "email").length;
+    if (el.leadFollowupMetric) el.leadFollowupMetric.textContent = (openWebsiteCount + openIntake.length + all.filter((entry) => leadEntryMatchesInboxTab(entry, "new")).length).toLocaleString("nb-NO");
+    if (el.leadEmailMetric) el.leadEmailMetric.textContent = (emailIntakeCount + all.filter((entry) => leadEntryMatchesInboxTab(entry, "email")).length).toLocaleString("nb-NO");
+    if (el.leadWebsiteMetric) el.leadWebsiteMetric.textContent = (openWebsiteCount + all.filter((entry) => leadEntryMatchesInboxTab(entry, "website")).length).toLocaleString("nb-NO");
     if (el.leadNeedsOfferMetric) el.leadNeedsOfferMetric.textContent = all.filter((entry) => leadEntryMatchesInboxTab(entry, "followup")).length.toLocaleString("nb-NO");
     if (el.leadOfferSentMetric) el.leadOfferSentMetric.textContent = all.filter((entry) => leadStatusForEntry(entry) === "offer_sent").length.toLocaleString("nb-NO");
     if (el.leadLostMetric) el.leadLostMetric.textContent = all.filter((entry) => leadEntryMatchesInboxTab(entry, "archive")).length.toLocaleString("nb-NO");
     syncLeadInboxTabs();
     let list = filteredLeads();
-    if (!list.length && !currentLeadSearch && currentLeadFilter === "inbox_tab" && currentLeadInboxTab === "new" && all.length) {
+    const currentRawInboxCount = websiteSubmissionRowsForInboxTab().length + intakeRowsForInboxTab().length;
+    if (!list.length && !currentRawInboxCount && !currentLeadSearch && currentLeadFilter === "inbox_tab" && currentLeadInboxTab === "new" && all.length) {
       const fallbackTab = ["followup", "website", "email", "archive"].find((tab) => all.some((entry) => leadEntryMatchesInboxTab(entry, tab)));
       if (fallbackTab) {
         setLeadInboxTab(fallbackTab);
@@ -8308,7 +8337,9 @@
     if (!selectedLeadId || !selectedLeadEntry(list)) selectedLeadId = leadEntryKey(list[0]) || "";
     el.leadList.innerHTML = "";
     if (!list.length) {
-      el.leadList.innerHTML = `<div class="empty-state">Ingen henvendelser i dette filteret. Bruk + Ny eller lim inn melding i Innboks.</div>`;
+      el.leadList.innerHTML = currentRawInboxCount
+        ? `<div class="empty-state">Behandle innsendelser eller utkast over. Etter behandling vises de som henvendelse, jobb eller historikk.</div>`
+        : `<div class="empty-state">Ingen henvendelser i dette filteret. Bruk + Ny eller lim inn melding i Innboks.</div>`;
     }
     for (const entry of list.slice(0, 250)) {
       const customer = entry.customer;
@@ -8330,8 +8361,8 @@
 
   function renderWebsiteSubmissionInbox() {
     if (!el.websiteSubmissionInbox) return;
-    const rows = openWebsiteSubmissionRows();
-    const hiddenRows = hiddenWebsiteSubmissionRows();
+    const rows = websiteSubmissionRowsForInboxTab();
+    const hiddenRows = websiteSubmissionHiddenRowsForInboxTab();
     el.websiteSubmissionInbox.classList.toggle("hidden", !rows.length && !hiddenRows.length);
     if (!rows.length && !hiddenRows.length) {
       el.websiteSubmissionInbox.innerHTML = "";
@@ -8428,6 +8459,16 @@
 
   function hiddenWebsiteSubmissionRows() {
     return (websiteSubmissions || []).filter((row) => ["read", "spam", "invalid"].includes(row.processing_status || "new"));
+  }
+
+  function websiteSubmissionRowsForInboxTab(tab = currentLeadInboxTab) {
+    if (currentLeadFilter !== "inbox_tab") return [];
+    return ["new", "website"].includes(tab) ? openWebsiteSubmissionRows() : [];
+  }
+
+  function websiteSubmissionHiddenRowsForInboxTab(tab = currentLeadInboxTab) {
+    if (currentLeadFilter !== "inbox_tab") return [];
+    return tab === "website" ? hiddenWebsiteSubmissionRows() : [];
   }
 
   function websiteSubmissionStatusLabel(status) {
