@@ -2384,6 +2384,17 @@
     `;
   }
 
+  function renderOrderJobMirrorNotice(order, linkedJob) {
+    if (!orderMissingJobMirror({ order, job: linkedJob }) || !store.repairOrderJobMirror || !isAdmin()) return "";
+    return `
+      <section class="detail-section attention compact-warning">
+        <h3>Mangler jobbkobling</h3>
+        <p>Denne eldre jobben mangler teknisk kobling til ny jobbtabell. Opprett kobling før du legger bilder på jobben, fullfører/fakturerer videre eller bruker jobbstatusen som fasit.</p>
+        <button data-repair-order-job="${escapeHtml(order.id)}" type="button" title="Opprett manglende kobling til ny jobbtabell. Kundedata slettes ikke.">Opprett jobbkobling</button>
+      </section>
+    `;
+  }
+
   async function persistAiRegistrationAttachments(links = {}) {
     if (!aiRegistrationAttachments.length || !store.saveCrmAttachment || !store.isConfigured) return [];
     const saved = [];
@@ -9169,6 +9180,7 @@
       </div>
       ${workflowHtml(flow, { title: "Hvor er jobben?" })}
       <p class="context-hint">Jobben er arbeidet som skal gjøres. Avtalen er tidspunktet i kalenderen. Når jobben er utført, havner den i Må faktureres.</p>
+      ${renderOrderJobMirrorNotice(order, linkedJob)}
       <div class="action-row">
         ${orderDetailActionsHtml(order, customer, primaryBooking, effectiveBilling, linkedJob)}
       </div>
