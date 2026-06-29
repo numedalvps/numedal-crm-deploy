@@ -236,6 +236,7 @@
   let orderTitleManuallyEdited = false;
   let completingBookingId = "";
   let completionFollowupBooking = null;
+  let completionAttachmentContext = null;
   let billingDialogBookingId = "";
   let moveDialogBookingId = "";
   let deleteBookingDialogBookingId = "";
@@ -550,6 +551,9 @@
     completionAddPriceLine: document.getElementById("completionAddPriceLine"),
     completionPriceLines: document.getElementById("completionPriceLines"),
     completionPriceTotal: document.getElementById("completionPriceTotal"),
+    completionAttachmentSection: document.getElementById("completionAttachmentSection"),
+    completionAttachments: document.getElementById("completionAttachments"),
+    completionAttachmentList: document.getElementById("completionAttachmentList"),
     completionNote: document.getElementById("completionNote"),
     billingDialog: document.getElementById("billingDialog"),
     billingForm: document.getElementById("billingForm"),
@@ -2360,10 +2364,20 @@
     `;
   }
 
+  function canUploadJobAttachment(customer, linkedJob) {
+    return Boolean(
+      store.isConfigured
+      && store.saveCrmAttachment
+      && customer?.id
+      && linkedJob?.id
+      && (isAdmin() || isTechnicianUser())
+    );
+  }
+
   function renderOrderAttachmentSection(order, customer, linkedJob) {
     const attachments = attachmentsForJob(linkedJob);
     const installation = installationForOrder(order, customer, linkedJob);
-    const canUpload = store.isConfigured && isAdmin() && customer?.id && linkedJob?.id;
+    const canUpload = canUploadJobAttachment(customer, linkedJob);
     const actions = canUpload ? `
       <div class="section-actions">
         <button data-add-job-attachment="${escapeHtml(order.id)}" type="button" title="Last opp bilde eller PDF til akkurat denne jobben.">Legg til bilde/vedlegg</button>
@@ -11397,8 +11411,10 @@
     const type = bookingDisplayType(row);
     const paymentMode = bookingPaymentMode(row);
     const linkedOrder = linkedOrderForBooking(row.id) || findOrder(row.booking.orderId);
+    const linkedJob = linkedOrder ? jobForOrder(linkedOrder) : null;
     const flow = bookingWorkflowState(row, linkedOrder);
-    const installationText = linkedOrder ? orderInstallationText(linkedOrder, row.customer, jobForOrder(linkedOrder)) : "";
+    const installationText = linkedOrder ? orderInstallationText(linkedOrder, row.customer, linkedJob) : "";
+    const attachmentCount = attachmentsForJob(linkedJob).length;
     const paymentActionLabel = row.customer?.pays_cash ? "Betalt" : "Fakturert";
     const paymentActionTitle = row.customer?.pays_cash
       ? "Marker at betaling er mottatt for denne jobben."
@@ -11429,6 +11445,7 @@
       ${workflowInlineHtml(flow)}
       <span class="job-type-pill ${escapeHtml(type)}">${escapeHtml(bookingJobLabel(row))}</span>
       ${installationText ? `<small>${escapeHtml(installationText)}</small>` : ""}
+      ${attachmentCount ? `<small>${attachmentCount.toLocaleString("nb-NO")} bilde(r)/vedlegg</small>` : ""}
       <small>${escapeHtml(addressFor(row.customer) || row.customer.location_tag || row.customer.visit_city || "Adresse mangler")}</small>
       ${accessInfo(row.customer) ? `<small class="access-inline">Kodeboks/nøkkel: ${escapeHtml(accessInfo(row.customer))}</small>` : ""}
       ${overlap ? `<p class="overlap-note">Krasjer med ${escapeHtml(cleanDisplayName(overlap.customer))} kl. ${escapeHtml(bookingTimeText(overlap.booking))}. Flytt en av jobbene.</p>` : ""}
@@ -12722,6 +12739,85 @@
     return String(el.completionPriceLines?.value || "").trim();
   }
 
+  function completionAttachmentFiles() {
+    return Array.from(el.completionAttachments?.files || []);
+  }
+
+  function completionAttachmentContextForRow(row) {
+    const linkedOrder = row ? (linkedOrderForBooking(row.id) || findOrder(row.booking.orderId)) : null;
+    const linkedJob = linkedOrder ? jobForOrder(linkedOrder) : null;
+    return {
+      row,
+      customer: row?.customer || null,
+      order: linkedOrder,
+      job: linkedJob,
+      canUpload: canUploadJobAttachment(row?.customer, linkedJob),
+    };
+  }
+
+  function renderCompletionAttachmentList() {
+    if (!el.completionAttachmentList || !el.completionAttachments) return;
+    const context = completionAttachmentContext || {};
+    const files = completionAttachmentFiles();
+    const existing = attachmentsForJob(context.job);
+    if (!context.customer?.id) {
+      el.completionAttachmentList.innerHTML = `<span>Bildelagring krever lagret kundekort.</span>`;
+      return;
+    }
+    if (!context.job?.id) {
+      el.completionAttachmentList.innerHTML = `<span>Jobben mangler jobbkobling. Opprett jobbkobling før bilder kan lagres på jobben.</span>`;
+      return;
+    }
+    const parts = [];
+    if (existing.length) {
+      parts.push(`<span>${existing.length.toLocaleString("nb-NO")} vedlegg er lagret på jobben fra før.</span>`);
+    }
+    if (files.length) {
+      parts.push(`
+        <ul>
+          ${files.map((file) => `<li>${escapeHtml(file.name || "Vedlegg")} <small>${escapeHtml(attachmentSizeLabel(file.size))}</small></li>`).join("")}
+        </ul>
+      `);
+    } else {
+      parts.push(`<span>Ingen nye filer valgt.</span>`);
+    }
+    el.completionAttachmentList.innerHTML = parts.join("");
+  }
+
+  function setupCompletionAttachmentField(row) {
+    if (!el.completionAttachmentSection || !el.completionAttachments || !el.completionAttachmentList) return;
+    completionAttachmentContext = completionAttachmentContextForRow(row);
+    el.completionAttachments.value = "";
+    const shouldShow = Boolean(store.isConfigured && store.saveCrmAttachment && row?.customer?.id && (isAdmin() || isTechnicianUser()));
+    el.completionAttachmentSection.classList.toggle("hidden", !shouldShow);
+    el.completionAttachments.disabled = !completionAttachmentContext.canUpload;
+    renderCompletionAttachmentList();
+  }
+
+  async function saveCompletionAttachments(row, selectedInstallation, doneDate) {
+    const files = completionAttachmentFiles();
+    if (!files.length) return [];
+    const context = completionAttachmentContextForRow(row);
+    if (!context.customer?.id) throw new Error("Kundekortet må være lagret før bilder kan lagres.");
+    if (!context.job?.id) throw new Error("Jobben mangler jobbkobling. Opprett jobbkobling før bilder kan lagres på jobben.");
+    const installationId = selectedInstallation?.id || installationIdForOrder(context.order, context.job) || null;
+    const saved = [];
+    setSyncStatus(`Laster opp ${files.length.toLocaleString("nb-NO")} vedlegg...`, "");
+    for (let index = 0; index < files.length; index += 1) {
+      const rowAttachment = await store.saveCrmAttachment(files[index], {
+        customer_id: context.customer.id,
+        job_id: context.job.id,
+        installation_id: installationId,
+        source_kind: "jobb_fullforing",
+        note: `Lastet opp ved fullføring ${formatDate(doneDate)}.`,
+        source_order: index,
+      });
+      saved.push(rowAttachment);
+    }
+    replaceCrmAttachments(saved);
+    return saved;
+  }
+
   function openCompletionDialog(id) {
     const row = bookingRows().find((item) => item.id === id);
     if (!row) return;
@@ -12749,6 +12845,7 @@
     syncCompletionIntervalFromInstallation();
     setupCompletionPaymentFields(row);
     setupCompletionPriceFields(row);
+    setupCompletionAttachmentField(row);
     el.completionNote.value = "";
     syncCompletionFields();
     el.completionDialog.showModal();
@@ -13313,9 +13410,11 @@
     const selectedInstallation = selectedInstallationId
       ? installationsForCustomer(customer).find((installation) => String(installation.id || "") === String(selectedInstallationId))
       : null;
+    const savedCompletionAttachments = await saveCompletionAttachments(row, selectedInstallation, doneDate);
     const eventLines = [
       `${bookingJobLabel(row)} fullført ${formatDate(doneDate)}.`,
       selectedInstallation ? `Anlegg: ${installationDisplayName(selectedInstallation)}.` : "",
+      savedCompletionAttachments.length ? `${savedCompletionAttachments.length.toLocaleString("nb-NO")} bilder/vedlegg lagret på jobben.` : "",
       paymentDone ? (customer.pays_cash ? "Betaling markert mottatt ved fullføring." : "Faktura markert ferdig/sendt ved fullføring.") : "",
       priceBasis ? `Prisgrunnlag/tillegg:\n${priceBasis}` : "",
       userNote,
@@ -14610,10 +14709,12 @@
   el.completionInstallation?.addEventListener("change", () => {
     syncCompletionIntervalFromInstallation();
     syncCompletionFields();
+    renderCompletionAttachmentList();
   });
   el.completionPricePreset?.addEventListener("change", syncCompletionPriceQuantity);
   el.completionAddPriceLine?.addEventListener("click", addCompletionPriceLine);
   el.completionPriceLines?.addEventListener("input", renderCompletionPriceTotal);
+  el.completionAttachments?.addEventListener("change", renderCompletionAttachmentList);
   el.closeCompletionDialog.addEventListener("click", () => el.completionDialog.close());
   el.cancelCompletionButton.addEventListener("click", () => el.completionDialog.close());
   el.completionForm.addEventListener("submit", async (event) => {

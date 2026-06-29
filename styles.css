@@ -4775,6 +4775,36 @@ textarea {
   font-weight: 800;
 }
 
+.completion-attachment-section {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fff;
+}
+
+.completion-attachment-list {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.completion-attachment-list ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.completion-attachment-list small {
+  color: var(--muted);
+  font-weight: 700;
+}
+
 @media (max-width: 640px) {
   .completion-price-controls {
     grid-template-columns: 1fr;

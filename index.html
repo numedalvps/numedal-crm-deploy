@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260629-27" />
+    <link rel="stylesheet" href="./styles.css?v=20260629-28" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -1007,6 +1007,12 @@
           <textarea id="completionPriceLines" rows="4" placeholder="Tillegg eller prisgrunnlag som bør kontrolleres før faktura."></textarea>
           <div id="completionPriceTotal" class="completion-price-total"></div>
         </details>
+        <section id="completionAttachmentSection" class="completion-attachment-section hidden">
+          <label>Bilder / vedlegg
+            <input id="completionAttachments" type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif,application/pdf" multiple />
+          </label>
+          <div id="completionAttachmentList" class="completion-attachment-list"></div>
+        </section>
         <label>Notat<textarea id="completionNote" rows="3"></textarea></label>
         <div class="modal-actions">
           <button class="secondary" id="cancelCompletionButton" type="button">Avbryt</button>
@@ -1085,7 +1091,7 @@
     <script src="./supabase-config.js?v=20260629-08"></script>
     <script src="./supabase-adapter.js?v=20260629-08"></script>
     <script src="./intake-parser.js?v=20260629-08"></script>
-    <script src="./app.js?v=20260629-27"></script>
+    <script src="./app.js?v=20260629-28"></script>
   </body>
 </html>
 
