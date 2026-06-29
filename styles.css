@@ -3392,8 +3392,17 @@ textarea {
   left: 0;
   right: 0;
   display: none;
-  border-top: 1px solid rgba(245, 158, 11, 0.52);
+  border-top: 1px solid rgba(245, 158, 11, 0.28);
   background: rgba(255, 247, 237, 0.54);
+}
+
+.timeline-drop-zone.hour {
+  border-top-color: rgba(245, 158, 11, 0.62);
+}
+
+.timeline-drop-zone.half {
+  border-top-style: dashed;
+  border-top-color: rgba(245, 158, 11, 0.44);
 }
 
 .planning-day.drag-over .timeline-drop-zone {
@@ -3405,6 +3414,7 @@ textarea {
   position: absolute;
   top: 3px;
   right: 4px;
+  display: none;
   border-radius: 999px;
   padding: 2px 6px;
   background: rgba(255, 255, 255, 0.92);
@@ -3417,6 +3427,11 @@ textarea {
 .timeline-drop-zone:hover {
   background: rgba(255, 237, 213, 0.88);
   box-shadow: inset 0 0 0 2px rgba(245, 158, 11, 0.35);
+}
+
+.timeline-drop-zone.active span,
+.timeline-drop-zone:hover span {
+  display: block;
 }
 
 .timeline-event {

@@ -9907,7 +9907,7 @@
           ${today ? `<small>I dag</small>` : ""}
           <em>${dayRows.length} jobb${dayRows.length === 1 ? "" : "er"}</em>
         </div>
-        <div class="drop-hint">Slipp i tidslinjen for klokkeslett, eller over en jobb for før/etter.</div>
+        <div class="drop-hint">Slipp i tidslinjen for klokkeslett i 15-minutters steg, eller over en jobb for før/etter.</div>
         ${planningDayTimeline(dayRows, dayIso)}
         <div class="day-jobs"></div>
       `;
@@ -9973,15 +9973,15 @@
   function planningTimelineDropZones(dayIso, workStart, workEnd) {
     const workSpan = workEnd - workStart;
     const zones = [];
-    for (let hour = Math.floor(workStart / 60); hour < Math.ceil(workEnd / 60); hour += 1) {
-      const minutes = hour * 60;
+    for (let minutes = workStart; minutes < workEnd; minutes += 15) {
       if (minutes < workStart || minutes >= workEnd) continue;
       const top = ((minutes - workStart) / workSpan) * 100;
-      const height = (60 / workSpan) * 100;
-      const label = `${String(hour).padStart(2, "0")}:00`;
+      const height = (15 / workSpan) * 100;
+      const label = timeFromMinutes(minutes);
+      const marker = minutes % 60 === 0 ? "hour" : minutes % 30 === 0 ? "half" : "quarter";
       zones.push(`
         <div
-          class="timeline-drop-zone"
+          class="timeline-drop-zone ${marker}"
           data-planning-date="${escapeHtml(dayIso)}"
           data-planning-time="${label}"
           style="top:${top.toFixed(2)}%;height:${height.toFixed(2)}%"
@@ -11678,7 +11678,7 @@
       const workStart = minutesFromTime("08:00");
       const workEnd = minutesFromTime("18:00");
       const minutes = workStart + ratio * (workEnd - workStart);
-      const time = timeFromMinutes(clampPlanningMinutes(Math.round(minutes / 60) * 60));
+      const time = timeFromMinutes(clampPlanningMinutes(minutes));
       return { time, label: `kl. ${time}` };
     }
     return planningFallbackDropPlacement(day?.dataset?.planningDate, draggedRow);
