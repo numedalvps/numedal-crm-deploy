@@ -287,6 +287,49 @@
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
   }
 
+  function safeAttachmentFilename(value, fallback = "vedlegg") {
+    const text = String(value || fallback)
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/æ/g, "ae")
+      .replace(/ø/g, "o")
+      .replace(/å/g, "a")
+      .replace(/Æ/g, "AE")
+      .replace(/Ø/g, "O")
+      .replace(/Å/g, "A")
+      .replace(/[^a-zA-Z0-9._-]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 120);
+    return text || fallback;
+  }
+
+  function attachmentExtension(file) {
+    const fromName = String(file?.name || "").match(/\.([a-z0-9]{2,8})$/i)?.[1];
+    if (fromName) return fromName.toLowerCase();
+    const type = String(file?.type || "").toLowerCase();
+    if (type === "image/jpeg") return "jpg";
+    if (type === "image/png") return "png";
+    if (type === "image/webp") return "webp";
+    if (type === "image/heic") return "heic";
+    if (type === "image/heif") return "heif";
+    if (type === "application/pdf") return "pdf";
+    return "bin";
+  }
+
+  function randomId() {
+    if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+    return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+
+  function attachmentPath(file, links = {}) {
+    const date = localIsoDate(new Date());
+    const owner = links.customer_id || links.customerId || links.lead_id || links.leadId || links.intake_id || links.intakeId || "unlinked";
+    const filename = safeAttachmentFilename(file?.name || `vedlegg.${attachmentExtension(file)}`);
+    const hasExtension = /\.[a-z0-9]{2,8}$/i.test(filename);
+    const finalName = hasExtension ? filename : `${filename}.${attachmentExtension(file)}`;
+    return `${safeAttachmentFilename(owner, "unlinked")}/${date}/${randomId()}-${finalName}`;
+  }
+
   function jobTypeFor(value) {
     const type = String(value || "service").toLowerCase();
     if (type === "servicearbeid") return "reparasjon";
@@ -601,6 +644,17 @@
     );
   }
 
+  function isOptionalCrmAttachmentsError(error) {
+    return error && (
+      error.code === "42P01"
+      || error.code === "42501"
+      || /relation .* does not exist/i.test(error.message || "")
+      || /Could not find the table/i.test(error.message || "")
+      || /permission denied for table crm_attachments/i.test(error.message || "")
+      || /crm_attachments/i.test(error.message || "") && /schema cache/i.test(error.message || "")
+    );
+  }
+
   function isOptionalSettingsError(error) {
     return error && (
       error.code === "42P01"
@@ -738,6 +792,7 @@
         { data: websiteSubmissionRows, error: websiteSubmissionError },
         { data: profileRows, error: profileError },
         intakeResult,
+        attachmentResult,
         settingsResult,
       ] = await Promise.all([
         fetchAllRows(() => supabase.from("customers").select("*").order("name")),
@@ -755,6 +810,7 @@
         supabase.from("website_submissions").select("*").order("received_at", { ascending: false }).limit(200),
         supabase.from("profiles").select("*").order("display_name"),
         supabase.from("intake_items").select("*").in("status", ["draft", "needs_review", "ready", "failed"]).order("created_at", { ascending: false }).limit(100),
+        supabase.from("crm_attachments").select("*").is("deleted_at", null).order("created_at", { ascending: false }).limit(2000),
         supabase.from("crm_settings").select("*"),
       ]);
       if (customerError) throw customerError;
@@ -772,6 +828,7 @@
       if (websiteSubmissionError) throw websiteSubmissionError;
       if (profileError) throw profileError;
       if (intakeResult.error && !isOptionalIntakeError(intakeResult.error)) throw intakeResult.error;
+      if (attachmentResult.error && !isOptionalCrmAttachmentsError(attachmentResult.error)) throw attachmentResult.error;
       if (settingsResult.error && !isOptionalSettingsError(settingsResult.error)) throw settingsResult.error;
       return {
         customers: (customerRows || []).map(customerFromDb),
@@ -793,6 +850,7 @@
         websiteSubmissions: websiteSubmissionRows || [],
         profiles: profileRows || [],
         intakeItems: intakeResult.error ? [] : intakeResult.data || [],
+        crmAttachments: attachmentResult.error ? [] : attachmentResult.data || [],
         crmSettings: settingsResult.error
           ? {}
           : Object.fromEntries((settingsResult.data || []).map((row) => [row.key, row.value])),
@@ -1290,6 +1348,7 @@
         model: values?.model || null,
         note: values?.note || null,
         keepOriginal: Boolean(values?.keepOriginal),
+        attachment_count: Number(values?.attachment_count || values?.attachmentCount || 0),
       };
       const { data, error } = await supabase
         .from("intake_items")
@@ -1336,6 +1395,88 @@
         .single();
       if (error) throw error;
       return data;
+    },
+    async saveCrmAttachment(file, links = {}) {
+      const supabase = await requireClient();
+      if (!file) throw new Error("Mangler fil.");
+      const allowed = ["image/png", "image/jpeg", "image/webp", "image/heic", "image/heif", "application/pdf"];
+      if (!allowed.includes(file.type)) throw new Error(`Filtypen ${file.type || "ukjent"} støttes ikke som CRM-vedlegg.`);
+      if (file.size > 10 * 1024 * 1024) throw new Error("Vedlegget er over 10 MB.");
+      const customerId = isUuid(links.customer_id || links.customerId) ? (links.customer_id || links.customerId) : null;
+      const leadId = isUuid(links.lead_id || links.leadId) ? (links.lead_id || links.leadId) : null;
+      const installationId = isUuid(links.installation_id || links.installationId) ? (links.installation_id || links.installationId) : null;
+      const jobId = isUuid(links.job_id || links.jobId) ? (links.job_id || links.jobId) : null;
+      const intakeId = isUuid(links.intake_id || links.intakeId) ? (links.intake_id || links.intakeId) : null;
+      if (!customerId && !leadId && !installationId && !jobId && !intakeId) {
+        throw new Error("Vedlegget må kobles til innboks, kunde, lead, jobb eller anlegg.");
+      }
+      const path = attachmentPath(file, {
+        customer_id: customerId,
+        lead_id: leadId,
+        intake_id: intakeId,
+      });
+      const { error: uploadError } = await supabase.storage
+        .from("crm-attachments")
+        .upload(path, file, {
+          cacheControl: "3600",
+          contentType: file.type || "application/octet-stream",
+          upsert: false,
+        });
+      if (uploadError) throw uploadError;
+      const row = {
+        customer_id: customerId,
+        lead_id: leadId,
+        installation_id: installationId,
+        job_id: jobId,
+        intake_id: intakeId,
+        source_kind: links.source_kind || links.sourceKind || "manual",
+        title: links.title || file.name || "Vedlegg",
+        note: links.note || null,
+        storage_bucket: "crm-attachments",
+        storage_path: path,
+        original_filename: file.name || null,
+        mime_type: file.type || null,
+        size_bytes: file.size || null,
+        source_order: Number(links.source_order ?? links.sourceOrder ?? 0) || 0,
+      };
+      const { data, error } = await supabase
+        .from("crm_attachments")
+        .insert(row)
+        .select("*")
+        .single();
+      if (error) {
+        await supabase.storage.from("crm-attachments").remove([path]).catch(() => {});
+        throw error;
+      }
+      return data;
+    },
+    async linkCrmAttachments(patch = {}) {
+      const supabase = await requireClient();
+      const intakeId = patch.intake_id || patch.intakeId;
+      if (!isUuid(intakeId)) return [];
+      const dbPatch = {};
+      if ("customer_id" in patch || "customerId" in patch) dbPatch.customer_id = isUuid(patch.customer_id || patch.customerId) ? (patch.customer_id || patch.customerId) : null;
+      if ("lead_id" in patch || "leadId" in patch) dbPatch.lead_id = isUuid(patch.lead_id || patch.leadId) ? (patch.lead_id || patch.leadId) : null;
+      if ("installation_id" in patch || "installationId" in patch) dbPatch.installation_id = isUuid(patch.installation_id || patch.installationId) ? (patch.installation_id || patch.installationId) : null;
+      if ("job_id" in patch || "jobId" in patch) dbPatch.job_id = isUuid(patch.job_id || patch.jobId) ? (patch.job_id || patch.jobId) : null;
+      if (!Object.keys(dbPatch).length) return [];
+      const { data, error } = await supabase
+        .from("crm_attachments")
+        .update(dbPatch)
+        .eq("intake_id", intakeId)
+        .is("deleted_at", null)
+        .select("*");
+      if (error) throw error;
+      return data || [];
+    },
+    async attachmentUrl(attachment) {
+      const supabase = await requireClient();
+      const bucket = attachment?.storage_bucket || "crm-attachments";
+      const path = attachment?.storage_path || "";
+      if (!path) throw new Error("Vedlegget mangler lagringssti.");
+      const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, 60 * 10);
+      if (error) throw error;
+      return data?.signedUrl || "";
     },
     async discardIntakeItem(id) {
       return this.updateIntakeItem(id, { status: "discarded" });

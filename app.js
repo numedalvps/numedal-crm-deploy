@@ -215,6 +215,7 @@
   let appointments = [];
   let websiteSubmissions = [];
   let intakeItems = [];
+  let crmAttachments = [];
   let profiles = [];
   let crmSettings = {};
   let customerLocationsByCustomer = new Map();
@@ -223,6 +224,10 @@
   let serviceEventsByCustomer = new Map();
   let installationsByCustomer = new Map();
   let accessNotesByCustomer = new Map();
+  let crmAttachmentsByCustomer = new Map();
+  let crmAttachmentsByLead = new Map();
+  let crmAttachmentsByInstallation = new Map();
+  let crmAttachmentsByIntake = new Map();
   let bookingSelectedCustomerId = "";
   let bookingPendingOrderId = "";
   let editingOrderId = "";
@@ -2077,6 +2082,12 @@
           <p title="Appen foreslår treff, men du velger selv riktig kunde før lagring.">Velg ved treff.</p>
           <div id="aiRegistrationSelectedCustomer" class="ai-selected-customer"></div>
           <div id="aiRegistrationCandidates" class="ai-candidate-list"></div>
+          ${aiRegistrationDraft.intakeId ? `
+            <div class="ai-stored-attachments">
+              <h3>Vedlegg</h3>
+              ${crmAttachmentListHtml(attachmentsForIntake(aiRegistrationDraft.intakeId), { compact: true, empty: "Ingen lagrede vedlegg på utkastet." })}
+            </div>
+          ` : ""}
           <details class="ai-original-source">
             <summary>Originaltekst</summary>
             <pre>${escapeHtml(aiRegistrationDraft.raw || "")}</pre>
@@ -2154,7 +2165,14 @@
           customer_id: aiRegistrationSelectedCustomerId || null,
           source_kind: aiRegistrationDraft.analysis?.source?.kind || "pasted_text",
           source_channel: "crm_hurtigregistrering",
+          attachment_count: aiRegistrationAttachments.length,
         });
+    await persistAiRegistrationAttachments({
+      intake_id: saved.id,
+      customer_id: aiRegistrationSelectedCustomerId || null,
+      source_kind: "hurtigregistrering",
+      note: "Vedlagt CRM-innboksutkast.",
+    });
     intakeItems = [saved, ...intakeItems.filter((row) => row.id !== saved.id)];
     aiRegistrationDraft.intakeId = saved.id;
     renderDashboard();
@@ -2182,7 +2200,7 @@
         <div>
           <strong>${escapeHtml(item.name || `Skjermbilde ${index + 1}`)}</strong>
           <span>${escapeHtml(item.type || "bilde")} · ${Math.round((item.size || 0) / 1024).toLocaleString("nb-NO")} kB</span>
-          <small>Bildeanalyse/OCR kommer i serverfasen. Legg gjerne inn tekst manuelt foreløpig.</small>
+          <small>Lagres som privat CRM-vedlegg når du lagrer i innboks eller på kunde/lead.</small>
         </div>
         <button data-remove-ai-attachment="${index}" type="button" title="Fjern dette bildet">Fjern</button>
       </article>
@@ -2211,6 +2229,274 @@
       });
     }
     renderAiRegistrationAttachments();
+  }
+
+  function attachmentFileKind(attachment) {
+    const type = String(attachment?.mime_type || attachment?.type || "").toLowerCase();
+    if (type.startsWith("image/")) return "Bilde";
+    if (type === "application/pdf") return "PDF";
+    return "Vedlegg";
+  }
+
+  function attachmentSizeLabel(bytes) {
+    const size = Number(bytes || 0);
+    if (!size) return "";
+    if (size >= 1024 * 1024) return `${(size / 1024 / 1024).toLocaleString("nb-NO", { maximumFractionDigits: 1 })} MB`;
+    return `${Math.max(1, Math.round(size / 1024)).toLocaleString("nb-NO")} kB`;
+  }
+
+  function attachmentTitle(attachment, index = 0) {
+    return attachment?.title || attachment?.original_filename || `Vedlegg ${index + 1}`;
+  }
+
+  function attachmentsForCustomer(customer) {
+    const key = customer?.id || customerKey(customer);
+    return key ? (crmAttachmentsByCustomer.get(String(key)) || []) : [];
+  }
+
+  function attachmentsForLead(entry, customer) {
+    const leadId = entry?.lead?.id || "";
+    if (leadId) return crmAttachmentsByLead.get(String(leadId)) || [];
+    return attachmentsForCustomer(customer);
+  }
+
+  function attachmentsForInstallation(installation) {
+    return installation?.id ? (crmAttachmentsByInstallation.get(String(installation.id)) || []) : [];
+  }
+
+  function findInstallationById(id) {
+    const wanted = String(id || "");
+    if (!wanted) return null;
+    for (const list of installationsByCustomer.values()) {
+      const found = (list || []).find((installation) => String(installation.id || "") === wanted);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  function attachmentsForIntake(id) {
+    return id ? (crmAttachmentsByIntake.get(String(id)) || []) : [];
+  }
+
+  function crmAttachmentListHtml(attachments, options = {}) {
+    const rows = (attachments || []).slice(0, options.limit || 8);
+    if (!rows.length) {
+      return options.empty ? `<div class="empty-state">${escapeHtml(options.empty)}</div>` : "";
+    }
+    return `
+      <div class="crm-attachment-list ${options.compact ? "compact" : ""}">
+        ${rows.map((attachment, index) => `
+          <article>
+            <div class="attachment-icon" aria-hidden="true">${attachmentFileKind(attachment) === "Bilde" ? "IMG" : "PDF"}</div>
+            <div>
+              <strong>${escapeHtml(attachmentTitle(attachment, index))}</strong>
+              <span>${escapeHtml([attachmentFileKind(attachment), attachmentSizeLabel(attachment.size_bytes), formatDate(isoDate(new Date(attachment.created_at || Date.now())))].filter(Boolean).join(" · "))}</span>
+              ${attachment.note ? `<small>${escapeHtml(attachment.note)}</small>` : ""}
+            </div>
+            <button data-open-crm-attachment="${escapeHtml(attachment.id)}" type="button" title="Åpne vedlegget i en tidsbegrenset privat lenke.">Åpne</button>
+          </article>
+        `).join("")}
+      </div>
+    `;
+  }
+
+  function renderCustomerAttachmentSection(customer) {
+    const key = customerKey(customer);
+    const attachments = attachmentsForCustomer(customer);
+    const actions = store.isConfigured && isAdmin() && customer?.id ? `
+      <div class="section-actions">
+        <button data-add-customer-attachment="${escapeHtml(key)}" type="button" title="Last opp bilde eller PDF til kundekortet.">Legg til bilde/vedlegg</button>
+      </div>
+    ` : "";
+    return `
+      <section class="detail-section">
+        <div class="section-title-row">
+          <h3>Bilder og vedlegg</h3>
+          ${actions}
+        </div>
+        ${crmAttachmentListHtml(attachments, { empty: "Ingen bilder eller vedlegg lagret på kundekortet ennå." })}
+      </section>
+    `;
+  }
+
+  function renderLeadAttachmentSection(entry, customer, leadTarget) {
+    const attachments = attachmentsForLead(entry, customer);
+    const leadId = entry?.lead?.id || "";
+    const key = customerKey(customer);
+    const actions = store.isConfigured && isAdmin() && (leadId || customer?.id) ? `
+      <div class="section-actions">
+        <button data-add-lead-attachment="${escapeHtml(leadTarget || key)}" type="button" title="Last opp bilde eller PDF på denne leaden/saken.">Legg til bilde/vedlegg</button>
+      </div>
+    ` : "";
+    return `
+      <section class="detail-section">
+        <div class="section-title-row">
+          <h3>Bilder og vedlegg</h3>
+          ${actions}
+        </div>
+        ${crmAttachmentListHtml(attachments, { empty: leadId ? "Ingen bilder lagret på denne saken ennå." : "Ingen bilder lagret på kundekortet ennå." })}
+      </section>
+    `;
+  }
+
+  function renderInstallationAttachmentBlock(customer, installation) {
+    if (!installation?.id) return "";
+    const attachments = attachmentsForInstallation(installation);
+    const key = customerKey(customer);
+    return `
+      <div class="installation-attachments">
+        <div>
+          <strong>Bilder / vedlegg</strong>
+          <span>${attachments.length ? `${attachments.length.toLocaleString("nb-NO")} lagret` : "Ingen lagret"}</span>
+        </div>
+        ${crmAttachmentListHtml(attachments, { compact: true, limit: 3 })}
+        ${store.isConfigured && isAdmin() && customer?.id ? `<button class="secondary" data-add-installation-attachment="${escapeHtml(installation.id)}" data-attachment-customer="${escapeHtml(key)}" type="button" title="Last opp bilde på akkurat dette anlegget.">Legg bilde til anlegg</button>` : ""}
+      </div>
+    `;
+  }
+
+  async function persistAiRegistrationAttachments(links = {}) {
+    if (!aiRegistrationAttachments.length || !store.saveCrmAttachment || !store.isConfigured) return [];
+    const saved = [];
+    for (let index = 0; index < aiRegistrationAttachments.length; index += 1) {
+      const item = aiRegistrationAttachments[index];
+      if (item.savedCrmAttachmentId) continue;
+      const row = await store.saveCrmAttachment(item.file, {
+        ...links,
+        title: item.name || `Skjermbilde ${index + 1}`,
+        note: links.note || "Vedlagt hurtigregistrering.",
+        source_kind: links.source_kind || "hurtigregistrering",
+        source_order: index,
+      });
+      item.savedCrmAttachmentId = row.id;
+      saved.push(row);
+    }
+    replaceCrmAttachments(saved);
+    return saved;
+  }
+
+  async function linkStoredIntakeAttachments(intakeId, links = {}) {
+    if (!intakeId || !store.linkCrmAttachments) return [];
+    const updated = await store.linkCrmAttachments({
+      intake_id: intakeId,
+      ...links,
+    });
+    replaceCrmAttachments(updated);
+    return updated;
+  }
+
+  function promptCrmAttachmentUpload(context = {}) {
+    if (!store.isConfigured || !store.saveCrmAttachment) {
+      setSyncStatus("Bildeopplasting krever oppdatert Supabase-lagring.", "error");
+      return;
+    }
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/png,image/jpeg,image/webp,image/heic,image/heif,application/pdf";
+    input.multiple = true;
+    input.addEventListener("change", () => {
+      uploadCrmAttachmentFiles(input.files, context)
+        .catch((error) => setSyncStatus(error.message || "Klarte ikke laste opp vedlegg.", "error"))
+        .finally(() => input.remove());
+    });
+    document.body.appendChild(input);
+    input.click();
+  }
+
+  async function uploadCrmAttachmentFiles(files, context = {}) {
+    const incoming = Array.from(files || []).slice(0, 8);
+    if (!incoming.length) return;
+    const saved = [];
+    setSyncStatus(`Laster opp ${incoming.length.toLocaleString("nb-NO")} vedlegg...`, "");
+    for (let index = 0; index < incoming.length; index += 1) {
+      const row = await store.saveCrmAttachment(incoming[index], {
+        ...context,
+        source_order: index,
+      });
+      saved.push(row);
+    }
+    replaceCrmAttachments(saved);
+    renderAll();
+    setSyncStatus(`${saved.length.toLocaleString("nb-NO")} vedlegg lagret.`, "ok");
+  }
+
+  async function openCrmAttachment(id, previewWindow = null) {
+    const attachment = crmAttachments.find((item) => String(item.id) === String(id));
+    if (!attachment) throw new Error("Fant ikke vedlegget.");
+    if (!store.attachmentUrl) throw new Error("Privat visningslenke er ikke tilgjengelig.");
+    const url = await store.attachmentUrl(attachment);
+    if (!url) throw new Error("Klarte ikke lage visningslenke.");
+    if (previewWindow && !previewWindow.closed) {
+      previewWindow.location.href = url;
+      return;
+    }
+    window.open(url, "_blank", "noopener");
+  }
+
+  function handleCrmAttachmentClick(event) {
+    const openAttachment = event.target.closest("[data-open-crm-attachment]");
+    if (openAttachment) {
+      const previewWindow = window.open("about:blank", "_blank");
+      if (previewWindow) {
+        previewWindow.opener = null;
+        previewWindow.document.title = "Åpner vedlegg";
+        previewWindow.document.body.textContent = "Åpner privat CRM-vedlegg...";
+      }
+      openCrmAttachment(openAttachment.dataset.openCrmAttachment, previewWindow)
+        .catch((error) => {
+          if (previewWindow && !previewWindow.closed) previewWindow.close();
+          setSyncStatus(error.message || "Klarte ikke åpne vedlegg.", "error");
+        });
+      return true;
+    }
+    const addCustomer = event.target.closest("[data-add-customer-attachment]");
+    if (addCustomer) {
+      const customer = findCustomer(addCustomer.dataset.addCustomerAttachment);
+      if (!customer?.id) {
+        setSyncStatus("Kundekortet må være lagret i databasen før bilder kan lastes opp.", "error");
+        return true;
+      }
+      promptCrmAttachmentUpload({
+        customer_id: customer.id,
+        source_kind: "kundekort",
+        note: "Lastet opp fra kundekort.",
+      });
+      return true;
+    }
+    const addLead = event.target.closest("[data-add-lead-attachment]");
+    if (addLead) {
+      const entry = leadEntryForTarget(addLead.dataset.addLeadAttachment);
+      const customer = entry?.customer ? (findCustomer(leadEntryCustomerKey(entry)) || entry.customer) : null;
+      const leadId = entry?.lead?.id || null;
+      if (!customer?.id && !leadId) {
+        setSyncStatus("Leaden må være lagret i databasen før bilder kan lastes opp.", "error");
+        return true;
+      }
+      promptCrmAttachmentUpload({
+        customer_id: customer?.id || null,
+        lead_id: leadId,
+        source_kind: "lead",
+        note: "Lastet opp fra lead/salgsmulighet.",
+      });
+      return true;
+    }
+    const addInstallation = event.target.closest("[data-add-installation-attachment]");
+    if (addInstallation) {
+      const customer = findCustomer(addInstallation.dataset.attachmentCustomer);
+      const installation = findInstallationById(addInstallation.dataset.addInstallationAttachment);
+      if (!customer?.id || !installation?.id) {
+        setSyncStatus("Anlegget må være lagret i databasen før bilder kan lastes opp.", "error");
+        return true;
+      }
+      promptCrmAttachmentUpload({
+        customer_id: customer.id,
+        installation_id: installation.id,
+        source_kind: "anlegg",
+        note: "Lastet opp på varmepumpe/anlegg.",
+      });
+      return true;
+    }
+    return false;
   }
 
   async function analyzeAiRegistrationText(text) {
@@ -2245,14 +2531,39 @@
   async function parseAiRegistrationInput() {
     const text = el.aiRegistrationInput?.value || "";
     if (!text.trim()) {
+      if (aiRegistrationAttachments.length) {
+        const placeholder = `${weekdayDate(isoDate(new Date()), { long: true })}: Bildevedlegg uten tekst. Fyll inn kundeinfo manuelt ved behandling.`;
+        aiRegistrationDraft = parseAiRegistrationText(placeholder, null);
+        aiRegistrationDraft = {
+          ...aiRegistrationDraft,
+          action: "create_customer",
+          type: "lead",
+          name: "",
+          phone: "",
+          email: "",
+          street: "",
+          zip: "",
+          city: "",
+          tags: "Bildevedlegg, Må kontaktes",
+          brand: "",
+          model: "",
+          note: placeholder,
+          raw: placeholder,
+          analysis: {
+            parser: "image_attachment_placeholder",
+            warnings: [{ code: "image_only", message: "Bilde er lagt ved. Fyll inn kundeinfo før du lagrer som kunde eller lead.", severity: "info" }],
+          },
+        };
+        renderAiRegistrationDraft();
+        showAiRegistrationMessage("Bildeutkast klart. Lagre i CRM-innboks, eller fyll inn kundeinfo manuelt først.", "ok");
+        setSyncStatus("Bildeutkast klart for CRM-innboks.", "ok");
+        return;
+      }
       if (el.aiRegistrationDraft) {
         el.aiRegistrationDraft.classList.remove("hidden");
-        const imageNote = aiRegistrationAttachments.length
-          ? "Bilde er lagt ved, men OCR/bildeanalyse krever server-AI i neste fase. Lim inn tekst eller fyll ut manuelt foreløpig."
-          : "Lim inn SMS/e-post før du lager forslag.";
-        el.aiRegistrationDraft.innerHTML = `<div id="aiRegistrationMessage" class="dialog-message error">${escapeHtml(imageNote)}</div>`;
+        el.aiRegistrationDraft.innerHTML = `<div id="aiRegistrationMessage" class="dialog-message error">Lim inn SMS/e-post før du lager forslag.</div>`;
       }
-      setSyncStatus(aiRegistrationAttachments.length ? "Bilde er lagt ved, men OCR er ikke aktivert ennå." : "Lim inn SMS/e-post før du lager forslag.", "error");
+      setSyncStatus("Lim inn SMS/e-post før du lager forslag.", "error");
       return;
     }
     try {
@@ -2360,6 +2671,15 @@
       });
       leads.unshift(savedLead);
       selectedLeadId = `lead:${savedLead.id}`;
+      if (sourceIntakeId) {
+        await linkStoredIntakeAttachments(sourceIntakeId, { lead_id: savedLead.id });
+      } else {
+        await persistAiRegistrationAttachments({
+          lead_id: savedLead.id,
+          source_kind: "hurtigregistrering",
+          note: "Vedlagt lead fra hurtigregistrering.",
+        });
+      }
       await markIntakeCommitted(sourceIntakeId, {
         linked_lead_id: savedLead.id,
         selected_action: values.action,
@@ -2402,6 +2722,19 @@
     const syncedLead = ["lead", "befaring", "installasjon", "blaseisolering"].includes(values.type) || isLeadCustomer(saved)
       ? await syncLeadRecord(saved, leadStatusForCustomer(saved), values.note)
       : null;
+    if (sourceIntakeId) {
+      await linkStoredIntakeAttachments(sourceIntakeId, {
+        customer_id: saved?.id || "",
+        lead_id: syncedLead?.id || null,
+      });
+    } else {
+      await persistAiRegistrationAttachments({
+        customer_id: saved?.id || "",
+        lead_id: syncedLead?.id || null,
+        source_kind: "hurtigregistrering",
+        note: "Vedlagt hurtigregistrering.",
+      });
+    }
     await markIntakeCommitted(sourceIntakeId, {
       linked_customer_id: saved?.id || "",
       linked_lead_id: syncedLead?.id || null,
@@ -4182,6 +4515,7 @@
     buildInvoices(rawData.invoices || []);
     buildServiceEvents(localServiceEvents());
     buildInstallations(localInstallations());
+    buildCrmAttachments([]);
     leads = localLeads();
   }
 
@@ -4198,6 +4532,7 @@
       appointments = [];
       websiteSubmissions = [];
       intakeItems = [];
+      crmAttachments = [];
       profiles = [];
       crmSettings = {};
       buildCustomerLocations([]);
@@ -4205,6 +4540,7 @@
       buildServiceEvents([]);
       buildInstallations([]);
       buildAccessNotes([]);
+      buildCrmAttachments([]);
       return;
     }
     const profile = await store.profile();
@@ -4232,6 +4568,7 @@
     appointments = loaded.appointments || [];
     websiteSubmissions = loaded.websiteSubmissions || [];
     intakeItems = loaded.intakeItems || [];
+    crmAttachments = loaded.crmAttachments || [];
     profiles = loaded.profiles || [];
     crmSettings = loaded.crmSettings || {};
     buildCustomerLocations(loaded.customerLocations || []);
@@ -4239,6 +4576,7 @@
     buildServiceEvents(loaded.serviceEvents || []);
     buildInstallations(loaded.installations || []);
     buildAccessNotes(loaded.accessNotes || []);
+    buildCrmAttachments(crmAttachments);
   }
 
   function buildInvoices(invoices) {
@@ -4331,6 +4669,40 @@
     for (const list of accessNotesByCustomer.values()) {
       list.sort((a, b) => String(b.updated_at || b.created_at || "").localeCompare(String(a.updated_at || a.created_at || "")));
     }
+  }
+
+  function buildCrmAttachments(rows) {
+    crmAttachments = (rows || []).filter((item) => item && !item.deleted_at);
+    crmAttachmentsByCustomer = new Map();
+    crmAttachmentsByLead = new Map();
+    crmAttachmentsByInstallation = new Map();
+    crmAttachmentsByIntake = new Map();
+    const add = (map, key, attachment) => {
+      if (!key) return;
+      const list = map.get(String(key)) || [];
+      list.push(attachment);
+      map.set(String(key), list);
+    };
+    for (const attachment of crmAttachments) {
+      add(crmAttachmentsByCustomer, attachment.customer_id, attachment);
+      add(crmAttachmentsByLead, attachment.lead_id, attachment);
+      add(crmAttachmentsByInstallation, attachment.installation_id, attachment);
+      add(crmAttachmentsByIntake, attachment.intake_id, attachment);
+    }
+    const sort = (list) => list.sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")) || String(a.title || "").localeCompare(String(b.title || ""), "nb"));
+    for (const map of [crmAttachmentsByCustomer, crmAttachmentsByLead, crmAttachmentsByInstallation, crmAttachmentsByIntake]) {
+      for (const list of map.values()) sort(list);
+    }
+  }
+
+  function replaceCrmAttachments(updatedRows) {
+    const updated = Array.isArray(updatedRows) ? updatedRows : [updatedRows].filter(Boolean);
+    if (!updated.length) return;
+    const byId = new Map(crmAttachments.map((item) => [item.id, item]));
+    for (const row of updated) {
+      if (row?.id) byId.set(row.id, row);
+    }
+    buildCrmAttachments([...byId.values()]);
   }
 
   function upsertAccessNoteInMemory(customer, note) {
@@ -6899,11 +7271,13 @@
 
   function intakeItemSummary(row) {
     const final = intakeItemFinal(row);
+    const attachmentCount = attachmentsForIntake(row?.id).length || Number(final.attachment_count || row?.analysis_json?.attachment_count || 0);
     return [
       final.type ? aiRegistrationTypeLabel(final.type) : "",
       final.phone || "",
       final.email || "",
       [final.street, final.zip, final.city].filter(Boolean).join(", "),
+      attachmentCount ? `${attachmentCount.toLocaleString("nb-NO")} vedlegg` : "",
       row?.status || "needs_review",
     ].filter(Boolean).join(" · ") || String(row?.raw_text || row?.extracted_text || "").slice(0, 140);
   }
@@ -6951,6 +7325,11 @@
     const raw = String(row.raw_text || row.extracted_text || "");
     const final = intakeItemFinal(row);
     const draft = parseAiRegistrationText(raw, row.analysis_json || null);
+    aiRegistrationAttachments.forEach((item) => {
+      if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+    });
+    aiRegistrationAttachments = [];
+    renderAiRegistrationAttachments();
     aiRegistrationDraft = {
       ...draft,
       action: final.action || row.selected_action || draft.action,
@@ -8566,6 +8945,7 @@
       ${leadNextActionHtml(entry, customer, realCustomer, status, leadTarget)}
       ${!realCustomer && entry?.lead ? leadCustomerMatchHtml(entry) : ""}
       ${leadContactSectionHtml(entry, customer, realCustomer, status)}
+      ${realCustomer ? renderLeadAttachmentSection(entry, customer, leadTarget) : ""}
       ${leadQuickNoteHtml(leadTarget, note, canEditLead)}
       <section class="detail-section">
         <h3>Endre status manuelt</h3>
@@ -10260,6 +10640,7 @@
                 <small>Serviceintervall: ${escapeHtml(installationServiceIntervalLabel(installation))}</small>
                 ${access ? `<small class="access-inline">Adkomst finnes</small>` : ""}
                 ${note ? `<details><summary>Notat / leverandør</summary><p>${escapeHtml(note).replaceAll("\n", "<br>")}</p></details>` : ""}
+                ${renderInstallationAttachmentBlock(customer, installation)}
                 <div class="installation-actions">
                   ${installationActions.join("")}
                 </div>
@@ -10303,6 +10684,7 @@
       ${renderDuplicateWarning(customer)}
       ${isLikelyHomeAddress(customer) ? `<section class="detail-section attention compact-warning"><h3>Mulig hjemmeadresse</h3><p>Kunden er tagget med ${escapeHtml(cabinAreaTag(customer) || "hytteområde")}, men adressen ligger i ${escapeHtml(customer.visit_city || "annet sted")}. Bruk koordinater eller kontroller anleggsadresse for rute.</p></section>` : ""}
       ${renderCustomerContactAccess(customer)}
+      ${renderCustomerAttachmentSection(customer)}
       ${renderInstallationList(customer, installations)}
       ${renderCustomerOpenLeads(customer)}
       ${renderCustomerOrders(customer)}
@@ -13263,7 +13645,7 @@
     const imageFiles = items.filter((item) => item.kind === "file" && /^image\//.test(item.type)).map((item) => item.getAsFile()).filter(Boolean);
     if (imageFiles.length) {
       addAiRegistrationFiles(imageFiles);
-      setSyncStatus("Skjermbilde lagt ved. OCR/bildeanalyse kommer i serverfasen.", "ok");
+      setSyncStatus("Skjermbilde lagt ved som privat CRM-vedlegg.", "ok");
     }
   });
   el.aiRegistrationPasteZone?.addEventListener("dragover", (event) => {
@@ -13287,6 +13669,7 @@
     renderAiRegistrationAttachments();
   });
   el.aiRegistrationDraft?.addEventListener("click", (event) => {
+    if (handleCrmAttachmentClick(event)) return;
     const candidate = event.target.closest("[data-ai-candidate]");
     if (candidate) {
       clearAiRegistrationMessage();
@@ -13423,6 +13806,7 @@
     renderCustomers();
   });
   el.customerDetail.addEventListener("click", (event) => {
+    if (handleCrmAttachmentClick(event)) return;
     const dismissDuplicate = event.target.closest("[data-dismiss-duplicate]");
     if (dismissDuplicate) {
       dismissDuplicateMatch(dismissDuplicate.dataset.dismissDuplicate, dismissDuplicate.dataset.dismissDuplicateOther)
@@ -13553,6 +13937,7 @@
     if (lineField) renderOfferLinesTotal(lineField.dataset.offerLinePrice || lineField.dataset.offerLineQty);
   });
   el.leadDetail?.addEventListener("click", (event) => {
+    if (handleCrmAttachmentClick(event)) return;
     const focusOffer = event.target.closest("[data-focus-lead-offer]");
     if (focusOffer) {
       focusLeadOfferFields(focusOffer.dataset.focusLeadOffer);
@@ -13907,6 +14292,7 @@
     if (event.target === el.customerQuickDialog) el.customerQuickDialog.close();
   });
   el.customerQuickContent.addEventListener("click", async (event) => {
+    if (handleCrmAttachmentClick(event)) return;
     const payment = event.target.closest("[data-payment-mode]");
     if (payment) {
       setCustomerPaymentMode(payment.dataset.paymentCustomer, payment.dataset.paymentMode)

@@ -991,6 +991,73 @@ textarea {
   font-weight: 700;
 }
 
+.crm-attachment-list {
+  display: grid;
+  gap: 8px;
+}
+
+.crm-attachment-list article {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  background: #f8fafc;
+}
+
+.crm-attachment-list.compact article {
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  padding: 7px;
+}
+
+.attachment-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  background: #ecfeff;
+  color: #0f766e;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.crm-attachment-list strong,
+.crm-attachment-list span,
+.crm-attachment-list small {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.crm-attachment-list span,
+.crm-attachment-list small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.installation-attachments {
+  display: grid;
+  gap: 8px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  background: #fbfdff;
+}
+
+.installation-attachments > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
 .ai-registration-draft {
   margin-top: 12px;
   border-top: 1px solid var(--line);
