@@ -2359,7 +2359,7 @@
   function isLegacyImportTag(tag) {
     const normalized = normalizeMatch(tag);
     if (!normalized) return true;
-    if (/^lead(status)?\s*:/.test(String(tag || "").trim().toLowerCase()) || normalized === "lead") return true;
+    if (isLegacyLeadTag(tag)) return true;
     if (/^(varmepumpe kunde|service kunde|lime go|lime|import|eaccounting|visma)$/.test(normalized)) return true;
     if (/^(panasonic|samsung|mitsubishi|fujitsu|wilfa|norgespumpa)$/.test(normalized)) return true;
     if (/^(hz|nz|cz|z)\s*\d{0,2}\s*(xke|zke|yke)?$/.test(normalized)) return true;
@@ -2367,6 +2367,20 @@
     if (/^(kaiteki|hara|iguru|vindfree|gulvmodell)$/.test(normalized)) return true;
     if (/^(19|20)\d{2}$/.test(normalized)) return true;
     return false;
+  }
+
+  function isLegacyLeadTag(tag) {
+    const normalized = normalizeMatch(tag);
+    return /^lead(status)?\s*:/.test(String(tag || "").trim().toLowerCase()) || normalized === "lead";
+  }
+
+  function legacyTagKind(tag) {
+    const normalized = normalizeMatch(tag);
+    if (isLegacyLeadTag(tag)) return "Gammel leadstatus";
+    if (/^(panasonic|samsung|mitsubishi|fujitsu|wilfa|norgespumpa)$/.test(normalized)) return "Merke fra import";
+    if (/^(hz|nz|cz|z)\s*\d{0,2}\s*(xke|zke|yke)?$/.test(normalized) || /^(samsung )?smart\s*9$/.test(normalized) || /^(kaiteki|hara|iguru|vindfree|gulvmodell)$/.test(normalized)) return "Modell fra import";
+    if (/^(19|20)\d{2}$/.test(normalized)) return "Årstall fra import";
+    return "Importtagg";
   }
 
   function customerVisibleTags(customer) {
@@ -2431,7 +2445,7 @@
     if (!el.formTagCatalog) return;
     const selected = new Set(selectedTags.map((tag) => normalizeMatch(tag)));
     const catalog = knownCustomerTags()
-      .filter((tag) => !/^lead(status)?\s*:/i.test(tag));
+      .filter((tag) => !isLegacyImportTag(tag));
     if (!catalog.length) {
       el.formTagCatalog.innerHTML = `<span class="tag-catalog-empty">Lag en tagg i feltet over. Den kan hukes av her neste gang.</span>`;
       return;
@@ -6466,21 +6480,29 @@
     }).join("");
   }
 
-  function customerTagUsageRows() {
+  function tagUsageRows(filter) {
     const usage = new Map();
     for (const customer of customers || []) {
       if (!customer || customer.is_inactive) continue;
       for (const tag of splitTags(customer.tags)) {
-        if (/^lead(status)?\s*:/i.test(tag) || normalizeMatch(tag) === "lead") continue;
+        if (filter && !filter(tag)) continue;
         const key = normalizeMatch(tag);
         if (!key) continue;
-        const row = usage.get(key) || { tag, count: 0 };
+        const row = usage.get(key) || { tag, count: 0, kind: legacyTagKind(tag) };
         row.count += 1;
         if (tag.length < row.tag.length) row.tag = tag;
         usage.set(key, row);
       }
     }
-    return [...usage.values()].sort((a, b) => a.tag.localeCompare(b.tag, "nb-NO"));
+    return [...usage.values()].sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag, "nb-NO"));
+  }
+
+  function customerTagUsageRows() {
+    return tagUsageRows((tag) => !isLegacyImportTag(tag));
+  }
+
+  function hiddenCustomerTagUsageRows() {
+    return tagUsageRows((tag) => isLegacyImportTag(tag));
   }
 
   function customersWithTag(tag) {
@@ -6552,15 +6574,47 @@
       return;
     }
     const rows = customerTagUsageRows();
+    const hiddenRows = hiddenCustomerTagUsageRows();
+    const hiddenCustomerCount = (customers || []).filter((customer) => (
+      customer && !customer.is_inactive && splitTags(customer.tags).some((tag) => isLegacyImportTag(tag))
+    )).length;
+    const hiddenLeadCount = hiddenRows.filter((row) => isLegacyLeadTag(row.tag)).reduce((sum, row) => sum + row.count, 0);
     const canSave = Boolean(store.isConfigured ? store.saveCustomer : demoEnabled);
     el.tagSettings.innerHTML = `
       <section class="settings-section">
         <div class="section-head compact">
           <div>
             <h3>Tagger</h3>
-            <p>Rydd, gi nytt navn eller fjern tagger på alle kundekort samtidig.</p>
+            <p>Rydd vanlige tagger. Gamle importtagger skjules fra kundekort og kartotek.</p>
           </div>
         </div>
+        <div class="legacy-tag-summary">
+          <article>
+            <strong>${hiddenRows.length.toLocaleString("nb-NO")}</strong>
+            <span>Skjulte importtagger</span>
+          </article>
+          <article>
+            <strong>${hiddenCustomerCount.toLocaleString("nb-NO")}</strong>
+            <span>Kundekort med skjulte importtagger</span>
+          </article>
+          <article>
+            <strong>${hiddenLeadCount.toLocaleString("nb-NO")}</strong>
+            <span>Gamle leadstatus-tagger skjult</span>
+          </article>
+        </div>
+        ${hiddenRows.length ? `
+          <details class="legacy-tag-details">
+            <summary>Mest brukte skjulte importtagger</summary>
+            <div class="legacy-tag-list">
+              ${hiddenRows.slice(0, 12).map((row) => `
+                <span title="Skjules i kundekort og taggkartotek. Ikke slettet fra historiske data.">
+                  <strong>${escapeHtml(row.tag)}</strong>
+                  <small>${escapeHtml(row.kind)} · ${row.count.toLocaleString("nb-NO")} kundekort</small>
+                </span>
+              `).join("")}
+            </div>
+          </details>
+        ` : ""}
         ${rows.length ? `
           <div class="tag-settings-list">
             ${rows.map((row) => `
