@@ -116,6 +116,10 @@
     { id: "driving_km", label: "Kjøretillegg", unit: "km", price: 15, defaultQty: 1 },
     { id: "service_heatpump", label: "Service varmepumpe", unit: "stk", price: 2490, defaultQty: 1 },
   ];
+  const offerLinePresets = [
+    { id: "heatpump_custom", label: "Varmepumpe/modell - skriv selv", unit: "stk", price: 0, defaultQty: 1 },
+    ...jobPriceItems,
+  ];
   const rentalImages = [
     { title: "Industristøvsuger 15 hk", href: "./documents/isobygg/vac/industristovsuger-15hk.jpg" },
     { title: "Front", href: "./documents/isobygg/vac/industristovsuger-front.jpg" },
@@ -9528,6 +9532,13 @@
     )).join("");
   }
 
+  function offerLinePresetOptions(selected = "heatpump_custom") {
+    return offerLinePresets.map((item) => {
+      const price = Number(item.price || 0) > 0 ? ` - ${formatJobPriceAmount(item.price)} / ${item.unit}` : "";
+      return `<option value="${escapeHtml(item.id)}" ${item.id === selected ? "selected" : ""}>${escapeHtml(item.label + price)}</option>`;
+    }).join("");
+  }
+
   function leadOfferComposerHtml(entry) {
     const customer = entry?.customer || {};
     const target = leadEntryKey(entry);
@@ -9571,6 +9582,40 @@
           </label>
           <a href="${escapeHtml(priceListDocument.href)}" target="_blank" rel="noreferrer" download title="Last ned aktiv prisliste-PDF.">${escapeHtml(priceListDocument.title)}</a>
         </div>
+        <div class="lead-offer-builder">
+          <div class="lead-offer-builder-head">
+            <div>
+              <strong>Tilbudslinjer</strong>
+              <small>Bygg opp modeller og tillegg før teksten sendes.</small>
+            </div>
+            <button class="secondary" data-insert-offer-lines="${escapeHtml(target)}" type="button" title="Legger tilbudslinjene inn i teksten under.">Legg i tekst</button>
+          </div>
+          <div class="lead-offer-line-grid">
+            <label>Prisvalg
+              <select data-offer-line-preset="${escapeHtml(target)}">
+                ${offerLinePresetOptions()}
+              </select>
+            </label>
+            <label>Linje/modell
+              <input data-offer-line-label="${escapeHtml(target)}" placeholder="F.eks. Mitsubishi Kaiteki 6600" />
+            </label>
+            <label>Antall
+              <input data-offer-line-qty="${escapeHtml(target)}" type="number" min="0" step="0.25" value="1" />
+            </label>
+            <label>Enhet
+              <input data-offer-line-unit="${escapeHtml(target)}" value="stk" />
+            </label>
+            <label>Pris inkl. mva
+              <input data-offer-line-price="${escapeHtml(target)}" inputmode="decimal" placeholder="29900" />
+            </label>
+            <button class="secondary" data-add-offer-line="${escapeHtml(target)}" type="button" title="Legger linjen i listen. Kontroller teksten før du sender tilbudet.">Legg til</button>
+          </div>
+          <textarea data-offer-lines="${escapeHtml(target)}" rows="4" placeholder="Tilbudslinjer som skal inn i e-postteksten. Du kan også skrive her manuelt."></textarea>
+          <div class="lead-offer-builder-footer">
+            <small data-offer-lines-total="${escapeHtml(target)}">Ingen tilbudslinjer lagt inn.</small>
+            <button class="secondary" data-clear-offer-lines="${escapeHtml(target)}" type="button">Tøm linjer</button>
+          </div>
+        </div>
         <textarea data-offer-text="${escapeHtml(target)}" rows="12">${escapeHtml(body)}</textarea>
         <div class="lead-offer-actions">
           <button class="secondary" data-fill-offer-template="${escapeHtml(target)}" type="button">Bruk mal</button>
@@ -9592,7 +9637,109 @@
       subject: el.leadDetail.querySelector(`[data-offer-subject="${safe}"]`),
       text: el.leadDetail.querySelector(`[data-offer-text="${safe}"]`),
       priceList: el.leadDetail.querySelector(`[data-offer-pricelist="${safe}"]`),
+      linePreset: el.leadDetail.querySelector(`[data-offer-line-preset="${safe}"]`),
+      lineLabel: el.leadDetail.querySelector(`[data-offer-line-label="${safe}"]`),
+      lineQty: el.leadDetail.querySelector(`[data-offer-line-qty="${safe}"]`),
+      lineUnit: el.leadDetail.querySelector(`[data-offer-line-unit="${safe}"]`),
+      linePrice: el.leadDetail.querySelector(`[data-offer-line-price="${safe}"]`),
+      lines: el.leadDetail.querySelector(`[data-offer-lines="${safe}"]`),
+      linesTotal: el.leadDetail.querySelector(`[data-offer-lines-total="${safe}"]`),
     };
+  }
+
+  function stripOfferLinesBlock(text) {
+    return String(text || "")
+      .replace(/\n*\[Tilbudslinjer\][\s\S]*?\[\/Tilbudslinjer\]/g, "")
+      .trimEnd();
+  }
+
+  function offerLinesBlock(linesText) {
+    const lines = String(linesText || "")
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    if (!lines.length) return "";
+    const total = jobPriceBasisTotal(lines.join("\n"));
+    return [
+      "",
+      "[Tilbudslinjer]",
+      ...lines,
+      total > 0 ? `Sum tilbudslinjer: ${formatJobPriceAmount(total)} inkl. mva` : "",
+      "[/Tilbudslinjer]",
+    ].filter((line) => line !== "").join("\n");
+  }
+
+  function renderOfferLinesTotal(target) {
+    const fields = leadOfferFields(target);
+    if (!fields.linesTotal || !fields.lines) return;
+    const text = String(fields.lines.value || "").trim();
+    const total = jobPriceBasisTotal(text);
+    fields.linesTotal.textContent = text
+      ? total > 0
+        ? `Sum tilbudslinjer: ${formatJobPriceAmount(total)} inkl. mva.`
+        : "Tilbudslinjer uten summerbar pris. Kontroller teksten før sending."
+      : "Ingen tilbudslinjer lagt inn.";
+  }
+
+  function syncOfferLinePreset(target) {
+    const fields = leadOfferFields(target);
+    const item = offerLinePresets.find((entry) => entry.id === fields.linePreset?.value);
+    if (!item) return;
+    if (item.id === "heatpump_custom") {
+      if (fields.lineLabel && !fields.lineLabel.value.trim()) fields.lineLabel.value = "";
+      if (fields.lineUnit) fields.lineUnit.value = "stk";
+      if (fields.lineQty) fields.lineQty.value = "1";
+      if (fields.linePrice && !fields.linePrice.value.trim()) fields.linePrice.value = "";
+      return;
+    }
+    if (fields.lineLabel) fields.lineLabel.value = item.label;
+    if (fields.lineUnit) fields.lineUnit.value = item.unit || "stk";
+    if (fields.lineQty) fields.lineQty.value = String(item.defaultQty || 1);
+    if (fields.linePrice) fields.linePrice.value = formatJobPriceAmount(item.price).replace(",-", "");
+  }
+
+  function offerLineFromBuilder(target) {
+    const fields = leadOfferFields(target);
+    const selected = offerLinePresets.find((entry) => entry.id === fields.linePreset?.value);
+    const label = String(fields.lineLabel?.value || selected?.label || "").trim();
+    const unit = String(fields.lineUnit?.value || selected?.unit || "stk").trim() || "stk";
+    const qtyText = String(fields.lineQty?.value || selected?.defaultQty || 1).replace(",", ".");
+    const qty = Number(qtyText);
+    const price = parseJobPriceAmount(fields.linePrice?.value || selected?.price || 0);
+    if (!label) throw new Error("Skriv inn linje/modell før du legger til tilbudslinje.");
+    if (!Number.isFinite(qty) || qty <= 0) throw new Error("Antall må være større enn 0.");
+    if (price <= 0) return `- ${label}: ${formatJobPriceNumber(qty)} ${unit} - pris avtales/legges inn`;
+    const amount = qty * price;
+    return `- ${label}: ${formatJobPriceNumber(qty)} ${unit} x ${formatJobPriceAmount(price)} = ${formatJobPriceAmount(amount)} inkl. mva`;
+  }
+
+  function addOfferLine(target) {
+    const fields = leadOfferFields(target);
+    if (!fields.lines) return;
+    const line = offerLineFromBuilder(target);
+    const existing = String(fields.lines.value || "").trim();
+    fields.lines.value = [existing, line].filter(Boolean).join("\n");
+    renderOfferLinesTotal(target);
+    setSyncStatus("Tilbudslinje lagt til. Trykk Legg i tekst når tilbudet er klart.", "ok");
+  }
+
+  function insertOfferLinesIntoText(target) {
+    const fields = leadOfferFields(target);
+    if (!fields.text || !fields.lines) return;
+    const base = stripOfferDocumentBlock(stripOfferLinesBlock(fields.text.value)).trimEnd();
+    const block = offerLinesBlock(fields.lines.value);
+    fields.text.value = applyOfferDocumentSelection([base, block].filter(Boolean).join("\n").trimEnd(), Boolean(fields.priceList?.checked));
+    renderOfferLinesTotal(target);
+    focusLeadOfferFields(target);
+    setSyncStatus(block ? "Tilbudslinjene er lagt inn i teksten." : "Tilbudslinjer fjernet fra teksten.", "ok");
+  }
+
+  function clearOfferLines(target) {
+    const fields = leadOfferFields(target);
+    if (fields.lines) fields.lines.value = "";
+    if (fields.text) fields.text.value = applyOfferDocumentSelection(stripOfferLinesBlock(fields.text.value), Boolean(fields.priceList?.checked));
+    renderOfferLinesTotal(target);
+    setSyncStatus("Tilbudslinjer tømt.", "ok");
   }
 
   function fillLeadOfferTemplate(target, templateId = "") {
@@ -9606,6 +9753,7 @@
     if (fields.subject) fields.subject.value = template.subject;
     if (fields.priceList) fields.priceList.checked = offerTemplateUsesPriceList(id);
     if (fields.text) fields.text.value = applyOfferDocumentSelection(template.body(customer), Boolean(fields.priceList?.checked));
+    renderOfferLinesTotal(target);
   }
 
   function syncLeadOfferDocuments(target) {
@@ -13315,10 +13463,24 @@
       syncLeadOfferDocuments(offerPriceList.dataset.offerPricelist);
       return;
     }
+    const offerLinePreset = event.target.closest("[data-offer-line-preset]");
+    if (offerLinePreset) {
+      syncOfferLinePreset(offerLinePreset.dataset.offerLinePreset);
+      return;
+    }
     const select = event.target.closest("[data-lead-status-customer]");
     if (!select) return;
     setLeadStatusTarget(select.dataset.leadStatusCustomer, select.value)
       .catch((error) => setSyncStatus(error.message || "Klarte ikke endre leadstatus.", "error"));
+  });
+  el.leadDetail?.addEventListener("input", (event) => {
+    const lines = event.target.closest("[data-offer-lines]");
+    if (lines) {
+      renderOfferLinesTotal(lines.dataset.offerLines);
+      return;
+    }
+    const lineField = event.target.closest("[data-offer-line-price], [data-offer-line-qty]");
+    if (lineField) renderOfferLinesTotal(lineField.dataset.offerLinePrice || lineField.dataset.offerLineQty);
   });
   el.leadDetail?.addEventListener("click", (event) => {
     const focusOffer = event.target.closest("[data-focus-lead-offer]");
@@ -13332,6 +13494,25 @@
       fillLeadOfferTemplate(fillOffer.dataset.fillOfferTemplate);
       focusLeadOfferFields(fillOffer.dataset.fillOfferTemplate);
       setSyncStatus("Tilbudsmal fylt inn.", "ok");
+      return;
+    }
+    const addLine = event.target.closest("[data-add-offer-line]");
+    if (addLine) {
+      try {
+        addOfferLine(addLine.dataset.addOfferLine);
+      } catch (error) {
+        setSyncStatus(error.message || "Klarte ikke legge til tilbudslinje.", "error");
+      }
+      return;
+    }
+    const insertLines = event.target.closest("[data-insert-offer-lines]");
+    if (insertLines) {
+      insertOfferLinesIntoText(insertLines.dataset.insertOfferLines);
+      return;
+    }
+    const clearLines = event.target.closest("[data-clear-offer-lines]");
+    if (clearLines) {
+      clearOfferLines(clearLines.dataset.clearOfferLines);
       return;
     }
     const copyOffer = event.target.closest("[data-copy-offer-draft]");

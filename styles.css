@@ -2498,6 +2498,50 @@ textarea {
   white-space: nowrap;
 }
 
+.lead-offer-builder {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.lead-offer-builder-head,
+.lead-offer-builder-footer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.lead-offer-builder-head small,
+.lead-offer-builder-footer small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.lead-offer-line-grid {
+  display: grid;
+  grid-template-columns: minmax(190px, 1.3fr) minmax(190px, 1.4fr) minmax(74px, 0.45fr) minmax(82px, 0.5fr) minmax(120px, 0.65fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.lead-offer-line-grid label {
+  min-width: 0;
+}
+
+.lead-offer-line-grid button {
+  min-height: 40px;
+}
+
+.lead-offer-builder textarea {
+  min-height: 96px;
+}
+
 .lead-offer-actions {
   display: flex;
   flex-wrap: wrap;
@@ -5107,6 +5151,9 @@ label {
   .order-metrics,
   .lead-next-action,
   .lead-offer-grid,
+  .lead-offer-line-grid,
+  .lead-offer-builder-head,
+  .lead-offer-builder-footer,
   .insulation-offer-customer,
   .rental-input-grid,
   .rental-image-grid,
