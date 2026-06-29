@@ -7722,7 +7722,7 @@
       el.intakeInbox.innerHTML = "";
       return;
     }
-    const sourceTitle = currentLeadInboxTab === "email" ? "Utkast fra e-post" : "Utkast fra hurtigregistrering";
+    const sourceTitle = currentLeadInboxTab === "email" ? "Utkast fra e-post" : "Nye innboksutkast";
     el.intakeInbox.innerHTML = `
       <div class="section-head compact">
         <div>
