@@ -1299,11 +1299,21 @@
     const saved = crmSettings.offer_settings && typeof crmSettings.offer_settings === "object"
       ? crmSettings.offer_settings
       : {};
+    const templateOverrides = saved.templateOverrides && typeof saved.templateOverrides === "object"
+      ? { ...saved.templateOverrides }
+      : {};
+    if (!templateOverrides.general_price_offer && (saved.generalOfferSubject || saved.generalOfferBody)) {
+      templateOverrides.general_price_offer = {
+        subject: saved.generalOfferSubject || "Pristilbud på varmepumpe og tilleggsarbeid",
+        body: saved.generalOfferBody || defaultGeneralOfferBody(),
+      };
+    }
     return {
       generalOfferSubject: String(saved.generalOfferSubject || "Pristilbud på varmepumpe og tilleggsarbeid"),
       generalOfferBody: String(saved.generalOfferBody || defaultGeneralOfferBody()),
       priceTermsText: String(saved.priceTermsText || defaultOfferPriceTermsText()),
       autoEmailEnabled: Boolean(saved.autoEmailEnabled),
+      templateOverrides,
     };
   }
 
@@ -1322,6 +1332,49 @@
       .replaceAll("{navn}", cleanDisplayName(customer) || "")
       .replaceAll("{adresse}", customerOfferAddress(customer) || "[adresse]")
       .replaceAll("{prisgrunnlag}", offerPriceTermsText());
+  }
+
+  function offerTemplatePlaceholderCustomer() {
+    return {
+      name: "{fornavn} {navn}",
+      visit_street: "{adresse}",
+      visit_zip: "",
+      visit_city: "",
+      location_tag: "",
+    };
+  }
+
+  function defaultLeadTemplateSubject(templateId) {
+    if (templateId === "general_price_offer") return "Pristilbud på varmepumpe og tilleggsarbeid";
+    return String(leadTemplates[templateId]?.subject || "");
+  }
+
+  function defaultLeadTemplateBodyForSettings(templateId) {
+    if (templateId === "general_price_offer") return defaultGeneralOfferBody();
+    const template = leadTemplates[templateId];
+    if (!template) return "";
+    const body = String(template.body(offerTemplatePlaceholderCustomer()) || "");
+    const priceTerms = offerPriceTermsText();
+    return priceTerms ? body.replace(priceTerms, "{prisgrunnlag}") : body;
+  }
+
+  function offerTemplateOverride(templateId) {
+    const override = offerSettings().templateOverrides?.[templateId];
+    return override && typeof override === "object" ? override : {};
+  }
+
+  function offerTemplateSubject(templateId) {
+    const override = offerTemplateOverride(templateId);
+    const subject = String(override.subject || "").trim();
+    return subject || defaultLeadTemplateSubject(templateId);
+  }
+
+  function offerTemplateBody(templateId, customer) {
+    const override = offerTemplateOverride(templateId);
+    const body = String(override.body || "").trim();
+    if (body) return renderOfferTextTemplate(override.body, customer);
+    const template = leadTemplates[templateId];
+    return template ? template.body(customer) : "";
   }
 
   function leadStatusLabel(status) {
@@ -7032,7 +7085,7 @@
         <div class="section-head compact">
           <div>
             <h3>Tilbudsmaler og priser</h3>
-            <p>Brukes av malen Generelt pristilbud i lead-fanen.</p>
+            <p>Rediger tekstene som brukes i lead-fanen. Prisgrunnlaget brukes i flere maler.</p>
           </div>
           <div class="mini-action-row">
             <button class="secondary" data-reset-offer-settings type="button">Standardtekst</button>
@@ -7042,12 +7095,31 @@
         ${canSave ? "" : `<p class="form-hint">Lagring av maler krever Supabase og crm_settings-tabellen.</p>`}
         <label class="check-row"><input data-offer-settings-auto-email type="checkbox" ${settings.autoEmailEnabled ? "checked" : ""} ${disabled} /> Aktiver direkte sending fra CRM</label>
         <p class="form-hint">La denne være av til e-postbroen er bekreftet. Bruk e-postutkast og marker sendt manuelt imens.</p>
-        <label>Emne for generelt pristilbud
-          <input data-offer-settings-subject value="${escapeHtml(settings.generalOfferSubject)}" ${disabled} />
-        </label>
-        <label>Tekstmal
-          <textarea data-offer-settings-body rows="12" ${disabled}>${escapeHtml(settings.generalOfferBody)}</textarea>
-        </label>
+        <div class="offer-template-editor-list">
+          ${Object.entries(leadTemplates).map(([id, template]) => {
+            const override = settings.templateOverrides?.[id] || {};
+            const subject = String(override.subject || defaultLeadTemplateSubject(id));
+            const body = String(override.body || defaultLeadTemplateBodyForSettings(id));
+            const changed = String(override.subject || "").trim() || String(override.body || "").trim();
+            return `
+              <details class="offer-template-editor" data-offer-settings-template="${escapeHtml(id)}">
+                <summary>
+                  <strong>${escapeHtml(template.title)}</strong>
+                  <span>${escapeHtml(changed ? "Tilpasset" : "Standard")}</span>
+                </summary>
+                <label>Emne
+                  <input data-offer-settings-template-subject="${escapeHtml(id)}" value="${escapeHtml(subject)}" ${disabled} />
+                </label>
+                <label>Tekst
+                  <textarea data-offer-settings-template-body="${escapeHtml(id)}" rows="10" ${disabled}>${escapeHtml(body)}</textarea>
+                </label>
+                <div class="mini-action-row">
+                  <button class="secondary" data-reset-one-offer-template="${escapeHtml(id)}" type="button" ${disabled}>Tilbakestill denne</button>
+                </div>
+              </details>
+            `;
+          }).join("")}
+        </div>
         <label>Prisgrunnlag / standard montering og tillegg
           <textarea data-offer-settings-prices rows="16" ${disabled}>${escapeHtml(settings.priceTermsText)}</textarea>
         </label>
@@ -7179,11 +7251,30 @@
     if (!isAdmin()) throw new Error("Bare admin kan endre tilbudsmaler.");
     if (!store.saveCrmSetting) throw new Error("Lagring av tilbudsmaler krever Supabase.");
     const container = el.offerTemplateSettings;
+    const templateOverrides = {};
+    container?.querySelectorAll("[data-offer-settings-template]").forEach((row) => {
+      const id = row.dataset.offerSettingsTemplate || "";
+      if (!leadTemplates[id]) return;
+      const subject = row.querySelector(`[data-offer-settings-template-subject="${CSS.escape(id)}"]`)?.value?.trim() || "";
+      const body = row.querySelector(`[data-offer-settings-template-body="${CSS.escape(id)}"]`)?.value || "";
+      const defaultSubject = defaultLeadTemplateSubject(id);
+      const defaultBody = defaultLeadTemplateBodyForSettings(id);
+      const changedSubject = subject && subject !== defaultSubject;
+      const changedBody = body.trim() && body !== defaultBody;
+      if (changedSubject || changedBody) {
+        templateOverrides[id] = {
+          subject: changedSubject ? subject : defaultSubject,
+          body: changedBody ? body : defaultBody,
+        };
+      }
+    });
+    const generalOverride = templateOverrides.general_price_offer || {};
     const next = {
-      generalOfferSubject: container?.querySelector("[data-offer-settings-subject]")?.value?.trim() || "Pristilbud på varmepumpe og tilleggsarbeid",
-      generalOfferBody: container?.querySelector("[data-offer-settings-body]")?.value || defaultGeneralOfferBody(),
+      generalOfferSubject: generalOverride.subject || "Pristilbud på varmepumpe og tilleggsarbeid",
+      generalOfferBody: generalOverride.body || defaultGeneralOfferBody(),
       priceTermsText: container?.querySelector("[data-offer-settings-prices]")?.value || defaultOfferPriceTermsText(),
       autoEmailEnabled: Boolean(container?.querySelector("[data-offer-settings-auto-email]")?.checked),
+      templateOverrides,
     };
     const saved = await store.saveCrmSetting("offer_settings", next);
     crmSettings.offer_settings = saved?.value || next;
@@ -7194,15 +7285,27 @@
 
   function resetOfferSettingsForm() {
     const container = el.offerTemplateSettings;
-    const subject = container?.querySelector("[data-offer-settings-subject]");
-    const body = container?.querySelector("[data-offer-settings-body]");
     const prices = container?.querySelector("[data-offer-settings-prices]");
     const autoEmail = container?.querySelector("[data-offer-settings-auto-email]");
     if (autoEmail) autoEmail.checked = false;
-    if (subject) subject.value = "Pristilbud på varmepumpe og tilleggsarbeid";
-    if (body) body.value = defaultGeneralOfferBody();
+    container?.querySelectorAll("[data-offer-settings-template]").forEach((row) => {
+      const id = row.dataset.offerSettingsTemplate || "";
+      resetOneOfferTemplateForm(id);
+    });
     if (prices) prices.value = defaultOfferPriceTermsText();
     setSyncStatus("Standard tilbudstekst er fylt inn. Trykk Lagre for å bruke den videre.", "ok");
+  }
+
+  function resetOneOfferTemplateForm(templateId) {
+    const container = el.offerTemplateSettings;
+    if (!container || !leadTemplates[templateId]) return;
+    const row = container.querySelector(`[data-offer-settings-template="${CSS.escape(templateId)}"]`);
+    const subject = container.querySelector(`[data-offer-settings-template-subject="${CSS.escape(templateId)}"]`);
+    const body = container.querySelector(`[data-offer-settings-template-body="${CSS.escape(templateId)}"]`);
+    if (subject) subject.value = defaultLeadTemplateSubject(templateId);
+    if (body) body.value = defaultLeadTemplateBodyForSettings(templateId);
+    const stateLabel = row?.querySelector("summary span");
+    if (stateLabel) stateLabel.textContent = "Standard";
   }
 
   function renderTagSettings() {
@@ -10052,7 +10155,7 @@
   function leadTemplateText(templateId, customer) {
     const template = leadTemplates[templateId];
     if (!template) return "";
-    return `Emne: ${template.subject}\n\n${template.body(customer)}`;
+    return `Emne: ${offerTemplateSubject(templateId)}\n\n${offerTemplateBody(templateId, customer)}`;
   }
 
   function isUuid(value) {
@@ -10330,9 +10433,9 @@
     const customer = entry?.customer || {};
     const target = leadEntryKey(entry);
     const templateId = defaultLeadOfferTemplateId(entry);
-    const template = leadTemplates[templateId] || leadTemplates.heatpump_standard_offer;
     const includePriceList = offerTemplateUsesPriceList(templateId);
-    const body = applyOfferDocumentSelection(template.body(customer), includePriceList);
+    const body = applyOfferDocumentSelection(offerTemplateBody(templateId, customer), includePriceList);
+    const subject = offerTemplateSubject(templateId);
     const autoSendEnabled = offerAutoEmailEnabled();
     const autoSendDisabled = autoSendEnabled ? "" : "disabled";
     const autoSendTitle = autoSendEnabled
@@ -10356,7 +10459,7 @@
             </select>
           </label>
           <label>Emne
-            <input data-offer-subject="${escapeHtml(target)}" value="${escapeHtml(template.subject)}" />
+            <input data-offer-subject="${escapeHtml(target)}" value="${escapeHtml(subject)}" />
           </label>
         </div>
         <div class="lead-offer-documents">
@@ -10548,9 +10651,9 @@
     const template = leadTemplates[id];
     if (!template) return;
     if (fields.template) fields.template.value = id;
-    if (fields.subject) fields.subject.value = template.subject;
+    if (fields.subject) fields.subject.value = offerTemplateSubject(id);
     if (fields.priceList) fields.priceList.checked = offerTemplateUsesPriceList(id);
-    if (fields.text) fields.text.value = applyOfferDocumentSelection(template.body(customer), Boolean(fields.priceList?.checked));
+    if (fields.text) fields.text.value = applyOfferDocumentSelection(offerTemplateBody(id, customer), Boolean(fields.priceList?.checked));
     renderOfferLinesTotal(target);
   }
 
@@ -14080,6 +14183,11 @@
     }
     const reset = event.target.closest("[data-reset-offer-settings]");
     if (reset) resetOfferSettingsForm();
+    const resetOne = event.target.closest("[data-reset-one-offer-template]");
+    if (resetOne) {
+      resetOneOfferTemplateForm(resetOne.dataset.resetOneOfferTemplate);
+      setSyncStatus("Standardtekst fylt inn for valgt mal. Trykk Lagre for å bruke den videre.", "ok");
+    }
   });
   el.tagSettings?.addEventListener("click", (event) => {
     const rename = event.target.closest("[data-rename-tag]");
@@ -14386,6 +14494,8 @@
     const offerTemplate = event.target.closest("[data-offer-template-select]");
     if (offerTemplate) {
       fillLeadOfferTemplate(offerTemplate.dataset.offerTemplateSelect, offerTemplate.value);
+      focusLeadOfferFields(offerTemplate.dataset.offerTemplateSelect);
+      setSyncStatus("Tilbudsmal fylt inn i tekstfeltet.", "ok");
       return;
     }
     const offerPriceList = event.target.closest("[data-offer-pricelist]");

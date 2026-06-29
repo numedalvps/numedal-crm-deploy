@@ -3320,6 +3320,39 @@ textarea {
   line-height: 1.45;
 }
 
+.offer-template-editor-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.offer-template-editor {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 10px 12px;
+}
+
+.offer-template-editor summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  color: var(--text);
+  font-weight: 900;
+}
+
+.offer-template-editor summary span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.offer-template-editor[open] {
+  background: #fff;
+}
+
 .settings-grid h3 {
   margin: 0 0 6px;
 }
