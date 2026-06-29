@@ -4921,7 +4921,7 @@
   async function refreshData(message) {
     try {
       if (store.isConfigured) {
-        setSyncStatus("Laster CRM-data fra Supabase. På tregt nett kan dette ta litt tid.", "");
+        if (currentUser) setSyncStatus("Laster CRM-data fra Supabase. På tregt nett kan dette ta litt tid.", "");
         await supabaseLoad();
       }
       else if (canUseLocalDemo()) localLoad();
