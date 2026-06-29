@@ -1126,22 +1126,25 @@
     async completeBookingAsAdmin(id, options = {}) {
       const supabase = await requireClient();
       const completedOn = normalizeDate(options.completedOn || options.completedAt) || localIsoDate(new Date());
-      const { data, error } = await supabase.rpc("complete_booking_as_admin", {
-        p_booking_id: id,
-        p_completed_on: completedOn,
-        p_event_type: options.eventType || null,
-        p_event_note: options.eventNote || null,
-        p_booking_note: options.bookingNote || null,
-        p_order_id: isUuid(options.orderId) ? options.orderId : null,
-        p_order_note: options.orderNote || null,
-        p_billing_status: options.billingStatus || "not_ready",
-        p_payment_mode: options.paymentMode || null,
-        p_payment_done: Boolean(options.paymentDone),
-        p_next_action: options.nextAction || "none",
-        p_next_service_due: normalizeDate(options.nextServiceDate),
-        p_installation_id: isUuid(options.installationId) ? options.installationId : null,
-        p_customer_note_line: options.customerNoteLine || null,
-      });
+      const { data, error } = await withDbTimeout(
+        supabase.rpc("complete_booking_as_admin", {
+          p_booking_id: id,
+          p_completed_on: completedOn,
+          p_event_type: options.eventType || null,
+          p_event_note: options.eventNote || null,
+          p_booking_note: options.bookingNote || null,
+          p_order_id: isUuid(options.orderId) ? options.orderId : null,
+          p_order_note: options.orderNote || null,
+          p_billing_status: options.billingStatus || "not_ready",
+          p_payment_mode: options.paymentMode || null,
+          p_payment_done: Boolean(options.paymentDone),
+          p_next_action: options.nextAction || "none",
+          p_next_service_due: normalizeDate(options.nextServiceDate),
+          p_installation_id: isUuid(options.installationId) ? options.installationId : null,
+          p_customer_note_line: options.customerNoteLine || null,
+        }),
+        "fullføre jobb",
+      );
       if (error) throw error;
       return data || {};
     },
@@ -1149,12 +1152,15 @@
       const supabase = await requireClient();
       const markedAt = normalizeDate(options.markedAt || options.date) || localIsoDate(new Date());
       const eventNote = options.eventNote || null;
-      const { data, error } = await supabase.rpc("mark_booking_needs_move", {
-        p_booking_id: id,
-        p_reason: reason || null,
-        p_marked_at: markedAt,
-        p_event_note: eventNote,
-      });
+      const { data, error } = await withDbTimeout(
+        supabase.rpc("mark_booking_needs_move", {
+          p_booking_id: id,
+          p_reason: reason || null,
+          p_marked_at: markedAt,
+          p_event_note: eventNote,
+        }),
+        "markere jobb som må flyttes",
+      );
       if (error) throw error;
       return {
         id: data,
@@ -1168,12 +1174,15 @@
     async saveServiceEvent(event) {
       const supabase = await requireClient();
       const customerId = event.customerId || event.customer_id;
-      const rpcResult = await supabase.rpc("add_service_event", {
-        p_customer_id: customerId,
-        p_event_date: normalizeDate(event.event_date),
-        p_event_type: event.event_type || "Historikk",
-        p_note: event.note || null,
-      });
+      const rpcResult = await withDbTimeout(
+        supabase.rpc("add_service_event", {
+          p_customer_id: customerId,
+          p_event_date: normalizeDate(event.event_date),
+          p_event_type: event.event_type || "Historikk",
+          p_note: event.note || null,
+        }),
+        "lagre historikk",
+      );
       if (!rpcResult.error && rpcResult.data) {
         return {
           id: rpcResult.data,
@@ -1185,16 +1194,19 @@
         };
       }
       if (rpcResult.error && !/function .*add_service_event/i.test(rpcResult.error.message || "")) throw rpcResult.error;
-      const { data, error } = await supabase
-        .from("service_events")
-        .insert({
-          customer_id: customerId,
-          event_date: normalizeDate(event.event_date),
-          event_type: event.event_type || "Historikk",
-          note: event.note || null,
-        })
-        .select("*")
-        .single();
+      const { data, error } = await withDbTimeout(
+        supabase
+          .from("service_events")
+          .insert({
+            customer_id: customerId,
+            event_date: normalizeDate(event.event_date),
+            event_type: event.event_type || "Historikk",
+            note: event.note || null,
+          })
+          .select("*")
+          .single(),
+        "lagre historikk",
+      );
       if (error) throw error;
       return data;
     },
