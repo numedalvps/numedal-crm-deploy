@@ -60,6 +60,12 @@ button {
   cursor: pointer;
 }
 
+button:disabled,
+button[data-busy="true"] {
+  opacity: 0.58;
+  cursor: wait;
+}
+
 button.secondary,
 .section-head button,
 .planning-head button,
@@ -917,6 +923,40 @@ textarea {
   background: linear-gradient(180deg, #ffffff 0%, #f7fbfb 100%);
 }
 
+.ai-registration-panel[open] {
+  display: block;
+}
+
+.ai-registration-summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.ai-registration-summary::-webkit-details-marker {
+  display: none;
+}
+
+.ai-registration-summary span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ai-registration-summary strong {
+  color: var(--teal-dark);
+  font-size: 16px;
+}
+
+.ai-registration-summary small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.ai-registration-body {
+  margin-top: 14px;
+}
+
 .ai-registration-panel .section-head p {
   color: var(--muted);
   font-weight: 700;
@@ -954,6 +994,32 @@ textarea {
 
 .ai-registration-panel textarea {
   resize: vertical;
+}
+
+.lead-filter-details {
+  position: relative;
+  min-width: 170px;
+}
+
+.lead-filter-details summary {
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  padding: 10px 12px;
+  color: var(--ink);
+  font-weight: 900;
+  cursor: pointer;
+  list-style: none;
+}
+
+.lead-filter-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.lead-filter-details select {
+  margin-top: 8px;
+  width: 100%;
 }
 
 .ai-attachment-list {
@@ -1670,6 +1736,28 @@ textarea {
   flex: 1 1 124px;
   min-width: 0;
   white-space: normal;
+}
+
+.website-raw-details {
+  width: 100%;
+}
+
+.website-raw-details summary {
+  color: var(--teal);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.website-raw-details pre {
+  max-height: 220px;
+  overflow: auto;
+  margin: 8px 0 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #f8fafc;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .website-workflow-hint {
@@ -2529,6 +2617,34 @@ textarea {
 .lead-contact-actions button {
   min-height: 36px;
   white-space: nowrap;
+}
+
+.lead-next-actions .order-primary {
+  border: 1px solid #99f6e4;
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
+.lead-current-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #f8fafc;
+  color: #334155;
+  font-weight: 900;
+}
+
+.lead-email-tools-collapsed > summary {
+  cursor: pointer;
+  color: var(--teal);
+  font-weight: 950;
+}
+
+.lead-email-tools-collapsed > .detail-section {
+  margin-top: 12px;
 }
 
 .lead-contact-panel .section-title-row {

@@ -470,6 +470,7 @@
     const billingStatus = order.billingStatus || order.billing_status || "not_ready";
     return {
       customer_id: order.customerId || order.customer_id || null,
+      lead_id: isUuid(order.lead_id || order.leadId) ? (order.lead_id || order.leadId) : null,
       location_id: isUuid(order.location_id || order.locationId) ? (order.location_id || order.locationId) : null,
       installation_id: isUuid(order.installation_id || order.installationId) ? (order.installation_id || order.installationId) : null,
       title: order.title || "Jobb",
@@ -914,6 +915,8 @@
         || Object.prototype.hasOwnProperty.call(order, "locationId");
       const job = await syncJobForOrder(supabase, data.id, {
         ...saved,
+        lead_id: order.lead_id || order.leadId || null,
+        leadId: order.lead_id || order.leadId || null,
         installation_id: hasInstallationId ? (order.installation_id ?? order.installationId ?? null) : (saved.installation_id || null),
         location_id: hasLocationId ? (order.location_id ?? order.locationId ?? null) : (saved.location_id || null),
       });
