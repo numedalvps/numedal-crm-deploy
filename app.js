@@ -227,6 +227,7 @@
   let crmAttachmentsByCustomer = new Map();
   let crmAttachmentsByLead = new Map();
   let crmAttachmentsByInstallation = new Map();
+  let crmAttachmentsByJob = new Map();
   let crmAttachmentsByIntake = new Map();
   let bookingSelectedCustomerId = "";
   let bookingPendingOrderId = "";
@@ -2264,6 +2265,10 @@
     return installation?.id ? (crmAttachmentsByInstallation.get(String(installation.id)) || []) : [];
   }
 
+  function attachmentsForJob(job) {
+    return job?.id ? (crmAttachmentsByJob.get(String(job.id)) || []) : [];
+  }
+
   function findInstallationById(id) {
     const wanted = String(id || "");
     if (!wanted) return null;
@@ -2352,6 +2357,30 @@
         ${crmAttachmentListHtml(attachments, { compact: true, limit: 3 })}
         ${store.isConfigured && isAdmin() && customer?.id ? `<button class="secondary" data-add-installation-attachment="${escapeHtml(installation.id)}" data-attachment-customer="${escapeHtml(key)}" type="button" title="Last opp bilde på akkurat dette anlegget.">Legg bilde til anlegg</button>` : ""}
       </div>
+    `;
+  }
+
+  function renderOrderAttachmentSection(order, customer, linkedJob) {
+    const attachments = attachmentsForJob(linkedJob);
+    const installation = installationForOrder(order, customer, linkedJob);
+    const canUpload = store.isConfigured && isAdmin() && customer?.id && linkedJob?.id;
+    const actions = canUpload ? `
+      <div class="section-actions">
+        <button data-add-job-attachment="${escapeHtml(order.id)}" type="button" title="Last opp bilde eller PDF til akkurat denne jobben.">Legg til bilde/vedlegg</button>
+      </div>
+    ` : "";
+    const empty = linkedJob?.id
+      ? "Ingen bilder eller vedlegg lagret på denne jobben ennå."
+      : "Jobben mangler jobbkobling. Opprett jobbkobling før bilder kan lagres direkte på jobben.";
+    return `
+      <section class="detail-section">
+        <div class="section-title-row">
+          <h3>Bilder og vedlegg</h3>
+          ${actions}
+        </div>
+        ${installation ? `<p class="compact-help">Gjelder anlegg: ${escapeHtml(installationDisplayName(installation))}</p>` : ""}
+        ${crmAttachmentListHtml(attachments, { empty })}
+      </section>
     `;
   }
 
@@ -2493,6 +2522,28 @@
         installation_id: installation.id,
         source_kind: "anlegg",
         note: "Lastet opp på varmepumpe/anlegg.",
+      });
+      return true;
+    }
+    const addJob = event.target.closest("[data-add-job-attachment]");
+    if (addJob) {
+      const order = findOrder(addJob.dataset.addJobAttachment);
+      const customer = order ? findCustomer(orderCustomerId(order)) : null;
+      const linkedJob = order ? jobForOrder(order) : null;
+      if (!order || !customer?.id) {
+        setSyncStatus("Fant ikke lagret kunde/jobb for vedlegget.", "error");
+        return true;
+      }
+      if (!linkedJob?.id) {
+        setSyncStatus("Opprett jobbkobling før bilder kan lagres direkte på jobben.", "error");
+        return true;
+      }
+      promptCrmAttachmentUpload({
+        customer_id: customer.id,
+        job_id: linkedJob.id,
+        installation_id: installationIdForOrder(order, linkedJob) || null,
+        source_kind: "jobb",
+        note: "Lastet opp fra jobbkort.",
       });
       return true;
     }
@@ -4676,6 +4727,7 @@
     crmAttachmentsByCustomer = new Map();
     crmAttachmentsByLead = new Map();
     crmAttachmentsByInstallation = new Map();
+    crmAttachmentsByJob = new Map();
     crmAttachmentsByIntake = new Map();
     const add = (map, key, attachment) => {
       if (!key) return;
@@ -4687,10 +4739,11 @@
       add(crmAttachmentsByCustomer, attachment.customer_id, attachment);
       add(crmAttachmentsByLead, attachment.lead_id, attachment);
       add(crmAttachmentsByInstallation, attachment.installation_id, attachment);
+      add(crmAttachmentsByJob, attachment.job_id, attachment);
       add(crmAttachmentsByIntake, attachment.intake_id, attachment);
     }
     const sort = (list) => list.sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")) || String(a.title || "").localeCompare(String(b.title || ""), "nb"));
-    for (const map of [crmAttachmentsByCustomer, crmAttachmentsByLead, crmAttachmentsByInstallation, crmAttachmentsByIntake]) {
+    for (const map of [crmAttachmentsByCustomer, crmAttachmentsByLead, crmAttachmentsByInstallation, crmAttachmentsByJob, crmAttachmentsByIntake]) {
       for (const list of map.values()) sort(list);
     }
   }
@@ -9032,6 +9085,7 @@
       const item = document.createElement("article");
       item.className = `order-list-row ${row.id === selectedOrderId ? "active" : ""}`;
       const installationText = orderInstallationText(row.order, row.customer, row.job);
+      const attachmentCount = attachmentsForJob(row.job).length;
       item.innerHTML = `
         <label class="order-select" title="Velg jobb for sletting.">
           <input data-order-check="${escapeHtml(row.id)}" type="checkbox" ${selectedOrderIds.has(row.id) ? "checked" : ""} />
@@ -9045,6 +9099,7 @@
         <strong>${orderBadgesHtml(row.order, row.job)}${escapeHtml(row.order.title || orderTitleFromBooking(row.customer, row.order))}</strong>
         <small>${escapeHtml(cleanDisplayName(row.customer))} · ${escapeHtml(orderTypeLabel(row.order.type))} · ${escapeHtml(orderDateText(row.order))}</small>
         ${installationText ? `<small>${escapeHtml(installationText)}</small>` : ""}
+        ${attachmentCount ? `<small>${attachmentCount.toLocaleString("nb-NO")} vedlegg</small>` : ""}
         <span>${escapeHtml(row.order.note || addressFor(row.customer) || row.customer.location_tag || "Ingen notat").slice(0, 150)}</span>
       `;
       item.appendChild(button);
@@ -9127,6 +9182,7 @@
         <div><dt>Dato</dt><dd>${escapeHtml(orderDateText(order))}</dd></div>
         <div><dt>Telefon</dt><dd class="copy-field">${phoneField(customer.phone)}</dd></div>
       </dl>
+      ${renderOrderAttachmentSection(order, customer, linkedJob)}
       <section class="detail-section">
         <h3>Avtale</h3>
         ${linkedBookings.length ? `<div class="order-booking-list">${linkedBookings.map((row) => `
@@ -9155,6 +9211,7 @@
             const linkedBookings = bookingRows().filter((row) => bookingIdsForOrder(order).includes(row.id) || row.booking.orderId === order.id);
             const linkedJob = jobForOrder(order);
             const installationText = orderInstallationText(order, customer, linkedJob);
+            const attachmentCount = attachmentsForJob(linkedJob).length;
             const bookingLine = linkedBookings.length
               ? linkedBookings.map((row) => `${formatDate(row.booking.date)} ${bookingTimeText(row.booking)} ${row.booking.resource || ""}`.trim()).join(" · ")
               : "Ikke planlagt";
@@ -9165,6 +9222,7 @@
                   <span>${escapeHtml(orderDateText(order))} · ${escapeHtml(billingStatusLabel(orderEffectiveBillingStatus(order, linkedJob)))} · ${escapeHtml(orderJobSummary(order, linkedJob))}</span>
                   ${installationText ? `<small>${escapeHtml(installationText)}</small>` : ""}
                   <small>${escapeHtml(bookingLine)}</small>
+                  ${attachmentCount ? `<small>${attachmentCount.toLocaleString("nb-NO")} bilde(r)/vedlegg på jobben</small>` : ""}
                   ${workflowInlineHtml(orderWorkflowState(order, linkedBookings))}
                 </div>
                 <button data-open-order="${escapeHtml(order.id)}" type="button">Åpne jobb</button>
@@ -14100,6 +14158,7 @@
     if (book) openBookingFromButton(book);
   });
   el.orderDetail?.addEventListener("click", async (event) => {
+    if (handleCrmAttachmentClick(event)) return;
     const open = event.target.closest("[data-open-order-customer]");
     if (open) {
       openCustomerCard(open.dataset.openOrderCustomer);
