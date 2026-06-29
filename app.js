@@ -4528,6 +4528,37 @@
       });
   }
 
+  async function runBusyForm(form, action, options = {}) {
+    if (!form || form.dataset.busy === "true") return false;
+    const busyLabel = options.busyLabel || "Lagrer...";
+    const submitControls = [...form.querySelectorAll('button[type="submit"], input[type="submit"]')];
+    const originals = submitControls.map((control) => ({
+      control,
+      disabled: control.disabled,
+      label: control.tagName === "BUTTON" ? control.textContent : control.value,
+    }));
+    form.dataset.busy = "true";
+    form.setAttribute("aria-busy", "true");
+    submitControls.forEach((control) => {
+      control.disabled = true;
+      if (control.tagName === "BUTTON") control.textContent = busyLabel;
+      else control.value = busyLabel;
+    });
+    try {
+      await action();
+      return true;
+    } finally {
+      delete form.dataset.busy;
+      form.removeAttribute("aria-busy");
+      originals.forEach(({ control, disabled, label }) => {
+        if (!control.isConnected) return;
+        control.disabled = disabled;
+        if (control.tagName === "BUTTON") control.textContent = label;
+        else control.value = label;
+      });
+    }
+  }
+
   async function saveCrmSettingValue(key, value) {
     crmSettings[key] = value;
     if (store.saveCrmSetting) {
@@ -14400,15 +14431,17 @@
 
   el.loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    el.loginMessage.textContent = "Logger inn...";
-    try {
-      await store.signIn(el.loginEmail.value.trim(), el.loginPassword.value);
-      currentView = "";
-      const loaded = await refreshData("Innlogget.");
-      if (loaded) el.loginMessage.textContent = "";
-    } catch (error) {
-      el.loginMessage.textContent = error.message || "Klarte ikke logge inn.";
-    }
+    await runBusyForm(event.currentTarget, async () => {
+      el.loginMessage.textContent = "Logger inn...";
+      try {
+        await store.signIn(el.loginEmail.value.trim(), el.loginPassword.value);
+        currentView = "";
+        const loaded = await refreshData("Innlogget.");
+        if (loaded) el.loginMessage.textContent = "";
+      } catch (error) {
+        el.loginMessage.textContent = error.message || "Klarte ikke logge inn.";
+      }
+    }, { busyLabel: "Logger inn..." });
   });
 
   el.forgotPasswordButton?.addEventListener("click", requestPasswordReset);
@@ -14416,12 +14449,14 @@
   el.cancelPasswordResetButton?.addEventListener("click", () => el.passwordResetDialog.close());
   el.passwordResetForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    showPasswordResetMessage("", "error");
-    try {
-      await savePasswordReset();
-    } catch (error) {
-      showPasswordResetMessage(error.message || "Klarte ikke lagre nytt passord.", "error");
-    }
+    await runBusyForm(event.currentTarget, async () => {
+      showPasswordResetMessage("", "error");
+      try {
+        await savePasswordReset();
+      } catch (error) {
+        showPasswordResetMessage(error.message || "Klarte ikke lagre nytt passord.", "error");
+      }
+    });
   });
 
   el.logoutButton.addEventListener("click", async () => {
@@ -15323,21 +15358,25 @@
   el.installationServiceInterval?.addEventListener("change", () => syncInstallationNextServiceSuggestion(true));
   el.installationForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    showInstallationDialogMessage("", "error");
-    try {
-      await saveInstallationFromDialog();
-    } catch (error) {
-      showInstallationDialogMessage(error.message || "Klarte ikke lagre varmepumpe/anlegg.", "error");
-    }
+    await runBusyForm(event.currentTarget, async () => {
+      showInstallationDialogMessage("", "error");
+      try {
+        await saveInstallationFromDialog();
+      } catch (error) {
+        showInstallationDialogMessage(error.message || "Klarte ikke lagre varmepumpe/anlegg.", "error");
+      }
+    });
   });
   el.customerForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    clearCustomerDialogMessage();
-    try {
-      await saveCustomerFromDialog();
-    } catch (error) {
-      showCustomerDialogMessage(error.message || "Klarte ikke lagre kunde.", "error");
-    }
+    await runBusyForm(event.currentTarget, async () => {
+      clearCustomerDialogMessage();
+      try {
+        await saveCustomerFromDialog();
+      } catch (error) {
+        showCustomerDialogMessage(error.message || "Klarte ikke lagre kunde.", "error");
+      }
+    });
   });
   el.deleteCustomerButton.addEventListener("click", async () => {
     const customer = findCustomer(editingCustomerId);
@@ -15374,12 +15413,14 @@
   });
   el.orderForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    clearOrderDialogMessage();
-    try {
-      await saveOrderFromDialog();
-    } catch (error) {
-      showOrderDialogMessage(error.message || "Klarte ikke lagre jobb.", "error");
-    }
+    await runBusyForm(event.currentTarget, async () => {
+      clearOrderDialogMessage();
+      try {
+        await saveOrderFromDialog();
+      } catch (error) {
+        showOrderDialogMessage(error.message || "Klarte ikke lagre jobb.", "error");
+      }
+    });
   });
 
   el.closeBookingDialog.addEventListener("click", () => el.bookingDialog.close());
@@ -15462,11 +15503,13 @@
   el.cancelCompletionButton.addEventListener("click", () => el.completionDialog.close());
   el.completionForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    try {
-      await completeBookingFromDialog();
-    } catch (error) {
-      setSyncStatus(error.message || "Klarte ikke fullføre jobb.", "error");
-    }
+    await runBusyForm(event.currentTarget, async () => {
+      try {
+        await completeBookingFromDialog();
+      } catch (error) {
+        setSyncStatus(error.message || "Klarte ikke fullføre jobb.", "error");
+      }
+    }, { busyLabel: "Fullfører..." });
   });
   el.closeBillingDialog?.addEventListener("click", () => el.billingDialog.close());
   el.cancelBillingButton?.addEventListener("click", () => el.billingDialog.close());
@@ -15474,38 +15517,44 @@
   el.billingPriceBasis?.addEventListener("input", renderBillingPriceTotal);
   el.billingForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    clearBillingDialogMessage();
-    try {
-      await saveBillingFromDialog();
-    } catch (error) {
-      showBillingDialogMessage(error.message || "Klarte ikke lagre fakturering/betaling.", "error");
-      setSyncStatus(error.message || "Klarte ikke lagre fakturering/betaling.", "error");
-    }
+    await runBusyForm(event.currentTarget, async () => {
+      clearBillingDialogMessage();
+      try {
+        await saveBillingFromDialog();
+      } catch (error) {
+        showBillingDialogMessage(error.message || "Klarte ikke lagre fakturering/betaling.", "error");
+        setSyncStatus(error.message || "Klarte ikke lagre fakturering/betaling.", "error");
+      }
+    });
   });
   el.closeDeleteBookingDialog?.addEventListener("click", () => el.deleteBookingDialog.close());
   el.cancelDeleteBookingButton?.addEventListener("click", () => el.deleteBookingDialog.close());
   el.deleteBookingForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    clearDeleteBookingMessage();
-    try {
-      await deleteBookingFromDialog();
-    } catch (error) {
-      showDeleteBookingMessage(error.message || "Klarte ikke fjerne booking.", "error");
-      setSyncStatus(error.message || "Klarte ikke fjerne booking.", "error");
-    }
+    await runBusyForm(event.currentTarget, async () => {
+      clearDeleteBookingMessage();
+      try {
+        await deleteBookingFromDialog();
+      } catch (error) {
+        showDeleteBookingMessage(error.message || "Klarte ikke fjerne booking.", "error");
+        setSyncStatus(error.message || "Klarte ikke fjerne booking.", "error");
+      }
+    }, { busyLabel: "Fjerner..." });
   });
   el.closeDeleteOrdersDialog?.addEventListener("click", () => el.deleteOrdersDialog.close());
   el.cancelDeleteOrdersButton?.addEventListener("click", () => el.deleteOrdersDialog.close());
   el.deleteOrdersForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    clearDeleteOrdersMessage();
-    try {
-      await deleteSelectedOrders({ cancelLinkedBookings: Boolean(el.deleteOrdersCancelBookings?.checked) });
-      el.deleteOrdersDialog.close();
-    } catch (error) {
-      showDeleteOrdersMessage(error.message || "Klarte ikke slette jobb.", "error");
-      setSyncStatus(error.message || "Klarte ikke slette jobb.", "error");
-    }
+    await runBusyForm(event.currentTarget, async () => {
+      clearDeleteOrdersMessage();
+      try {
+        await deleteSelectedOrders({ cancelLinkedBookings: Boolean(el.deleteOrdersCancelBookings?.checked) });
+        el.deleteOrdersDialog.close();
+      } catch (error) {
+        showDeleteOrdersMessage(error.message || "Klarte ikke slette jobb.", "error");
+        setSyncStatus(error.message || "Klarte ikke slette jobb.", "error");
+      }
+    }, { busyLabel: "Sletter..." });
   });
   el.closeConfirmDialog?.addEventListener("click", () => {
     resolveConfirmDialog(false);
@@ -15525,24 +15574,28 @@
   el.cancelMoveButton?.addEventListener("click", () => el.moveDialog.close());
   el.moveForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    clearMoveDialogMessage();
-    try {
-      await saveMoveFromDialog();
-    } catch (error) {
-      showMoveDialogMessage(error.message || "Klarte ikke markere jobben som må flyttes.", "error");
-      setSyncStatus(error.message || "Klarte ikke markere jobben som må flyttes.", "error");
-    }
+    await runBusyForm(event.currentTarget, async () => {
+      clearMoveDialogMessage();
+      try {
+        await saveMoveFromDialog();
+      } catch (error) {
+        showMoveDialogMessage(error.message || "Klarte ikke markere jobben som må flyttes.", "error");
+        setSyncStatus(error.message || "Klarte ikke markere jobben som må flyttes.", "error");
+      }
+    }, { busyLabel: "Markerer..." });
   });
   el.bookingForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    clearBookingDialogMessage();
-    try {
-      await saveBookingFromDialog();
-    } catch (error) {
-      const message = error.message || "Klarte ikke lagre booking.";
-      showBookingDialogMessage(message, "error");
-      setSyncStatus(message, "error");
-    }
+    await runBusyForm(event.currentTarget, async () => {
+      clearBookingDialogMessage();
+      try {
+        await saveBookingFromDialog();
+      } catch (error) {
+        const message = error.message || "Klarte ikke lagre booking.";
+        showBookingDialogMessage(message, "error");
+        setSyncStatus(message, "error");
+      }
+    });
   });
   el.deleteBookingButton.addEventListener("click", async () => {
     openDeleteBookingDialog(editingBookingId, { closeBookingDialog: true });
