@@ -1268,6 +1268,13 @@
       if (error) throw error;
       return data;
     },
+    async deleteLead(id) {
+      const supabase = await requireClient();
+      if (!isUuid(id)) throw new Error("Ugyldig lead-id.");
+      const { error } = await supabase.from("leads").delete().eq("id", id);
+      if (error) throw error;
+      return true;
+    },
     async updateWebsiteSubmission(id, patch = {}) {
       const supabase = await requireClient();
       if (!isUuid(id)) throw new Error("Ugyldig nettsideinnsending-id.");
@@ -1395,6 +1402,13 @@
         .single();
       if (error) throw error;
       return data;
+    },
+    async deleteWebsiteSubmission(id) {
+      const supabase = await requireClient();
+      if (!isUuid(id)) throw new Error("Ugyldig nettsideinnsending-id.");
+      const { error } = await supabase.from("website_submissions").delete().eq("id", id);
+      if (error) throw error;
+      return true;
     },
     async saveCrmAttachment(file, links = {}) {
       const supabase = await requireClient();

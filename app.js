@@ -1622,22 +1622,45 @@
     const customer = findCustomer(customerId);
     if (!customer) return;
     const ok = await askForConfirmation({
-      title: "Sett lead inaktiv",
-      message: "Sette denne leaden inaktiv? Den slettes ikke permanent, men forsvinner fra aktive lister.",
-      confirmLabel: "Sett inaktiv",
+      title: "Skjul henvendelse",
+      message: "Skjule denne gamle leadmarkeringen fra innboksen? Kundekortet beholdes.",
+      confirmLabel: "Skjul henvendelse",
       tone: "danger",
     });
     if (!ok) return;
-    if (store.isConfigured) await store.deleteCustomer(customer);
-    else {
-      requireLocalDemoStorage();
-      deletedCustomers.add(customerId);
-      localStorage.setItem(storage.deleted, JSON.stringify([...deletedCustomers]));
-    }
-    customers = customers.filter((item) => customerKey(item) !== customerId);
+    const tags = uniqueTags(splitTags(customer.tags).filter((tag) => !isLegacyLeadTag(tag)));
+    await saveCustomerInline(customer, { tags }, "");
     selectedLeadId = leadEntryKey(allLeadEntries()[0]) || "";
     renderAll();
-    setSyncStatus("Lead satt inaktiv.", "ok");
+    setSyncStatus("Henvendelsen er skjult. Kundekortet er beholdt.", "ok");
+  }
+
+  async function deleteLeadEntry(entryKey) {
+    const entry = leadEntryForTarget(entryKey);
+    if (!entry?.lead?.id) throw new Error("Fant ikke henvendelsen som skulle slettes.");
+    const customer = entry.customer ? findCustomer(leadEntryCustomerKey(entry)) : null;
+    const ok = await askForConfirmation({
+      title: "Slett henvendelse",
+      message: `Slette henvendelsen for ${cleanDisplayName(entry.customer)}? Kundekort slettes ikke.`,
+      confirmLabel: "Slett henvendelse",
+      tone: "danger",
+    });
+    if (!ok) return;
+    if (store.isConfigured) {
+      if (!store.deleteLead) throw new Error("Sletting av henvendelser krever oppdatert Supabase-adapter.");
+      await store.deleteLead(entry.lead.id);
+    } else {
+      deleteLocalLead(entry.lead.id);
+    }
+    leads = leads.filter((lead) => lead.id !== entry.lead.id);
+    if (customer) {
+      const tags = uniqueTags(splitTags(customer.tags).filter((tag) => !isLegacyLeadTag(tag)));
+      await saveCustomerInline(customer, { tags }, "");
+    }
+    selectedLeadId = leadEntryKey(allLeadEntries()[0]) || "";
+    renderAll();
+    setView("leads");
+    setSyncStatus("Henvendelsen er slettet. Kundekortet er beholdt.", "ok");
   }
 
   function leadStatusControlHtml(customer, statusOverride = "", targetKey = "") {
@@ -4904,6 +4927,12 @@
     return updated;
   }
 
+  function deleteLocalLead(id) {
+    requireLocalDemoStorage();
+    leads = leads.filter((lead) => lead.id !== id);
+    saveLocalLeads();
+  }
+
   function bookingRows() {
     return Object.entries(bookings)
       .map(([id, booking]) => ({
@@ -8093,12 +8122,13 @@
   function renderWebsiteSubmissionInbox() {
     if (!el.websiteSubmissionInbox) return;
     const rows = openWebsiteSubmissionRows();
-    el.websiteSubmissionInbox.classList.toggle("hidden", !rows.length);
-    if (!rows.length) {
+    const hiddenRows = hiddenWebsiteSubmissionRows();
+    el.websiteSubmissionInbox.classList.toggle("hidden", !rows.length && !hiddenRows.length);
+    if (!rows.length && !hiddenRows.length) {
       el.websiteSubmissionInbox.innerHTML = "";
       return;
     }
-    el.websiteSubmissionInbox.innerHTML = `
+    const openHtml = rows.length ? `
       <div class="section-head compact">
         <div>
           <h3>Nye nettskjema</h3>
@@ -8136,6 +8166,7 @@
                   <div>
                     <button class="secondary" data-website-submission-status="read" data-website-submission-id="${escapeHtml(row.id)}" type="button" title="Skjul fra innboksen uten å opprette salgsmulighet eller jobb.">Marker lest</button>
                     <button class="secondary danger" data-website-submission-status="spam" data-website-submission-id="${escapeHtml(row.id)}" type="button" title="Marker som spam/ugyldig og skjul fra innboksen.">Spam</button>
+                    <button class="secondary danger" data-delete-website-submission="${escapeHtml(row.id)}" type="button" title="Slett denne nettsideinnsendingen permanent. Brukes for test/spam.">Slett</button>
                   </div>
                 </details>
               </div>
@@ -8143,11 +8174,52 @@
           `;
         }).join("")}
       </div>
+    ` : "";
+    const hiddenHtml = hiddenRows.length ? `
+      <details class="website-hidden-submissions">
+        <summary>Skjulte/spam (${hiddenRows.length.toLocaleString("nb-NO")})</summary>
+        <div class="website-submission-list compact">
+          ${hiddenRows.slice(0, 12).map((row) => {
+            const status = row.processing_status || "read";
+            const date = row.received_at ? formatDate(isoDate(new Date(row.received_at))) : "";
+            return `
+              <article>
+                <div>
+                  <strong>${escapeHtml(websiteSubmissionName(row) || "Ukjent innsending")}</strong>
+                  <span>${escapeHtml([websiteSubmissionStatusLabel(status), websiteSubmissionTypeLabel(row), date].filter(Boolean).join(" · "))}</span>
+                  ${websiteSubmissionMessage(row) ? `<small>${escapeHtml(websiteSubmissionMessage(row)).slice(0, 140)}</small>` : ""}
+                </div>
+                <div class="mini-action-row">
+                  <button class="secondary" data-website-submission-status="new" data-website-submission-id="${escapeHtml(row.id)}" type="button" title="Legg innsendingen tilbake i nye nettskjema.">Gjenåpne</button>
+                  <button class="secondary danger" data-delete-website-submission="${escapeHtml(row.id)}" type="button" title="Slett denne nettsideinnsendingen permanent. Brukes for test/spam.">Slett</button>
+                </div>
+              </article>
+            `;
+          }).join("")}
+        </div>
+      </details>
+    ` : "";
+    el.websiteSubmissionInbox.innerHTML = `
+      ${openHtml}
+      ${hiddenHtml}
     `;
   }
 
   function openWebsiteSubmissionRows() {
     return (websiteSubmissions || []).filter((row) => ["new", "duplicate_possible", "failed"].includes(row.processing_status || "new"));
+  }
+
+  function hiddenWebsiteSubmissionRows() {
+    return (websiteSubmissions || []).filter((row) => ["read", "spam", "invalid"].includes(row.processing_status || "new"));
+  }
+
+  function websiteSubmissionStatusLabel(status) {
+    if (status === "spam") return "Spam";
+    if (status === "invalid") return "Ugyldig";
+    if (status === "read") return "Skjult";
+    if (status === "processed") return "Behandlet";
+    if (status === "failed") return "Feilet";
+    return "Ny";
   }
 
   function websiteSubmissionDuplicateHints(row, rows = websiteSubmissions || []) {
@@ -8638,7 +8710,29 @@
     const updated = await store.updateWebsiteSubmission(id, { processing_status: status });
     mergeWebsiteSubmission(id, { processing_status: status }, updated);
     renderLeads();
-    setSyncStatus(status === "read" ? "Nettsideinnsending markert lest." : "Nettsideinnsending markert som spam.", "ok");
+    const message = status === "read"
+      ? "Nettsideinnsending markert lest."
+      : status === "new"
+        ? "Nettsideinnsending gjenåpnet."
+        : "Nettsideinnsending markert som spam.";
+    setSyncStatus(message, "ok");
+  }
+
+  async function deleteWebsiteSubmission(id) {
+    if (!store.deleteWebsiteSubmission) throw new Error("Sletting krever oppdatert Supabase-adapter.");
+    const row = (websiteSubmissions || []).find((item) => item.id === id);
+    if (!row) throw new Error("Fant ikke nettsideinnsendingen.");
+    const ok = await askForConfirmation({
+      title: "Slett nettsideinnsending",
+      message: `Slette nettsideinnsendingen fra ${websiteSubmissionName(row)}? Eventuelt opprettet kundekort, lead eller jobb slettes ikke.`,
+      confirmLabel: "Slett",
+      tone: "danger",
+    });
+    if (!ok) return;
+    await store.deleteWebsiteSubmission(id);
+    websiteSubmissions = (websiteSubmissions || []).filter((item) => item.id !== id);
+    renderLeads();
+    setSyncStatus("Nettsideinnsendingen er slettet.", "ok");
   }
 
   function leadCustomerMatchValues(entry) {
@@ -8909,6 +9003,9 @@
     if (realCustomer) {
       actions.push(`<button class="secondary" data-new-lead-existing-customer="${escapeHtml(key)}" type="button" title="Lag en ny salgsmulighet på samme kunde, for eksempel ekstra varmepumpe på hjemmeadresse eller hytte.">Ny salgsmulighet</button>`);
     }
+    if (entry?.lead && isAdmin()) {
+      actions.push(`<button class="secondary danger" data-delete-lead-entry="${escapeHtml(entryKey)}" type="button" title="Slett bare denne henvendelsen. Kundekort beholdes.">Slett henvendelse</button>`);
+    }
     return `
       <section class="lead-next-action ${escapeHtml(status)}">
         <div>
@@ -9037,7 +9134,7 @@
             <button data-lead-set-status="offer_sent" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button" title="Marker manuelt at tilbud er sendt og venter på svar.">Tilbud sendt</button>
             <button data-lead-set-status="won" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button" title="Kunden har takket ja. Da bør det opprettes jobb.">Vunnet</button>
             <button data-lead-set-status="lost" data-lead-status-customer="${escapeHtml(leadTarget)}" type="button" title="Avslutt saken når kunden ikke skal gå videre.">Tapt</button>
-            ${realCustomer && !entry?.lead ? `<button class="secondary" data-inactivate-lead="${escapeHtml(key)}" type="button" title="Skjul denne gamle kunde-tag-leaden fra aktiv leadliste.">Sett inaktiv</button>` : ""}` : ""}
+            ${realCustomer && !entry?.lead ? `<button class="secondary" data-inactivate-lead="${escapeHtml(key)}" type="button" title="Skjul denne gamle leadmarkeringen fra aktiv leadliste. Kundekortet beholdes.">Skjul henvendelse</button>` : ""}` : ""}
           </div>
         </details>
       </section>
@@ -13928,6 +14025,12 @@
     renderLeads();
   });
   el.websiteSubmissionInbox?.addEventListener("click", (event) => {
+    const deleteSubmission = event.target.closest("[data-delete-website-submission]");
+    if (deleteSubmission) {
+      deleteWebsiteSubmission(deleteSubmission.dataset.deleteWebsiteSubmission)
+        .catch((error) => setSyncStatus(error.message || "Klarte ikke slette nettsideinnsending.", "error"));
+      return;
+    }
     const createServiceOrder = event.target.closest("[data-create-website-service-order]");
     if (createServiceOrder) {
       createServiceOrderFromWebsiteSubmission(createServiceOrder.dataset.createWebsiteServiceOrder)
@@ -14167,6 +14270,12 @@
     if (statusButton) {
       setLeadStatusTarget(statusButton.dataset.leadStatusCustomer, statusButton.dataset.leadSetStatus)
         .catch((error) => setSyncStatus(error.message || "Klarte ikke endre leadstatus.", "error"));
+      return;
+    }
+    const deleteLead = event.target.closest("[data-delete-lead-entry]");
+    if (deleteLead) {
+      deleteLeadEntry(deleteLead.dataset.deleteLeadEntry)
+        .catch((error) => setSyncStatus(error.message || "Klarte ikke slette henvendelse.", "error"));
       return;
     }
     const template = event.target.closest("[data-copy-lead-template]");

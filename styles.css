@@ -1552,6 +1552,25 @@ textarea {
   gap: 7px;
 }
 
+.website-hidden-submissions {
+  margin-top: 10px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #f8fafc;
+}
+
+.website-hidden-submissions summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.website-hidden-submissions .website-submission-list {
+  margin-top: 8px;
+}
+
 .website-submission-list article {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -1560,6 +1579,11 @@ textarea {
   border: 1px solid #dbeafe;
   border-radius: 8px;
   padding: 8px 10px;
+  background: #fff;
+}
+
+.website-submission-list.compact article {
+  border-color: var(--line);
   background: #fff;
 }
 
