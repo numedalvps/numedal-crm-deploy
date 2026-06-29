@@ -1481,18 +1481,23 @@
         note: `Leadstatus satt til: ${leadStatusLabel(status)}.`,
       });
       selectedLeadId = `lead:${updatedLead.id}`;
+      focusLeadQueueForStatus(status);
       renderAll();
+      setView("leads");
       setSyncStatus(`Lead satt til: ${leadStatusLabel(status)}.`, "ok");
       return;
     }
     const saved = await saveCustomerInline(customer, { tags: nextTagsWithLeadStatus(customer, status) }, "");
-    await syncLeadRecord(saved || customer, status, `Leadstatus satt til: ${leadStatusLabel(status)}.`);
+    const syncedLead = await syncLeadRecord(saved || customer, status, `Leadstatus satt til: ${leadStatusLabel(status)}.`);
     await saveServiceEvent(customer, {
       event_date: isoDate(new Date()),
       event_type: "Leadstatus",
       note: `Leadstatus satt til: ${leadStatusLabel(status)}.`,
     });
-    selectedLeadId = customerId;
+    selectedLeadId = syncedLead?.id ? `lead:${syncedLead.id}` : customerKey(saved || customer) || customerId;
+    focusLeadQueueForStatus(status || leadStatusForCustomer(saved || customer));
+    renderAll();
+    setView("leads");
     setSyncStatus(status ? `Lead satt til: ${leadStatusLabel(status)}.` : "Lead-status fjernet.", "ok");
   }
 
@@ -1534,8 +1539,7 @@
       await saveCustomerInline(realCustomer, { tags: nextTagsWithLeadStatus(realCustomer, status) }, "");
     }
     selectedLeadId = `lead:${updatedLead.id}`;
-    currentLeadFilter = status || "followup";
-    if (el.leadStatusFilter) el.leadStatusFilter.value = currentLeadFilter;
+    focusLeadQueueForStatus(status || "followup");
     renderAll();
     setView("leads");
     setSyncStatus(`Lead satt til: ${leadStatusLabel(status)}.`, "ok");
@@ -2404,6 +2408,19 @@
       selected_action: values.action,
       final_json: aiRegistrationFinalJson(values),
     });
+    const shouldOpenLead = ["lead", "befaring", "installasjon", "blaseisolering"].includes(values.type) || Boolean(syncedLead);
+    if (shouldOpenLead) {
+      const status = leadStatusFromDb(syncedLead?.status) || leadStatusForCustomer(saved);
+      selectedLeadId = syncedLead?.id ? `lead:${syncedLead.id}` : customerKey(saved);
+      focusLeadQueueForStatus(status);
+      clearAiRegistration();
+      setView("leads");
+      setSyncStatus(existing
+        ? "Henvendelse lagret på eksisterende kundekort og åpnet i Innboks."
+        : "Kundekort og henvendelse opprettet. Saken er åpnet i Innboks for videre oppfølging.",
+      "ok");
+      return;
+    }
     selectedCustomerId = customerKey(saved);
     currentCustomerFilter = "all";
     currentSearch = "";
@@ -7466,6 +7483,19 @@
     return leadNoteFromDb(entry?.lead) || leadNoteForCustomer(entry?.customer);
   }
 
+  function leadCardSummary(entry) {
+    const note = leadNoteForEntry(entry);
+    if (note) return note;
+    const product = [
+      entry?.lead?.product_interest,
+      entry?.lead?.source_detail,
+    ].filter(Boolean).join(" · ");
+    if (product) return product;
+    const tags = importantCustomerTags(entry?.customer);
+    if (tags.length) return tags.join("; ");
+    return "Ingen notat ennå";
+  }
+
   function leadEntryMatchesSearch(entry, search) {
     if (!search) return true;
     const customer = entry.customer;
@@ -7493,9 +7523,25 @@
       entry?.customer?.tags,
       leadNoteForEntry(entry),
     ].filter(Boolean).join(" "));
-    if (/nettside|website|webskjema|skjema|contact form|kontakt/i.test(text)) return "website";
+    if (/nettside|website|webskjema|skjema|contact form|kontaktform|kontaktskjema/i.test(text)) return "website";
     if (/e-post|e post|epost|email|gmail|mail|innboks/i.test(text)) return "email";
     return "manual";
+  }
+
+  function leadInboxTabForStatus(status) {
+    if (status === "followup") return "new";
+    if (["needs_offer", "offer_sent"].includes(status)) return "followup";
+    if (["won", "lost"].includes(status)) return "archive";
+    return "new";
+  }
+
+  function focusLeadQueueForStatus(status) {
+    if (["won", "lost"].includes(status)) {
+      currentLeadFilter = status;
+      if (el.leadStatusFilter) el.leadStatusFilter.value = status;
+      return;
+    }
+    setLeadInboxTab(leadInboxTabForStatus(status));
   }
 
   function leadEntryMatchesInboxTab(entry, tab = currentLeadInboxTab) {
@@ -7581,7 +7627,7 @@
       button.innerHTML = `
         <strong>${leadBadgeForStatus(status)}${escapeHtml(cleanDisplayName(customer))}</strong>
         <small>${escapeHtml([customer.visit_city || customer.location_tag || "Ukjent sted", customer.phone, customer.email].filter(Boolean).join(" · "))}</small>
-        <span>${escapeHtml(leadNoteForEntry(entry) || customer.tags || "Ingen notat ennå").slice(0, 150)}</span>
+        <span>${escapeHtml(leadCardSummary(entry)).slice(0, 150)}</span>
       `;
       el.leadList.appendChild(button);
     }
