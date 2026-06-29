@@ -12715,9 +12715,10 @@
     const resourceRows = rows
       .filter((row) => row.id !== editingBookingId)
       .filter((row) => resourcesOverlap(row.booking.resource || "", previewValues.resource || ""));
-    const slots = freeSlotsForDay(resourceRows);
-    const conflict = bookingConflict(previewValues, editingBookingId);
     const selectedWindow = bookingTimeWindow(previewValues);
+    const selectedDuration = Math.max(1, selectedWindow.end - selectedWindow.start);
+    const slots = freeSlotsForDay(resourceRows).filter((slot) => slot.end - slot.start >= selectedDuration);
+    const conflict = bookingConflict(previewValues, editingBookingId);
     const previewText = `${timeRangeText(selectedWindow.start, selectedWindow.end)} · ${previewValues.resource || "valgt ansatt"}`;
     const previewHtml = conflict
       ? `<div class="day-agenda-preview conflict">Valgt tid krasjer med ${escapeHtml(cleanDisplayName(conflict.customer))} kl. ${escapeHtml(timeRangeText(bookingRowStartMinutes(conflict), bookingRowEndMinutes(conflict)))}.</div>`
@@ -12729,8 +12730,8 @@
       </article>
     `).join("") : `<div class="empty-state">Ingen jobber booket denne dagen.</div>`;
     const slotHtml = slots.length ? slots.map((slot) => `
-      <span class="free-slot">${timeRangeText(slot.start, slot.end)} ledig</span>
-    `).join("") : `<span class="free-slot busy">Ingen tydelige ledige hull 08-18 for valgt ansatt</span>`;
+      <button class="free-slot" data-booking-slot-time="${escapeHtml(timeFromMinutes(slot.start))}" type="button" title="Bruk ${escapeHtml(timeFromMinutes(slot.start))} som starttid.">${escapeHtml(slotSuggestionText(slot, selectedDuration))}</button>
+    `).join("") : `<span class="free-slot busy">Ingen ledige hull for ${escapeHtml(formatDuration(selectedDuration))} på valgt ansatt</span>`;
     el.bookingDayAgenda.innerHTML = `
       <div class="day-agenda-head">
         <strong>${formatDate(date)}</strong>
@@ -15151,6 +15152,12 @@
   el.bookingTime.addEventListener("input", renderBookingDayAgenda);
   el.bookingDuration.addEventListener("input", renderBookingDayAgenda);
   el.bookingResource.addEventListener("change", renderBookingDayAgenda);
+  el.bookingDayAgenda?.addEventListener("click", (event) => {
+    const slotButton = event.target.closest("[data-booking-slot-time]");
+    if (!slotButton) return;
+    el.bookingTime.value = slotButton.dataset.bookingSlotTime || "09:00";
+    renderBookingDayAgenda();
+  });
   el.bookingMonthPrev.addEventListener("click", () => shiftBookingMonth(-1));
   el.bookingMonthNext.addEventListener("click", () => shiftBookingMonth(1));
   el.bookingMonthGrid.addEventListener("click", (event) => {
