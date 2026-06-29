@@ -3498,7 +3498,8 @@
   function customerActionLinks(customer) {
     const links = [];
     if (customer.phone) links.push(`<a href="tel:${escapeHtml(phoneForLink(customer.phone))}" title="Ring kunden med registrert telefonnummer.">Ring</a>`);
-    if (customer.email) links.push(`<a href="${escapeHtml(emailUrl(customer))}" target="_blank" rel="noreferrer" title="Åpne Gmail med kundens e-postadresse ferdig utfylt.">E-post</a>`);
+    const emailLink = customerEmailLinkHtml(customer);
+    if (emailLink) links.push(emailLink);
     if (mapQuery(customer)) links.push(`<a href="${escapeHtml(mapsUrl(customer))}" target="_blank" rel="noreferrer" title="Åpne anleggsadressen i Google Maps.">Kart</a>`);
     return links.join("");
   }
@@ -3522,7 +3523,8 @@
   function customerMoreActionsHtml(customer) {
     const key = customerKey(customer);
     const actions = [];
-    if (customer.email) actions.push(`<a href="${escapeHtml(emailUrl(customer))}" target="_blank" rel="noreferrer" title="Åpne Gmail med kundens e-postadresse ferdig utfylt.">E-post</a>`);
+    const emailLink = customerEmailLinkHtml(customer);
+    if (emailLink) actions.push(emailLink);
     if (customer.phone) actions.push(`<a href="${escapeHtml(smsUrl())}" target="_blank" rel="noreferrer" title="Åpne Google Messages for å sende SMS.">SMS</a>`);
     if (isAdmin() && !customer.is_inactive) {
       actions.push(`<button class="secondary" data-new-order-customer="${escapeHtml(key)}" type="button" title="Lag jobb uten å velge dato nå. Bruk Book avtale hvis tidspunktet skal settes med en gang.">Ny jobb uten dato</button>`);
@@ -3543,8 +3545,13 @@
     `;
   }
 
+  function customerEmailLinkHtml(customer, label = "E-post") {
+    if (!customer?.email) return "";
+    return `<a href="${escapeHtml(emailUrl(customer))}" data-open-customer-email="${escapeHtml(customerKey(customer))}" title="Åpne standard e-postprogram. CRM-ref legges i emne og logges på kundekortet.">${escapeHtml(label)}</a>`;
+  }
+
   function emailUrl(customer) {
-    return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(customer.email || "")}`;
+    return mailtoUrl(customer.email || "");
   }
 
   function smsUrl() {
@@ -3801,6 +3808,38 @@
       .join(" ");
   }
 
+  function customerActivitySearchText(customer) {
+    const keys = new Set([
+      customerKey(customer),
+      customer?.id,
+      customer?.lime_id,
+      customer?.legacy_lime_id,
+    ].filter(Boolean).map(String));
+    return (activities || [])
+      .filter((activity) => {
+        const metadata = activity?.metadata || {};
+        return keys.has(String(activity?.customer_id || ""))
+          || keys.has(String(activity?.customerId || ""))
+          || keys.has(String(metadata.customer_id || ""))
+          || keys.has(String(metadata.customer_lime_id || ""))
+          || keys.has(String(metadata.customer_key || ""));
+      })
+      .slice(0, 30)
+      .map((activity) => {
+        const metadata = activity?.metadata || {};
+        return [
+          activity.summary,
+          activity.body,
+          activity.activity_type,
+          metadata.email_reference,
+          metadata.subject,
+          metadata.to,
+          metadata.from,
+        ].filter(Boolean).join(" ");
+      })
+      .join(" ");
+  }
+
   function customerHaystack(customer) {
     return [
       customer.name,
@@ -3819,6 +3858,7 @@
       customer.latest_deal_name,
       customer.local_note,
       installationSearchText(customer),
+      customerActivitySearchText(customer),
     ].join(" ").toLowerCase();
   }
 
@@ -8966,7 +9006,7 @@
               <div>
                 <button data-new-lead-existing-customer="${escapeHtml(key)}" data-lead-kind="blaseisolering" type="button">Lag blåseisolering-lead</button>
                 ${customer.phone ? `<a href="tel:${escapeHtml(phoneForLink(customer.phone))}">Ring</a>${copyPhoneButton(customer.phone, "Kopier")}` : ""}
-                ${customer.email ? `<a href="${escapeHtml(emailUrl(customer))}" target="_blank" rel="noreferrer">E-post</a>` : ""}
+                ${customerEmailLinkHtml(customer)}
                 <button data-book-insulation-customer="${escapeHtml(key)}" type="button">Book blåsejobb</button>
                 <button data-new-insulation-order="${escapeHtml(key)}" type="button">Ny blåsejobb</button>
               </div>
@@ -9145,6 +9185,170 @@
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
   }
 
+  function mailtoUrl(to, subject = "", body = "") {
+    const params = [];
+    if (subject) params.push(`subject=${encodeURIComponent(subject)}`);
+    if (body) params.push(`body=${encodeURIComponent(body)}`);
+    return `mailto:${encodeURIComponent(String(to || "").trim())}${params.length ? `?${params.join("&")}` : ""}`;
+  }
+
+  function emailReferenceSuffix(length = 6) {
+    const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const values = new Uint32Array(length);
+    if (globalThis.crypto?.getRandomValues) {
+      globalThis.crypto.getRandomValues(values);
+    } else {
+      for (let index = 0; index < values.length; index += 1) values[index] = Math.floor(Math.random() * 65536);
+    }
+    return Array.from(values, (value) => alphabet[value % alphabet.length]).join("");
+  }
+
+  function createEmailReference(prefix = "MAIL") {
+    const safePrefix = String(prefix || "MAIL").toUpperCase().replace(/[^A-Z0-9]+/g, "").slice(0, 12) || "MAIL";
+    return `NVS-${safePrefix}-${isoDate(new Date()).replaceAll("-", "")}-${emailReferenceSuffix()}`;
+  }
+
+  function extractEmailReference(...values) {
+    const text = values.map((value) => String(value || "")).join(" ");
+    return (text.match(/\bNVS-[A-Z0-9]+-\d{8}-[A-Z0-9]{6}\b/i)?.[0] || "").toUpperCase();
+  }
+
+  function ensureEmailReference(subject, body, prefix = "MAIL") {
+    const reference = extractEmailReference(subject, body) || createEmailReference(prefix);
+    const cleanSubject = String(subject || "").trim();
+    const cleanBody = String(body || "").trimEnd();
+    return {
+      reference,
+      subject: cleanSubject.includes(reference) ? cleanSubject : `${cleanSubject} [${reference}]`,
+      body: cleanBody.includes(reference) ? cleanBody : `${cleanBody}\n\n---\nCRM-ref: ${reference}`,
+    };
+  }
+
+  function emailActivityCustomerMetadata(customer, customerId = "") {
+    return {
+      customer_id: customerId || null,
+      customer_lime_id: customer?.lime_id || customer?.legacy_lime_id || null,
+      customer_key: customerId || customerKey(customer) || null,
+    };
+  }
+
+  async function recordExternalEmailDraftActivity({
+    customer,
+    leadId = "",
+    jobId = "",
+    reference = "",
+    from = "",
+    to = "",
+    subject = "",
+    body = "",
+    source = "external_mail",
+    activityType = "email_draft_opened",
+    summary = "E-postutkast åpnet",
+  } = {}) {
+    const customerId = customer ? customerKey(customer) : "";
+    return saveActivityRecord({
+      customer_id: isUuid(customerId) ? customerId : null,
+      lead_id: isUuid(leadId) ? leadId : null,
+      job_id: isUuid(jobId) ? jobId : null,
+      activity_type: activityType,
+      summary,
+      body: [
+        reference ? `CRM-ref: ${reference}` : "",
+        to ? `Til: ${to}` : "",
+        from ? `Fra: ${from}` : "",
+        subject ? `Emne: ${subject}` : "",
+        body ? `Utdrag:\n${String(body).slice(0, 1200)}` : "",
+      ].filter(Boolean).join("\n"),
+      metadata: {
+        direction: "outgoing",
+        external_mail_client: true,
+        source,
+        email_reference: reference || null,
+        from: from || null,
+        to: to || null,
+        subject: subject || null,
+        ...emailActivityCustomerMetadata(customer, customerId),
+      },
+    });
+  }
+
+  async function openReferencedEmailDraft({
+    customer,
+    leadId = "",
+    jobId = "",
+    from = "",
+    to = "",
+    subject = "",
+    body = "",
+    referencePrefix = "MAIL",
+    source = "external_mail",
+    activityType = "email_draft_opened",
+    summary = "E-postutkast åpnet",
+    statusMessage = "E-postutkast åpnet.",
+  } = {}) {
+    if (!isEmailAddress(to)) throw new Error("Mottaker mangler eller har ugyldig e-postadresse.");
+    const draft = ensureEmailReference(subject, body, referencePrefix);
+    const url = mailtoUrl(to, draft.subject, draft.body);
+    if (url.length > 7500) {
+      throw new Error("E-posten er for lang til å åpnes direkte. Kopier teksten og lim den inn manuelt i e-postprogrammet.");
+    }
+
+    let warning = "";
+    try {
+      await recordExternalEmailDraftActivity({
+        customer,
+        leadId,
+        jobId,
+        reference: draft.reference,
+        from,
+        to,
+        subject: draft.subject,
+        body: draft.body,
+        source,
+        activityType,
+        summary,
+      });
+    } catch (error) {
+      warning = error.message || "Aktivitet ble ikke lagret.";
+    }
+
+    window.location.href = url;
+    setSyncStatus(
+      warning
+        ? `${statusMessage} CRM-ref ${draft.reference} er lagt i e-posten, men loggen på kundekortet feilet: ${warning}`
+        : `${statusMessage} CRM-ref ${draft.reference} er lagt i e-posten og logget på kundekortet.`,
+      warning ? "error" : "ok",
+    );
+    return draft;
+  }
+
+  async function openCustomerEmailDraft(customerId) {
+    const customer = findCustomer(customerId);
+    if (!customer) throw new Error("Fant ikke kunden.");
+    if (!isEmailAddress(customer.email)) throw new Error("Kunden mangler gyldig e-postadresse.");
+    const name = firstName(customer);
+    const body = [
+      name ? `Hei ${name}!` : "Hei!",
+      "",
+      "",
+      "Mvh",
+      "Gunnar",
+      "Numedal Varmepumpeservice",
+      "93436855",
+    ].join("\n");
+    await openReferencedEmailDraft({
+      customer,
+      to: customer.email,
+      from: "post@numedalvps.no",
+      subject: `Numedal Varmepumpeservice - ${cleanDisplayName(customer) || "oppfølging"}`,
+      body,
+      referencePrefix: "MAIL",
+      source: "customer_email",
+      summary: "E-postutkast åpnet fra kundekort",
+      statusMessage: "E-postutkast åpnet i standard e-postprogram.",
+    });
+  }
+
   function defaultLeadOfferTemplateId(entry) {
     const text = normalizeMatch([
       leadNoteForEntry(entry),
@@ -9279,25 +9483,65 @@
     };
   }
 
-  async function copyLeadOfferDraft(target) {
+  function prepareLeadOfferPayload(target) {
     const payload = leadOfferPayload(target);
-    await copyTextToClipboard(`Emne: ${payload.subject}\n\n${payload.text}`);
-    setSyncStatus("Tilbud kopiert.", "ok");
+    const draft = ensureEmailReference(payload.subject, payload.text, "TILBUD");
+    const fields = leadOfferFields(target);
+    if (fields.subject) fields.subject.value = draft.subject;
+    if (fields.text) fields.text.value = draft.body;
+    return {
+      ...payload,
+      subject: draft.subject,
+      text: draft.body,
+      email_reference: draft.reference,
+    };
   }
 
-  function openLeadOfferMailDraft(target) {
-    const payload = leadOfferPayload(target);
-    const url = `mailto:${encodeURIComponent(payload.to)}?subject=${encodeURIComponent(payload.subject)}&body=${encodeURIComponent(payload.text)}`;
-    if (url.length > 7500) {
-      setSyncStatus("Tilbudet er langt. Kopier tilbudet og lim inn teksten manuelt i e-postprogrammet.", "error");
-      return;
+  async function copyLeadOfferDraft(target) {
+    const payload = prepareLeadOfferPayload(target);
+    await copyTextToClipboard(`Emne: ${payload.subject}\n\n${payload.text}`);
+    const entry = leadEntryForTarget(target);
+    const customer = entry?.customer ? (findCustomer(leadEntryCustomerKey(entry)) || entry.customer) : null;
+    try {
+      await recordExternalEmailDraftActivity({
+        customer,
+        leadId: entry?.lead?.id || "",
+        reference: payload.email_reference,
+        from: payload.from,
+        to: payload.to,
+        subject: payload.subject,
+        body: payload.text,
+        source: "lead_offer_copy",
+        activityType: "email_offer_draft",
+        summary: "Tilbudsutkast kopiert",
+      });
+    } catch (_error) {
+      // Kopiering skal ikke stoppes hvis historikkloggen ikke kan lagres.
     }
-    window.location.href = url;
-    setSyncStatus("E-postutkast åpnet. Marker tilbud sendt først etter at e-posten er sendt.", "ok");
+    setSyncStatus(`Tilbud kopiert med CRM-ref ${payload.email_reference}.`, "ok");
+  }
+
+  async function openLeadOfferMailDraft(target) {
+    const payload = prepareLeadOfferPayload(target);
+    const entry = leadEntryForTarget(target);
+    const customer = entry?.customer ? (findCustomer(leadEntryCustomerKey(entry)) || entry.customer) : null;
+    await openReferencedEmailDraft({
+      customer,
+      leadId: entry?.lead?.id || "",
+      from: payload.from,
+      to: payload.to,
+      subject: payload.subject,
+      body: payload.text,
+      referencePrefix: "TILBUD",
+      source: "lead_offer_mailto",
+      activityType: "email_offer_draft",
+      summary: "Tilbudsutkast åpnet",
+      statusMessage: "E-postutkast åpnet. Marker tilbud sendt først etter at e-posten faktisk er sendt.",
+    });
   }
 
   async function markLeadOfferSentManually(target) {
-    const payload = leadOfferPayload(target);
+    const payload = prepareLeadOfferPayload(target);
     const entry = leadEntryForTarget(target);
     if (!entry) throw new Error("Fant ikke leaden.");
     const ok = await askForConfirmation({
@@ -9311,10 +9555,11 @@
     const customerId = customer ? customerKey(customer) : leadCustomerId(entry.lead);
     const body = [
       "Tilbud sendt manuelt utenfor CRM.",
+      payload.email_reference ? `CRM-ref: ${payload.email_reference}` : "",
       `Mottaker: ${payload.to}`,
       `Avsender: ${payload.from}`,
       `Emne: ${payload.subject}`,
-    ].join("\n");
+    ].filter(Boolean).join("\n");
 
     if (entry.lead?.id) {
       const updatedLead = store.isConfigured && store.updateLead
@@ -9347,6 +9592,7 @@
         direction: "outgoing",
         manual: true,
         source: "mailto",
+        email_reference: payload.email_reference || null,
         from: payload.from,
         to: payload.to,
         subject: payload.subject,
@@ -9365,7 +9611,7 @@
 
   async function sendLeadOfferEmail(target) {
     if (!store.sendOfferEmail) throw new Error("Tilbudsutsending krever oppdatert serverfunksjon.");
-    const payload = leadOfferPayload(target);
+    const payload = prepareLeadOfferPayload(target);
     const ok = await askForConfirmation({
       title: "Send tilbud",
       message: `Sende tilbud fra ${payload.from} til ${payload.to}?`,
@@ -9955,7 +10201,8 @@
         return keys.has(String(activity?.customer_id || ""))
           || keys.has(String(activity?.customerId || ""))
           || keys.has(String(metadata.customer_id || ""))
-          || keys.has(String(metadata.customer_lime_id || ""));
+          || keys.has(String(metadata.customer_lime_id || ""))
+          || keys.has(String(metadata.customer_key || ""));
       })
       .filter((activity) => !["status_change", "lead_status"].includes(String(activity.activity_type || "").toLowerCase()))
       .sort((a, b) => activityTime(b.occurred_at || b.created_at) - activityTime(a.occurred_at || a.created_at));
@@ -9964,7 +10211,10 @@
   function activityTypeLabel(type) {
     const value = String(type || "").toLowerCase();
     if (value === "email_history") return "E-post";
+    if (value === "email_draft_opened") return "E-postutkast";
+    if (value === "email_offer_draft") return "Tilbudsutkast";
     if (value === "email_offer_sent") return "Tilbud sendt";
+    if (value === "email_offer_failed") return "Tilbud feilet";
     if (value === "website_submission") return "Nettside";
     if (value === "note") return "Notat";
     if (value === "job_completed") return "Jobb fullført";
@@ -9982,7 +10232,8 @@
             const metadata = activity.metadata || {};
             const direction = metadata.direction === "incoming" ? "Inn" : metadata.direction === "outgoing" ? "Ut" : "";
             const folder = metadata.folder || metadata.source_folder || "";
-            const hint = [activityTypeLabel(activity.activity_type), direction, folder].filter(Boolean).join(" · ");
+            const reference = metadata.email_reference || extractEmailReference(activity.summary, activity.body, metadata.subject);
+            const hint = [activityTypeLabel(activity.activity_type), direction, reference ? `Ref ${reference}` : "", folder].filter(Boolean).join(" · ");
             return `
               <article>
                 <time>${formatDate(activity.occurred_at || activity.created_at)}</time>
@@ -12392,6 +12643,13 @@
     hideGlobalSearchResults();
   });
   document.addEventListener("click", (event) => {
+    const emailLink = event.target.closest("[data-open-customer-email]");
+    if (!emailLink) return;
+    event.preventDefault();
+    openCustomerEmailDraft(emailLink.dataset.openCustomerEmail)
+      .catch((error) => setSyncStatus(error.message || "Klarte ikke åpne e-postutkast.", "error"));
+  });
+  document.addEventListener("click", (event) => {
     if (!event.target.closest(".top-search")) hideGlobalSearchResults();
     if (!event.target.closest(".new-action-wrap") && !event.target.closest(".more-nav-wrap")) closeFloatingMenus();
   });
@@ -12811,11 +13069,8 @@
     }
     const openOfferMail = event.target.closest("[data-open-offer-mailto]");
     if (openOfferMail) {
-      try {
-        openLeadOfferMailDraft(openOfferMail.dataset.openOfferMailto);
-      } catch (error) {
-        setSyncStatus(error.message || "Klarte ikke åpne e-postutkast.", "error");
-      }
+      openLeadOfferMailDraft(openOfferMail.dataset.openOfferMailto)
+        .catch((error) => setSyncStatus(error.message || "Klarte ikke åpne e-postutkast.", "error"));
       return;
     }
     const sendOffer = event.target.closest("[data-send-offer-email]");
