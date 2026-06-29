@@ -464,6 +464,7 @@
     bookingDate: document.getElementById("bookingDate"),
     bookingTime: document.getElementById("bookingTime"),
     bookingType: document.getElementById("bookingType"),
+    bookingInstallationSelect: document.getElementById("bookingInstallationSelect"),
     bookingDuration: document.getElementById("bookingDuration"),
     bookingResource: document.getElementById("bookingResource"),
     bookingMonthPrev: document.getElementById("bookingMonthPrev"),
@@ -4847,6 +4848,8 @@
   function orderDraftForBooking(bookingId, booking, overrides = {}) {
     const customer = findCustomer(booking.customerId);
     const type = bookingDisplayType(booking);
+    const installationId = overrides.installationId ?? overrides.installation_id ?? booking.installationId ?? booking.installation_id ?? "";
+    const locationId = overrides.locationId ?? overrides.location_id ?? booking.locationId ?? booking.location_id ?? "";
     const isDone = overrides.status === "completed" || booking.status === "done" || doneJobs.has(bookingId);
     const paymentMode = customer ? bookingPaymentMode({ id: bookingId, booking, customer }) : "";
     const billingStatus = overrides.billingStatus
@@ -4864,6 +4867,10 @@
       scheduledDate: booking.date || "",
       scheduledTime: normalizeBookingTime(booking.time),
       resource: booking.resource || "",
+      installationId,
+      installation_id: installationId,
+      locationId,
+      location_id: locationId,
       completedAt: overrides.completedAt || (isDone ? booking.done_at || booking.date || "" : ""),
       note: overrides.note ?? cleanBookingNote(booking.note || ""),
       created_at: overrides.created_at || new Date().toISOString(),
@@ -5157,6 +5164,54 @@
     el.orderInstallationSelect.title = installations.length
       ? "Velg hvilket anlegg jobben gjelder. Dette brukes videre ved fullføring og servicefrist."
       : "Kunden har ingen registrerte varmepumper/anlegg ennå.";
+  }
+
+  function renderBookingInstallationOptions(customer, selectedId = "") {
+    if (!el.bookingInstallationSelect) return;
+    const allInstallations = customer ? installationsForCustomer(customer) : [];
+    const installations = allInstallations.filter((installation) => (
+      installation.active !== false || String(installation.id || "") === String(selectedId || "")
+    ));
+    const activeInstallations = installations.filter((installation) => installation.active !== false);
+    const autoId = !selectedId
+      && ["service", "reparasjon"].includes(el.bookingType?.value || "service")
+      && activeInstallations.length === 1
+      ? String(activeInstallations[0].id || "")
+      : "";
+    const current = selectedId || autoId;
+    const rows = [
+      `<option value="">Ikke valgt / gjelder hele kunden</option>`,
+      ...installations.map((installation) => {
+        const location = locationForInstallation(installation, customer);
+        const label = [installationDisplayName(installation), locationAddressText(location)].filter(Boolean).join(" - ");
+        return `<option value="${escapeHtml(installation.id || "")}">${escapeHtml(label)}</option>`;
+      }),
+    ];
+    el.bookingInstallationSelect.innerHTML = rows.join("");
+    el.bookingInstallationSelect.value = current;
+    el.bookingInstallationSelect.disabled = !customer || installations.length === 0;
+    el.bookingInstallationSelect.title = installations.length
+      ? "Velg hvilket anlegg avtalen gjelder. Valget føres videre til jobben og fullføring/servicefrist."
+      : "Kunden har ingen registrerte varmepumper/anlegg ennå.";
+  }
+
+  function selectedBookingInstallation(customer = findCustomer(bookingSelectedCustomerId)) {
+    const installationId = el.bookingInstallationSelect?.value || "";
+    if (!customer || !installationId) return null;
+    return installationsForCustomer(customer).find((installation) => String(installation.id || "") === String(installationId)) || null;
+  }
+
+  function syncBookingInstallationNoteFromSelect() {
+    const customer = findCustomer(bookingSelectedCustomerId);
+    const installation = selectedBookingInstallation(customer);
+    if (!customer || !installation) return;
+    const generated = installationBookingNote(installation, customer);
+    if (!generated) return;
+    const keepLines = String(el.bookingNote?.value || "")
+      .split(/\n+/)
+      .map((line) => line.trim())
+      .filter((line) => line && !/^(Anlegg|Adresse|Serviceintervall|Kodeboks\/nøkkel\/adkomst|Kodeboks\/nokkel\/adkomst):/i.test(line));
+    el.bookingNote.value = [...keepLines, generated].filter(Boolean).join("\n");
   }
 
   function openOrderDialog(customerId, orderId = "", options = {}) {
@@ -10613,16 +10668,15 @@
     setSyncStatus("", "");
     const linkedOrder = bookingPendingOrderId ? findOrder(bookingPendingOrderId) : linkedOrderForBooking(bookingId);
     const linkedInstallationId = options.installationId || (linkedOrder ? installationIdForOrder(linkedOrder, jobForOrder(linkedOrder)) : "");
-    const linkedInstallation = selectedCustomer && linkedInstallationId
-      ? installationsForCustomer(selectedCustomer).find((installation) => String(installation.id || "") === String(linkedInstallationId))
-      : null;
     el.bookingCustomerSearch.value = selectedCustomer ? searchDisplayText(selectedCustomer) : "";
-    setBookingCustomerSelection(selectedCustomer);
+    setBookingCustomerSelection(selectedCustomer, linkedInstallationId);
     closeBookingCustomerResults();
     el.bookingDate.value = booking?.date || isoDate(new Date());
     el.bookingTime.value = normalizeBookingTime(booking?.time, "09:00");
     const dialogType = serviceWorkType(booking?.type || options.type) ? "reparasjon" : (booking?.type || options.type || "service");
     el.bookingType.value = dialogType;
+    renderBookingInstallationOptions(selectedCustomer, linkedInstallationId);
+    const linkedInstallation = selectedBookingInstallation(selectedCustomer);
     el.bookingDuration.value = booking?.duration || defaultBookingDuration(el.bookingType.value);
     el.bookingResource.value = booking?.resource || "Hubert";
     const defaultAccessNote = !booking && selectedCustomer && accessInfo(selectedCustomer)
@@ -10642,7 +10696,7 @@
     ].filter(Boolean).join("\n");
     el.bookingNote.value = cleanBookingNote(bookingNote);
     if (!booking && selectedCustomer && !linkedInstallation && installationsForCustomer(selectedCustomer).filter((installation) => installation.active !== false).length > 1) {
-      showBookingDialogMessage("Kunden har flere anlegg. Book helst fra riktig anlegg på kundekortet, eller skriv hvilket anlegg avtalen gjelder i notatet.", "info");
+      showBookingDialogMessage("Kunden har flere anlegg. Velg riktig anlegg før avtalen lagres hvis jobben gjelder en bestemt varmepumpe.", "info");
     }
     el.deleteBookingButton.classList.toggle("hidden", !booking);
     syncBookingDialogTypeStyle();
@@ -10666,11 +10720,12 @@
     ].filter(Boolean).join(" · ");
   }
 
-  function setBookingCustomerSelection(customer) {
+  function setBookingCustomerSelection(customer, selectedInstallationId = "") {
     if (!customer) {
       bookingSelectedCustomerId = "";
       el.bookingCustomer.innerHTML = `<option value="">Velg kunde</option>`;
       el.bookingCustomer.value = "";
+      renderBookingInstallationOptions(null, "");
       return;
     }
     const key = customerKey(customer);
@@ -10678,12 +10733,13 @@
     el.bookingCustomer.innerHTML = `<option value="${escapeHtml(key)}">${escapeHtml(bookingOptionLabel(customer))}</option>`;
     el.bookingCustomer.value = key;
     el.bookingCustomerSearch.value = searchDisplayText(customer);
+    renderBookingInstallationOptions(customer, selectedInstallationId);
   }
 
   function renderBookingCustomerResults(searchText = "", selectedId = bookingSelectedCustomerId) {
     const selectedCustomer = selectedId ? findCustomer(selectedId) : null;
     if (selectedCustomer && searchText === searchDisplayText(selectedCustomer)) {
-      setBookingCustomerSelection(selectedCustomer);
+      setBookingCustomerSelection(selectedCustomer, el.bookingInstallationSelect?.value || "");
       el.bookingCustomerResults.innerHTML = "";
       return;
     }
@@ -11003,9 +11059,20 @@
 
   function bookingFormValues() {
     const existing = bookings[editingBookingId] || null;
+    const customer = findCustomer(el.bookingCustomer.value);
+    const installationId = el.bookingInstallationSelect?.value || "";
+    const installation = customer && installationId
+      ? installationsForCustomer(customer).find((item) => String(item.id || "") === String(installationId))
+      : null;
+    const location = installation ? locationForInstallation(installation, customer) : null;
     const paymentMarker = markerText(existing?.note, paymentMarkerRegex());
+    const rawNote = el.bookingNote.value.trim();
+    const installationNote = installation && !/^\s*Anlegg:/im.test(rawNote)
+      ? installationBookingNote(installation, customer)
+      : "";
     const note = [
-      el.bookingNote.value.trim(),
+      rawNote,
+      installationNote,
       paymentMarker,
     ].filter(Boolean).join("\n");
     return {
@@ -11016,6 +11083,10 @@
       duration: el.bookingDuration.value,
       resource: el.bookingResource.value,
       note,
+      installationId,
+      installation_id: installationId,
+      locationId: location?.id || "",
+      location_id: location?.id || "",
       orderId: bookingPendingOrderId || existing?.orderId || linkedOrderForBooking(editingBookingId)?.id || "",
       status: existing?.status,
       invoiced: existing?.invoiced,
@@ -11067,7 +11138,13 @@
     let savedId = editingBookingId;
     if (store.isConfigured) {
       const saved = await store.saveBooking(editingBookingId, values);
-      bookings[saved.id] = saved.booking;
+      bookings[saved.id] = {
+        ...saved.booking,
+        installationId: values.installationId,
+        installation_id: values.installationId,
+        locationId: values.locationId,
+        location_id: values.locationId,
+      };
       savedId = saved.id;
       if (editingBookingId && editingBookingId !== saved.id) delete bookings[editingBookingId];
     } else {
@@ -11086,6 +11163,10 @@
         scheduledDate: values.date,
         scheduledTime: values.time,
         resource: values.resource,
+        installationId: values.installationId || order.installationId || order.installation_id || "",
+        installation_id: values.installationId || order.installation_id || order.installationId || "",
+        locationId: values.locationId || order.locationId || order.location_id || "",
+        location_id: values.locationId || order.location_id || order.locationId || "",
         note: order.note || cleanBookingNote(values.note || ""),
       }, [...bookingIdsForOrder(order), savedId]);
       const savedOrder = await saveOrderRecord(order.id, scheduledOrder, { quiet: true });
@@ -11094,7 +11175,13 @@
         if (!store.isConfigured) saveLocalBookings();
       }
     } else {
-      await ensureOrderForBooking(savedId, bookings[savedId] || values);
+      await ensureOrderForBooking(savedId, {
+        ...(bookings[savedId] || values),
+        installationId: values.installationId,
+        installation_id: values.installationId,
+        locationId: values.locationId,
+        location_id: values.locationId,
+      });
     }
     bookingPendingOrderId = "";
     if (values.date) weekStart = startOfWeek(new Date(`${values.date}T00:00:00`));
@@ -12997,11 +13084,16 @@
     setBookingCustomerSelection(customer);
     clearBookingDialogMessage();
     closeBookingCustomerResults();
+    syncBookingInstallationNoteFromSelect();
   });
   el.bookingCustomer.addEventListener("change", () => {
     const customer = findCustomer(el.bookingCustomer.value);
-    if (customer) setBookingCustomerSelection(customer);
+    if (customer) {
+      setBookingCustomerSelection(customer);
+      syncBookingInstallationNoteFromSelect();
+    }
   });
+  el.bookingInstallationSelect?.addEventListener("change", syncBookingInstallationNoteFromSelect);
   el.bookingDate.addEventListener("change", renderBookingMonth);
   el.bookingMonthPrev.addEventListener("click", () => shiftBookingMonth(-1));
   el.bookingMonthNext.addEventListener("click", () => shiftBookingMonth(1));
@@ -13013,6 +13105,7 @@
   });
   el.bookingType.addEventListener("change", () => {
     el.bookingDuration.value = defaultBookingDuration(el.bookingType.value);
+    renderBookingInstallationOptions(findCustomer(bookingSelectedCustomerId), el.bookingInstallationSelect?.value || "");
     syncBookingDialogTypeStyle();
     renderBookingMonth();
   });

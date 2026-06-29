@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260629-07" />
+    <link rel="stylesheet" href="./styles.css?v=20260629-08" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -905,6 +905,11 @@
             <select id="bookingCustomer" class="hidden-select" tabindex="-1" aria-hidden="true"></select>
             <div id="bookingCustomerResults" class="booking-customer-results"></div>
           </label>
+          <label class="form-wide">Anlegg
+            <select id="bookingInstallationSelect">
+              <option value="">Ikke valgt / gjelder hele kunden</option>
+            </select>
+          </label>
           <label>Dato<input id="bookingDate" type="date" required /></label>
           <label>Tid<input id="bookingTime" type="time" value="09:00" step="900" required /></label>
           <label>Type
@@ -1061,10 +1066,10 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260629-07"></script>
-    <script src="./supabase-adapter.js?v=20260629-07"></script>
-    <script src="./intake-parser.js?v=20260629-07"></script>
-    <script src="./app.js?v=20260629-07"></script>
+    <script src="./supabase-config.js?v=20260629-08"></script>
+    <script src="./supabase-adapter.js?v=20260629-08"></script>
+    <script src="./intake-parser.js?v=20260629-08"></script>
+    <script src="./app.js?v=20260629-08"></script>
   </body>
 </html>
 

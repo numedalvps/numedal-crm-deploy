@@ -7,6 +7,7 @@
     "test:intake": "node tests/intake.test.js",
     "eval:intake": "node tests/intake-eval.js",
     "test:production": "node tests/production-healthcheck.js",
+    "demo": "node tools/demo-server.js",
     "check": "node --check app.js && node --check supabase-adapter.js && node --check intake-parser.js && node tests/intake.test.js"
   }
 }
