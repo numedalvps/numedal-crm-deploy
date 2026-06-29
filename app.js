@@ -2119,6 +2119,7 @@
         <strong>${escapeHtml(aiRegistrationTypeLabel(aiRegistrationDraft.type))}</strong>
       </div>
       ${aiRegistrationWarningsHtml(analysis)}
+      ${aiRegistrationLinkHintHtml(aiRegistrationDraft)}
       <div class="ai-draft-grid">
         <div class="ai-draft-form">
           <label>Hva skal lagres?
@@ -7641,6 +7642,54 @@
     ].filter(Boolean).join(" · ") || String(row?.raw_text || row?.extracted_text || "").slice(0, 140);
   }
 
+  function intakeItemEmailReference(row) {
+    const source = row?.analysis_json?.source || {};
+    return String(
+      source.emailReference
+      || row?.email_reference
+      || row?.final_json?.emailReference
+      || extractEmailReference(row?.source_subject, row?.raw_text, row?.extracted_text, row?.final_json?.note)
+      || "",
+    ).toUpperCase();
+  }
+
+  function intakeLinkedLeadEntry(row) {
+    const linkedLeadId = String(row?.linked_lead_id || row?.analysis_json?.source?.matchedLeadId || "").trim();
+    if (!linkedLeadId) return null;
+    return allLeadEntries().find((entry) => String(entry?.lead?.id || "") === linkedLeadId) || null;
+  }
+
+  function intakeLinkedCustomer(row) {
+    const linkedCustomerId = String(row?.linked_customer_id || row?.analysis_json?.source?.matchedCustomerId || "").trim();
+    return (linkedCustomerId ? findCustomer(linkedCustomerId) : null) || intakeLinkedLeadEntry(row)?.customer || null;
+  }
+
+  function intakeLinkHintsHtml(row) {
+    const reference = intakeItemEmailReference(row);
+    const customer = intakeLinkedCustomer(row);
+    const linkedLead = intakeLinkedLeadEntry(row);
+    const hints = [];
+    if (reference) hints.push(`CRM-ref ${reference}`);
+    if (customer) hints.push(`Koblet til ${cleanDisplayName(customer)}`);
+    else if (linkedLead?.lead?.id) hints.push("Koblet til salgsmulighet");
+    if (!hints.length) return "";
+    return `<div class="intake-link-hints" title="Funnet fra e-postreferanse eller tidligere CRM-aktivitet. Kontroller før lagring.">${hints.map((hint) => `<span>${escapeHtml(hint)}</span>`).join("")}</div>`;
+  }
+
+  function aiRegistrationLinkHintHtml(draft) {
+    const reference = String(draft?.emailReference || "").trim();
+    const customer = draft?.linkedCustomerId ? findCustomer(draft.linkedCustomerId) : null;
+    const linkedLead = draft?.linkedLeadId ? allLeadEntries().find((entry) => String(entry?.lead?.id || "") === String(draft.linkedLeadId)) : null;
+    const target = customer || linkedLead?.customer || null;
+    if (!reference && !target && !draft?.linkedLeadId) return "";
+    return `
+      <div class="ai-link-hint" title="Utkastet har foreslått kobling fra CRM-innboksen. Kontroller koblingen før du lagrer.">
+        <strong>${reference ? `CRM-ref ${escapeHtml(reference)}` : "Kobling fra innboks"}</strong>
+        <span>${escapeHtml(target ? `Foreslått koblet til ${cleanDisplayName(target)}` : "Foreslått koblet til salgsmulighet")}</span>
+      </div>
+    `;
+  }
+
   function openIntakeRows() {
     return (intakeItems || []).filter((row) => ["draft", "needs_review", "ready", "failed"].includes(row.status || "needs_review"));
   }
@@ -7688,6 +7737,7 @@
             <div>
               <strong>${escapeHtml(intakeItemTitle(row))}</strong>
               <span>${escapeHtml(intakeItemSummary(row))}</span>
+              ${intakeLinkHintsHtml(row)}
               <small>${escapeHtml(formatDate(isoDate(new Date(row.created_at || Date.now()))))} · ${escapeHtml(row.source_channel || "hurtigregistrering")}</small>
             </div>
             <div class="mini-action-row">
@@ -7731,8 +7781,11 @@
       raw,
       analysis: row.analysis_json || draft.analysis,
       intakeId: row.id,
+      emailReference: intakeItemEmailReference(row),
+      linkedCustomerId: customerKey(intakeLinkedCustomer(row)) || "",
+      linkedLeadId: String(row.linked_lead_id || row.analysis_json?.source?.matchedLeadId || ""),
     };
-    aiRegistrationSelectedCustomerId = row.linked_customer_id || "";
+    aiRegistrationSelectedCustomerId = aiRegistrationDraft.linkedCustomerId || "";
     if (currentView !== "leads") setView("leads");
     if (el.aiRegistrationInput) el.aiRegistrationInput.value = raw;
     renderAiRegistrationDraft();
