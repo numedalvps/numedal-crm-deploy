@@ -12702,24 +12702,41 @@
   function renderBookingDayAgenda() {
     if (!el.bookingDayAgenda) return;
     const date = el.bookingDate.value || isoDate(new Date());
+    const previewValues = {
+      date,
+      time: normalizeBookingTime(el.bookingTime?.value || "09:00"),
+      type: el.bookingType?.value || "service",
+      duration: el.bookingDuration?.value || defaultBookingDuration(el.bookingType?.value || "service"),
+      resource: el.bookingResource?.value || "",
+    };
     const rows = bookingRows()
       .filter((row) => row.booking.date === date)
       .sort((a, b) => bookingRowStartMinutes(a) - bookingRowStartMinutes(b));
-    const slots = freeSlotsForDay(rows);
+    const resourceRows = rows
+      .filter((row) => row.id !== editingBookingId)
+      .filter((row) => resourcesOverlap(row.booking.resource || "", previewValues.resource || ""));
+    const slots = freeSlotsForDay(resourceRows);
+    const conflict = bookingConflict(previewValues, editingBookingId);
+    const selectedWindow = bookingTimeWindow(previewValues);
+    const previewText = `${timeRangeText(selectedWindow.start, selectedWindow.end)} · ${previewValues.resource || "valgt ansatt"}`;
+    const previewHtml = conflict
+      ? `<div class="day-agenda-preview conflict">Valgt tid krasjer med ${escapeHtml(cleanDisplayName(conflict.customer))} kl. ${escapeHtml(timeRangeText(bookingRowStartMinutes(conflict), bookingRowEndMinutes(conflict)))}.</div>`
+      : `<div class="day-agenda-preview ok">Valgt tid ser ledig ut: ${escapeHtml(previewText)}.</div>`;
     const jobHtml = rows.length ? rows.map((row) => `
-      <article class="day-agenda-job ${escapeHtml(bookingDisplayType(row))}">
+      <article class="day-agenda-job ${escapeHtml(bookingDisplayType(row))} ${resourcesOverlap(row.booking.resource || "", previewValues.resource || "") ? "same-resource" : ""}">
         <strong>${timeRangeText(bookingRowStartMinutes(row), bookingRowEndMinutes(row))} · ${escapeHtml(bookingJobLabel(row))}</strong>
-        <span>${escapeHtml(cleanDisplayName(row.customer))} · ${escapeHtml(siteLocationText(row.customer) || "Adresse mangler")}</span>
+        <span>${escapeHtml(cleanDisplayName(row.customer))} · ${escapeHtml(row.booking.resource || "Ikke satt")} · ${escapeHtml(siteLocationText(row.customer) || "Adresse mangler")}</span>
       </article>
     `).join("") : `<div class="empty-state">Ingen jobber booket denne dagen.</div>`;
     const slotHtml = slots.length ? slots.map((slot) => `
       <span class="free-slot">${timeRangeText(slot.start, slot.end)} ledig</span>
-    `).join("") : `<span class="free-slot busy">Ingen tydelige ledige hull 08-18</span>`;
+    `).join("") : `<span class="free-slot busy">Ingen tydelige ledige hull 08-18 for valgt ansatt</span>`;
     el.bookingDayAgenda.innerHTML = `
       <div class="day-agenda-head">
         <strong>${formatDate(date)}</strong>
-        <span>${rows.length} jobb${rows.length === 1 ? "" : "er"}</span>
+        <span>${rows.length} jobb${rows.length === 1 ? "" : "er"} · ${resourceRows.length} på valgt ansatt</span>
       </div>
+      ${previewHtml}
       <div class="day-agenda-free">${slotHtml}</div>
       <div class="day-agenda-list">${jobHtml}</div>
     `;
@@ -15131,6 +15148,9 @@
   });
   el.bookingInstallationSelect?.addEventListener("change", syncBookingInstallationNoteFromSelect);
   el.bookingDate.addEventListener("change", renderBookingMonth);
+  el.bookingTime.addEventListener("input", renderBookingDayAgenda);
+  el.bookingDuration.addEventListener("input", renderBookingDayAgenda);
+  el.bookingResource.addEventListener("change", renderBookingDayAgenda);
   el.bookingMonthPrev.addEventListener("click", () => shiftBookingMonth(-1));
   el.bookingMonthNext.addEventListener("click", () => shiftBookingMonth(1));
   el.bookingMonthGrid.addEventListener("click", (event) => {

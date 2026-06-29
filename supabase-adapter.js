@@ -677,7 +677,12 @@
   function bookingOverlapMessage(error) {
     const raw = `${error?.message || ""} ${error?.details || ""}`;
     const resource = raw.match(/Booking overlap:\s*([^\n]+?)\s+already has booking/i)?.[1]?.trim();
-    return `Kan ikke lagre booking${resource ? ` for ${resource}` : ""}: tidspunktet overlapper med en annen jobb. Velg et ledig tidspunkt eller flytt den andre bookingen først.`;
+    const startText = raw.match(/already has booking at\s+([0-9T:\-+. ]+)/i)?.[1]?.trim();
+    const start = startText ? new Date(startText) : null;
+    const when = start && !Number.isNaN(start.getTime())
+      ? ` Supabase fant konflikt ${localIsoDate(start)} kl. ${start.toTimeString().slice(0, 5)}.`
+      : "";
+    return `Kan ikke lagre booking${resource ? ` for ${resource}` : ""}: tidspunktet overlapper med en annen jobb.${when} Velg et ledig tidspunkt, flytt den andre bookingen først, eller oppdater planen hvis den så ledig ut.`;
   }
 
   async function requireClient() {
