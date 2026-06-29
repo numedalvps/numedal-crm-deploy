@@ -4620,6 +4620,45 @@ textarea {
   color: var(--muted);
 }
 
+.completion-price-details {
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fff;
+}
+
+.completion-price-details summary {
+  cursor: pointer;
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.completion-price-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 110px auto;
+  gap: 8px;
+  align-items: end;
+  margin-top: 10px;
+}
+
+.completion-price-details textarea {
+  margin-top: 10px;
+}
+
+.completion-price-total {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+@media (max-width: 640px) {
+  .completion-price-controls {
+    grid-template-columns: 1fr;
+  }
+}
+
 .choice-stack {
   display: grid;
   gap: 8px;

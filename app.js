@@ -80,6 +80,30 @@
     note: "Veiledende prisgrunnlag for standard montering og tilleggstjenester.",
   };
   const offerDocuments = [priceListDocument];
+  const jobPriceItems = [
+    { id: "extra_pipe", label: "Ekstra rør og strøm/signalkabel", unit: "m", price: 612.5, defaultQty: 1 },
+    { id: "extra_channel", label: "Ekstra PVC-kanal", unit: "m", price: 300, defaultQty: 1 },
+    { id: "spring_dampers", label: "Fjærdempere montert", unit: "stk", price: 615, defaultQty: 1 },
+    { id: "low_wall_bracket", label: "Spesialbrakett lav murvegg", unit: "stk", price: 900, defaultQty: 1 },
+    { id: "ground_stand", label: "Markstativ", unit: "stk", price: 1750, defaultQty: 1 },
+    { id: "trollflex", label: "Trollflex montert", unit: "stk", price: 650, defaultQty: 1 },
+    { id: "connection_3m", label: "Tilslutningskabel 3 meter", unit: "stk", price: 300, defaultQty: 1 },
+    { id: "connection_7m", label: "Tilslutningskabel 7 meter", unit: "stk", price: 450, defaultQty: 1 },
+    { id: "wall_drill_simple", label: "Enkel murboring", unit: "stk", price: 1240, defaultQty: 1 },
+    { id: "core_drill", label: "Kjerneboring", unit: "stk", price: 4375, defaultQty: 1 },
+    { id: "steel_roof", label: "Ståltak", unit: "stk", price: 1200, defaultQty: 1 },
+    { id: "steel_roof_mount", label: "Montering ståltak", unit: "stk", price: 600, defaultQty: 1 },
+    { id: "heatpump_house", label: "Varmepumpehus/trehus", unit: "stk", price: 3690, defaultQty: 1 },
+    { id: "heatpump_house_mount", label: "Montering varmepumpehus", unit: "time", price: 1112.5, defaultQty: 0.5 },
+    { id: "old_pump_removal", label: "Demontering gammel pumpe inkl. gasstømming", unit: "stk", price: 1990, defaultQty: 1 },
+    { id: "drip_pan_heated", label: "Dryppanne med varmekabel", unit: "stk", price: 3990, defaultQty: 1 },
+    { id: "drip_pan_mount", label: "Montering dryppanne med varmekabel", unit: "stk", price: 500, defaultQty: 1 },
+    { id: "heat_cable_extra", label: "Varmekabel/drensslange over 2 m", unit: "m", price: 500, defaultQty: 1 },
+    { id: "technician_hour", label: "Timepris montør ekstra tjenester", unit: "time", price: 1112.5, defaultQty: 1 },
+    { id: "customer_ground_stand_mount", label: "Montering kundens bakkestativ", unit: "stk", price: 615, defaultQty: 1 },
+    { id: "no_show", label: "Bomtur", unit: "stk", price: 1990, defaultQty: 1 },
+    { id: "wood_wall_mount", label: "Montering på trevegg inkl. springfjærer", unit: "stk", price: 1800, defaultQty: 1 },
+  ];
   const rentalImages = [
     { title: "Industristøvsuger 15 hk", href: "./documents/isobygg/vac/industristovsuger-15hk.jpg" },
     { title: "Front", href: "./documents/isobygg/vac/industristovsuger-front.jpg" },
@@ -498,6 +522,12 @@
     completionPaymentDoneLabel: document.getElementById("completionPaymentDoneLabel"),
     completionPaymentDone: document.getElementById("completionPaymentDone"),
     completionPaymentHint: document.getElementById("completionPaymentHint"),
+    completionPriceDetails: document.getElementById("completionPriceDetails"),
+    completionPricePreset: document.getElementById("completionPricePreset"),
+    completionPriceQuantity: document.getElementById("completionPriceQuantity"),
+    completionAddPriceLine: document.getElementById("completionAddPriceLine"),
+    completionPriceLines: document.getElementById("completionPriceLines"),
+    completionPriceTotal: document.getElementById("completionPriceTotal"),
     completionNote: document.getElementById("completionNote"),
     billingDialog: document.getElementById("billingDialog"),
     billingForm: document.getElementById("billingForm"),
@@ -509,6 +539,8 @@
     billingDate: document.getElementById("billingDate"),
     billingMode: document.getElementById("billingMode"),
     billingHint: document.getElementById("billingHint"),
+    billingPriceBasis: document.getElementById("billingPriceBasis"),
+    billingPriceTotal: document.getElementById("billingPriceTotal"),
     billingNote: document.getElementById("billingNote"),
     saveBillingButton: document.getElementById("saveBillingButton"),
     deleteBookingDialog: document.getElementById("deleteBookingDialog"),
@@ -5519,6 +5551,28 @@
     return String(note || "").match(regex)?.[0] || "";
   }
 
+  function jobPriceBlockRegex() {
+    return /\n*\[Prisgrunnlag\]\n?([\s\S]*?)\n?\[\/Prisgrunnlag\]\n*/i;
+  }
+
+  function extractJobPriceBasis(note) {
+    return String(note || "").match(jobPriceBlockRegex())?.[1]?.trim() || "";
+  }
+
+  function stripJobPriceBasis(note) {
+    return String(note || "")
+      .replace(jobPriceBlockRegex(), "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  }
+
+  function noteWithJobPriceBasis(note, priceBasis) {
+    const clean = stripJobPriceBasis(note);
+    const priceText = String(priceBasis || "").trim();
+    if (!priceText) return clean;
+    return [clean, `[Prisgrunnlag]\n${priceText}\n[/Prisgrunnlag]`].filter(Boolean).join("\n");
+  }
+
   function noteWithoutMoveMarker(note) {
     return String(note || "")
       .replace(moveMarkerRegex(), "")
@@ -5531,6 +5585,7 @@
       .replace(paymentMarkerRegex(), "")
       .replace(paymentMarkersRegex(), "")
       .replace(moveMarkerRegex(), "")
+      .replace(jobPriceBlockRegex(), "")
       .trim();
   }
 
@@ -11863,18 +11918,106 @@
     ];
   }
 
+  function formatJobPriceNumber(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return "";
+    return number.toLocaleString("nb-NO", { maximumFractionDigits: 2 });
+  }
+
+  function formatJobPriceAmount(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return "";
+    const decimals = Number.isInteger(number) ? 0 : 2;
+    return `${number.toLocaleString("nb-NO", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })},-`;
+  }
+
+  function parseJobPriceAmount(value) {
+    const normalized = String(value || "").replace(/\s/g, "").replace(",", ".");
+    const number = Number(normalized);
+    return Number.isFinite(number) ? number : 0;
+  }
+
+  function jobPriceBasisTotal(text) {
+    return [...String(text || "").matchAll(/=\s*([\d\s]+(?:,\d{1,2})?)\s*(?:,-|kr|inkl|$)/gi)]
+      .reduce((sum, match) => sum + parseJobPriceAmount(match[1]), 0);
+  }
+
+  function jobPriceLineForItem(item, quantity) {
+    const qty = Number(quantity || item.defaultQty || 1);
+    const amount = qty * Number(item.price || 0);
+    return `- ${item.label}: ${formatJobPriceNumber(qty)} ${item.unit} x ${formatJobPriceAmount(item.price)} = ${formatJobPriceAmount(amount)} inkl. mva`;
+  }
+
+  function renderCompletionPriceTotal() {
+    if (!el.completionPriceTotal || !el.completionPriceLines) return;
+    const total = jobPriceBasisTotal(el.completionPriceLines.value);
+    el.completionPriceTotal.textContent = total > 0
+      ? `Ca. sum tillegg: ${formatJobPriceAmount(total)} inkl. mva - kontroller før faktura.`
+      : "Ingen summerbare tillegg lagt inn.";
+  }
+
+  function renderBillingPriceTotal() {
+    if (!el.billingPriceTotal || !el.billingPriceBasis) return;
+    const total = jobPriceBasisTotal(el.billingPriceBasis.value);
+    el.billingPriceTotal.textContent = total > 0
+      ? `Ca. sum tillegg: ${formatJobPriceAmount(total)} inkl. mva.`
+      : "Ingen summerbare tillegg.";
+  }
+
+  function syncCompletionPriceQuantity() {
+    if (!el.completionPricePreset || !el.completionPriceQuantity) return;
+    const item = jobPriceItems.find((entry) => entry.id === el.completionPricePreset.value);
+    if (item) el.completionPriceQuantity.value = String(item.defaultQty || 1);
+  }
+
+  function setupCompletionPriceFields(row) {
+    if (!el.completionPriceDetails || !el.completionPricePreset || !el.completionPriceLines) return;
+    const type = bookingDisplayType(row);
+    const show = isAdmin() && completionCanHavePayment(type);
+    el.completionPriceDetails.classList.toggle("hidden", !show);
+    if (!show) {
+      el.completionPriceLines.value = "";
+      return;
+    }
+    el.completionPricePreset.innerHTML = jobPriceItems
+      .map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.label)} - ${escapeHtml(formatJobPriceAmount(item.price))} / ${escapeHtml(item.unit)}</option>`)
+      .join("");
+    el.completionPriceLines.value = extractJobPriceBasis(row.booking.note);
+    syncCompletionPriceQuantity();
+    el.completionPriceDetails.open = Boolean(el.completionPriceLines.value) || ["installasjon", "reparasjon"].includes(type);
+    renderCompletionPriceTotal();
+  }
+
+  function addCompletionPriceLine() {
+    if (!el.completionPricePreset || !el.completionPriceQuantity || !el.completionPriceLines) return;
+    const item = jobPriceItems.find((entry) => entry.id === el.completionPricePreset.value);
+    if (!item) return;
+    const quantity = Number(el.completionPriceQuantity.value || item.defaultQty || 1);
+    if (!Number.isFinite(quantity) || quantity <= 0) return;
+    const existing = String(el.completionPriceLines.value || "").trim();
+    el.completionPriceLines.value = [existing, jobPriceLineForItem(item, quantity)].filter(Boolean).join("\n");
+    renderCompletionPriceTotal();
+  }
+
+  function completionPriceBasisText() {
+    return String(el.completionPriceLines?.value || "").trim();
+  }
+
   function openCompletionDialog(id) {
     const row = bookingRows().find((item) => item.id === id);
     if (!row) return;
     completingBookingId = id;
     completionFollowupBooking = null;
     const type = bookingDisplayType(row);
+    const cleanNote = cleanBookingNote(row.booking.note);
+    const priceBasis = extractJobPriceBasis(row.booking.note);
     el.completionTitle.textContent = `Fullfør ${bookingJobLabel(row).toLowerCase()}`;
     el.completionSummary.innerHTML = `
       <strong>${customerStarHtml(row.customer)}${customerCashBadgeHtml(row.customer)}${escapeHtml(cleanDisplayName(row.customer))}</strong>
       <span>${formatDate(row.booking.date)} kl. ${escapeHtml(bookingTimeText(row.booking))} · ${escapeHtml(row.booking.resource || "")}</span>
       <em>${escapeHtml(bookingWorkKind(row).help)}</em>
-      ${row.booking.note ? `<p>${escapeHtml(row.booking.note)}</p>` : ""}
+      ${cleanNote ? `<p>${escapeHtml(cleanNote)}</p>` : ""}
+      ${priceBasis ? `<p>Prisgrunnlag er allerede lagt inn på jobben.</p>` : ""}
     `;
     el.completionDoneDate.value = row.booking.date || isoDate(new Date());
     const nextOptions = isAdmin() ? completionOptions(type) : [["none", "Ingen neste steg nå"]];
@@ -11886,6 +12029,7 @@
     setupCompletionInstallationField(row);
     syncCompletionIntervalFromInstallation();
     setupCompletionPaymentFields(row);
+    setupCompletionPriceFields(row);
     el.completionNote.value = "";
     syncCompletionFields();
     el.completionDialog.showModal();
@@ -12249,9 +12393,12 @@
     const userNote = String(options.note || "").trim();
     const marker = billingModeMarker(mode, billingDate);
     const paymentNote = userNote ? `${billingModeLabel(mode)}: ${userNote}` : "";
+    const priceBasis = "priceBasis" in options
+      ? String(options.priceBasis || "").trim()
+      : extractJobPriceBasis(row.booking.note);
     const updatedBooking = {
       ...row.booking,
-      note: [cleanBookingNote(row.booking.note), marker, paymentNote].filter(Boolean).join("\n"),
+      note: noteWithJobPriceBasis([cleanBookingNote(row.booking.note), marker, paymentNote].filter(Boolean).join("\n"), priceBasis),
       invoiced: mode === "invoice",
       paid_cash: mode === "cash",
     };
@@ -12280,6 +12427,7 @@
       note: [
         `${bookingJobLabel(row)} markert ${mode === "cash" ? "betalt på stedet" : "fakturert"}.`,
         `Jobbdato/installasjonsdato: ${formatDate(installDate)}.`,
+        priceBasis ? `Prisgrunnlag/tillegg: ${priceBasis.replace(/\n+/g, " / ")}` : "",
         userNote,
       ].filter(Boolean).join(" "),
     });
@@ -12322,8 +12470,10 @@
     if (!row || !el.billingDialog) return;
     billingDialogBookingId = id;
     const defaultMode = defaultBillingModeForRow(row);
+    const priceBasis = extractJobPriceBasis(row.booking.note);
     el.billingMode.value = defaultMode;
     el.billingDate.value = isoDate(new Date());
+    if (el.billingPriceBasis) el.billingPriceBasis.value = priceBasis;
     el.billingNote.value = "";
     el.billingSummary.innerHTML = `
       <strong>${customerStarHtml(row.customer)}${customerCashBadgeHtml(row.customer)}${escapeHtml(cleanDisplayName(row.customer))}</strong>
@@ -12333,6 +12483,7 @@
     `;
     clearBillingDialogMessage();
     syncBillingDialogText();
+    renderBillingPriceTotal();
     el.billingDialog.showModal();
   }
 
@@ -12342,6 +12493,7 @@
     await markBookingPaymentDone(billingDialogBookingId, {
       mode,
       date: el.billingDate.value || isoDate(new Date()),
+      priceBasis: el.billingPriceBasis?.value || "",
       note: el.billingNote.value,
     });
     billingDialogBookingId = "";
@@ -12431,6 +12583,7 @@
     const billingStatus = completionBillingStatus(type, customer, paymentDone);
     const completionPaymentMode = defaultBillingModeForRow(row);
     const completionPaymentMarker = paymentDone ? billingModeMarker(completionPaymentMode, doneDate) : "";
+    const priceBasis = completionPriceBasisText();
     const selectedInstallationId = el.completionInstallation?.value || "";
     const selectableInstallations = ["service", "installasjon"].includes(type)
       ? installationsForCustomer(customer).filter((installation) => installation.active !== false)
@@ -12445,6 +12598,7 @@
       `${bookingJobLabel(row)} fullført ${formatDate(doneDate)}.`,
       selectedInstallation ? `Anlegg: ${installationDisplayName(selectedInstallation)}.` : "",
       paymentDone ? (customer.pays_cash ? "Betaling markert mottatt ved fullføring." : "Faktura markert ferdig/sendt ved fullføring.") : "",
+      priceBasis ? `Prisgrunnlag/tillegg:\n${priceBasis}` : "",
       userNote,
     ].filter(Boolean);
     const useAdminCompletionRpc = store.isConfigured && isAdmin() && store.completeBookingAsAdmin;
@@ -12510,13 +12664,16 @@
       status: "done",
       needs_move: false,
       done_at: doneDate,
-      note: [cleanBookingNote(row.booking.note), completionPaymentMarker].filter(Boolean).join("\n"),
+      note: noteWithJobPriceBasis([cleanBookingNote(row.booking.note), completionPaymentMarker].filter(Boolean).join("\n"), priceBasis),
       invoiced: paymentDone && completionPaymentMode === "invoice" ? true : row.booking.invoiced,
       paid_cash: paymentDone && completionPaymentMode === "cash" ? true : row.booking.paid_cash,
     };
     const completionEventType = `${bookingJobLabel(row)} fullført`;
     const completionEventNote = eventLines.join("\n");
-    const orderNote = userNote || cleanBookingNote(row.booking.note || "");
+    const orderNote = [
+      userNote || cleanBookingNote(row.booking.note || ""),
+      priceBasis ? `Prisgrunnlag/tillegg:\n${priceBasis}` : "",
+    ].filter(Boolean).join("\n");
 
     if (useAdminCompletionRpc) {
       const linkedOrder = linkedOrderForBooking(completingBookingId);
@@ -13697,6 +13854,9 @@
     syncCompletionIntervalFromInstallation();
     syncCompletionFields();
   });
+  el.completionPricePreset?.addEventListener("change", syncCompletionPriceQuantity);
+  el.completionAddPriceLine?.addEventListener("click", addCompletionPriceLine);
+  el.completionPriceLines?.addEventListener("input", renderCompletionPriceTotal);
   el.closeCompletionDialog.addEventListener("click", () => el.completionDialog.close());
   el.cancelCompletionButton.addEventListener("click", () => el.completionDialog.close());
   el.completionForm.addEventListener("submit", async (event) => {
@@ -13710,6 +13870,7 @@
   el.closeBillingDialog?.addEventListener("click", () => el.billingDialog.close());
   el.cancelBillingButton?.addEventListener("click", () => el.billingDialog.close());
   el.billingMode?.addEventListener("change", syncBillingDialogText);
+  el.billingPriceBasis?.addEventListener("input", renderBillingPriceTotal);
   el.billingForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
     clearBillingDialogMessage();
