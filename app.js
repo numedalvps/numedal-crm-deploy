@@ -2520,6 +2520,7 @@
       const index = customers.findIndex((item) => customerKey(item) === customerKey(saved));
       if (index >= 0) customers[index] = saved;
       selectedCustomerId = customerKey(saved);
+      if (Object.prototype.hasOwnProperty.call(changes, "access_note")) upsertAccessNoteInMemory(saved, changes.access_note);
       renderAll();
       if (message) setSyncStatus(message, "ok");
       return saved;
@@ -2529,9 +2530,30 @@
     const key = customerKey(customer);
     customerEdits[key] = { ...(customerEdits[key] || {}), ...changes };
     saveLocalEdits();
+    if (Object.prototype.hasOwnProperty.call(changes, "access_note")) upsertAccessNoteInMemory(customer, changes.access_note);
     renderAll();
     if (message) setSyncStatus(message, "ok");
     return customer;
+  }
+
+  function openAccessDialog(customerId, options = {}) {
+    const customer = findCustomer(customerId);
+    if (!customer) return;
+    const prefill = options.prefill === "suggested" && !accessInfo(customer)
+      ? suggestedAccessInfo(customer)
+      : "";
+    openCustomerDialog(customerId, {
+      focus: "access",
+      accessPrefill: prefill,
+    });
+  }
+
+  async function promoteCustomerAccessNote(customerId) {
+    const customer = findCustomer(customerId);
+    if (!customer) throw new Error("Fant ikke kunden.");
+    const note = accessInfo(customer) || suggestedAccessInfo(customer);
+    if (!note) throw new Error("Fant ingen adkomsttekst å lagre.");
+    await saveCustomerInline(customer, { access_note: note }, "Adkomst lagret som eget adkomstnotat.");
   }
 
   async function setCustomerPaymentMode(customerId, mode) {
@@ -2641,6 +2663,42 @@
     const accessNotes = key ? accessNotesByCustomer.get(key) || [] : [];
     const note = accessNotes.find((item) => item.note_type === "adkomst") || accessNotes[0];
     return String(note?.note || customer?.access_note || "").trim();
+  }
+
+  function structuredAccessInfo(customer) {
+    const key = customerKey(customer);
+    const accessNotes = key ? accessNotesByCustomer.get(key) || [] : [];
+    const note = accessNotes.find((item) => item.note_type === "adkomst") || accessNotes[0];
+    return String(note?.note || "").trim();
+  }
+
+  function likelyAccessLines(customer) {
+    const sourceText = [
+      customer?.access_note,
+      customer?.local_note,
+      customer?.latest_deal_name,
+      customer?.tags,
+    ].filter(Boolean).join("\n");
+    const lines = sourceText
+      .split(/\n|;|\s-\s|•/g)
+      .map((line) => repairTextEncoding(line).replace(/\s+/g, " ").trim())
+      .filter(Boolean);
+    const accessPattern = /\b(adkomst|kodeboks|nøkkelboks|nokkelboks|nøkkel|nokkel|dørkode|dorkode|portkode|legge ut|lagt ut|ligger under|ligger ved|under matte|under matta)\b/i;
+    const seen = new Set();
+    return lines
+      .filter((line) => accessPattern.test(line))
+      .map((line) => line.replace(/^tags?\s*[:=-]\s*/i, "").trim())
+      .filter((line) => {
+        const key = normalizeMatch(line);
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .slice(0, 4);
+  }
+
+  function suggestedAccessInfo(customer) {
+    return likelyAccessLines(customer).join("\n").trim();
   }
 
   function phoneForLink(value) {
@@ -4123,6 +4181,29 @@
     for (const list of accessNotesByCustomer.values()) {
       list.sort((a, b) => String(b.updated_at || b.created_at || "").localeCompare(String(a.updated_at || a.created_at || "")));
     }
+  }
+
+  function upsertAccessNoteInMemory(customer, note) {
+    const key = customerKey(customer);
+    if (!key) return;
+    const cleanNote = String(note || "").trim();
+    if (!cleanNote) {
+      accessNotesByCustomer.set(key, []);
+      return;
+    }
+    const list = accessNotesByCustomer.get(key) || [];
+    const existingIndex = list.findIndex((item) => item.note_type === "adkomst");
+    const existing = existingIndex >= 0 ? list[existingIndex] : {};
+    const row = {
+      ...existing,
+      id: existing.id || `access-${Date.now()}`,
+      customer_id: key,
+      note_type: "adkomst",
+      note: cleanNote,
+      active: true,
+      updated_at: new Date().toISOString(),
+    };
+    accessNotesByCustomer.set(key, [row, ...list.filter((_, index) => index !== existingIndex)]);
   }
 
   function localServiceEvents() {
@@ -9516,9 +9597,24 @@
     const primaryLocation = primaryLocationForCustomer(customer);
     const siteAddress = locationAddressText(primaryLocation) || mainAddress;
     const access = accessInfo(customer);
+    const structuredAccess = structuredAccessInfo(customer);
+    const suggestedAccess = suggestedAccessInfo(customer);
+    const key = customerKey(customer);
+    const actions = [];
+    if (isAdmin() && !customer?.is_inactive) {
+      actions.push(`<button class="secondary" data-edit-access="${escapeHtml(key)}" type="button" title="Åpne kundeskjemaet direkte på adkomstfeltet.">Rediger adkomst</button>`);
+      if (!structuredAccess && access) {
+        actions.push(`<button data-promote-access="${escapeHtml(key)}" type="button" title="Lagrer dagens adkomsttekst som eget adkomstnotat i databasen.">Lagre som adkomstnotat</button>`);
+      } else if (!access && suggestedAccess) {
+        actions.push(`<button data-edit-access="${escapeHtml(key)}" data-access-prefill="suggested" type="button" title="Åpner kundeskjemaet med foreslått adkomsttekst fra gamle notater/tags. Kontroller før lagring.">Foreslå fra notat</button>`);
+      }
+    }
     return `
       <section class="detail-section contact-access-section">
-        <h3>Kontakt og adkomst</h3>
+        <div class="section-title-row">
+          <h3>Kontakt og adkomst</h3>
+          ${actions.length ? `<div class="section-actions">${actions.join("")}</div>` : ""}
+        </div>
         <dl class="facts compact">
           <div><dt>Telefon</dt><dd class="copy-field">${phoneField(customer.phone)}</dd></div>
           <div><dt>E-post</dt><dd class="copy-field">${emailField(customer.email)}</dd></div>
@@ -9526,6 +9622,7 @@
           <div><dt>Anleggsadresse</dt><dd>${escapeHtml(siteAddress || "Ikke registrert")}</dd></div>
           <div><dt>Adkomst</dt><dd>${access ? `<strong>Adkomst finnes</strong><br>${escapeHtml(access).replaceAll("\n", "<br>")}` : "Ikke registrert"}</dd></div>
         </dl>
+        ${!access && suggestedAccess ? `<p class="context-hint">Mulig adkomstinfo funnet i eldre notat/tag. Kontroller før lagring.</p>` : ""}
       </section>
     `;
   }
@@ -10394,7 +10491,7 @@
     el.formInstallDate.value = customer?.first_install_date || "";
     el.formLastService.value = customer?.last_service_date || "";
     el.formNextService.value = customer?.next_service_due || "";
-    el.formAccess.value = customer ? accessInfo(customer) : "";
+    el.formAccess.value = options.accessPrefill || (customer ? accessInfo(customer) : "");
     el.formPaysCash.checked = Boolean(customer?.pays_cash);
     el.formInsulation.checked = customer ? isInsulationCustomer(customer) : Boolean(options.insulation);
     el.formServiceDates.value = customer?.service_dates || "";
@@ -10407,6 +10504,12 @@
     syncPostalFieldsVisibility();
     renderTagCatalog(currentFormTags());
     el.customerDialog.showModal();
+    if (options.focus === "access") {
+      setTimeout(() => {
+        el.formAccess?.focus();
+        el.formAccess?.select();
+      }, 0);
+    }
   }
 
   function customerFormValues() {
@@ -11133,6 +11236,7 @@
       if (index >= 0) customers[index] = saved;
       else customers.unshift(saved);
       selectedCustomerId = customerKey(saved);
+      upsertAccessNoteInMemory(saved, values.access_note);
       setSyncStatus("Kunde lagret i Supabase.", "ok");
     } else if (editingCustomerId) {
       requireLocalDemoStorage();
@@ -11141,6 +11245,7 @@
       customerEdits[editingCustomerId] = { ...(customerEdits[editingCustomerId] || {}), ...values };
       selectedCustomerId = editingCustomerId;
       saveLocalEdits();
+      upsertAccessNoteInMemory(customer, values.access_note);
     } else {
       requireLocalDemoStorage();
       const customer = { lime_id: `manual-${Date.now()}`, source: "Manuell", ...values };
@@ -11148,6 +11253,7 @@
       customerEdits[customer.lime_id] = customer;
       selectedCustomerId = customer.lime_id;
       saveLocalEdits();
+      upsertAccessNoteInMemory(customer, values.access_note);
     }
     el.customerDialog.close();
     currentCustomerFilter = "all";
@@ -12492,6 +12598,17 @@
         .catch((error) => setSyncStatus(error.message || "Klarte ikke endre betaling.", "error"));
       return;
     }
+    const editAccess = event.target.closest("[data-edit-access]");
+    if (editAccess) {
+      openAccessDialog(editAccess.dataset.editAccess, { prefill: editAccess.dataset.accessPrefill });
+      return;
+    }
+    const promoteAccess = event.target.closest("[data-promote-access]");
+    if (promoteAccess) {
+      promoteCustomerAccessNote(promoteAccess.dataset.promoteAccess)
+        .catch((error) => setSyncStatus(error.message || "Klarte ikke lagre adkomstnotat.", "error"));
+      return;
+    }
     const insulation = event.target.closest("[data-toggle-insulation]");
     if (insulation) {
       toggleCustomerInsulation(insulation.dataset.toggleInsulation)
@@ -12678,6 +12795,17 @@
     if (newLead) {
       createLeadForExistingCustomer(newLead.dataset.newLeadExistingCustomer, { kind: newLead.dataset.leadKind })
         .catch((error) => setSyncStatus(error.message || "Klarte ikke opprette ny lead på kunden.", "error"));
+      return;
+    }
+    const editAccess = event.target.closest("[data-edit-access]");
+    if (editAccess) {
+      openAccessDialog(editAccess.dataset.editAccess, { prefill: editAccess.dataset.accessPrefill });
+      return;
+    }
+    const promoteAccess = event.target.closest("[data-promote-access]");
+    if (promoteAccess) {
+      promoteCustomerAccessNote(promoteAccess.dataset.promoteAccess)
+        .catch((error) => setSyncStatus(error.message || "Klarte ikke lagre adkomstnotat.", "error"));
       return;
     }
     const newInstallation = event.target.closest("[data-new-installation-customer]");
