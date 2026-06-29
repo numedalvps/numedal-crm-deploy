@@ -9320,11 +9320,23 @@
       .trimEnd();
   }
 
+  function splitEmailReferenceFooter(text) {
+    const value = String(text || "").trimEnd();
+    const match = value.match(/\n*\n---\nCRM-ref:\s*(NVS-[A-Z0-9]+-\d{8}-[A-Z0-9]{6})\s*$/i);
+    if (!match) return { body: value, footer: "" };
+    return {
+      body: value.slice(0, match.index).trimEnd(),
+      footer: `---\nCRM-ref: ${match[1].toUpperCase()}`,
+    };
+  }
+
   function applyOfferDocumentSelection(text, includePriceList) {
-    const clean = stripOfferDocumentBlock(text);
-    if (!includePriceList) return clean;
+    const referenceSplit = splitEmailReferenceFooter(text);
+    const clean = stripOfferDocumentBlock(referenceSplit.body);
+    if (!includePriceList) return [clean, referenceSplit.footer].filter(Boolean).join("\n\n").trimEnd();
     const url = publicDocumentUrl(priceListDocument);
-    return clean.includes(url) ? clean : `${clean}\n${offerPriceListBlock()}`.trimEnd();
+    const withDocument = clean.includes(url) ? clean : `${clean}\n${offerPriceListBlock()}`.trimEnd();
+    return [withDocument, referenceSplit.footer].filter(Boolean).join("\n\n").trimEnd();
   }
 
   function emailReferenceSuffix(length = 6) {
@@ -9351,11 +9363,11 @@
   function ensureEmailReference(subject, body, prefix = "MAIL") {
     const reference = extractEmailReference(subject, body) || createEmailReference(prefix);
     const cleanSubject = String(subject || "").trim();
-    const cleanBody = String(body || "").trimEnd();
+    const { body: cleanBody } = splitEmailReferenceFooter(body);
     return {
       reference,
       subject: cleanSubject.includes(reference) ? cleanSubject : `${cleanSubject} [${reference}]`,
-      body: cleanBody.includes(reference) ? cleanBody : `${cleanBody}\n\n---\nCRM-ref: ${reference}`,
+      body: cleanBody.includes(reference) ? cleanBody : [cleanBody, `---\nCRM-ref: ${reference}`].filter(Boolean).join("\n\n"),
     };
   }
 
@@ -9669,6 +9681,17 @@
     ].filter((line) => line !== "").join("\n");
   }
 
+  function applyOfferBuilderLinesToText(target, text) {
+    const fields = leadOfferFields(target);
+    const lines = String(fields.lines?.value || "").trim();
+    if (!lines) return String(text || "");
+    const referenceSplit = splitEmailReferenceFooter(text);
+    const base = stripOfferDocumentBlock(stripOfferLinesBlock(referenceSplit.body)).trimEnd();
+    const block = offerLinesBlock(lines);
+    const withLines = [base, block].filter(Boolean).join("\n").trimEnd();
+    return [withLines, referenceSplit.footer].filter(Boolean).join("\n\n").trimEnd();
+  }
+
   function renderOfferLinesTotal(target) {
     const fields = leadOfferFields(target);
     if (!fields.linesTotal || !fields.lines) return;
@@ -9726,9 +9749,9 @@
   function insertOfferLinesIntoText(target) {
     const fields = leadOfferFields(target);
     if (!fields.text || !fields.lines) return;
-    const base = stripOfferDocumentBlock(stripOfferLinesBlock(fields.text.value)).trimEnd();
+    const withLines = applyOfferBuilderLinesToText(target, fields.text.value);
     const block = offerLinesBlock(fields.lines.value);
-    fields.text.value = applyOfferDocumentSelection([base, block].filter(Boolean).join("\n").trimEnd(), Boolean(fields.priceList?.checked));
+    fields.text.value = applyOfferDocumentSelection(withLines, Boolean(fields.priceList?.checked));
     renderOfferLinesTotal(target);
     focusLeadOfferFields(target);
     setSyncStatus(block ? "Tilbudslinjene er lagt inn i teksten." : "Tilbudslinjer fjernet fra teksten.", "ok");
@@ -9777,7 +9800,9 @@
     const customer = entry.customer || {};
     const to = String(fields.to?.value || "").trim();
     const subject = String(fields.subject?.value || "").trim();
-    const text = applyOfferDocumentSelection(String(fields.text?.value || "").trim(), Boolean(fields.priceList?.checked));
+    const textDraft = applyOfferBuilderLinesToText(target, String(fields.text?.value || "").trim());
+    const text = applyOfferDocumentSelection(textDraft, Boolean(fields.priceList?.checked));
+    if (fields.text && fields.text.value !== text) fields.text.value = text;
     if (!isEmailAddress(to)) throw new Error("Mottaker mangler eller har ugyldig e-postadresse.");
     if (!subject) throw new Error("Emne mangler.");
     if (!text) throw new Error("Tilbudstekst mangler.");
