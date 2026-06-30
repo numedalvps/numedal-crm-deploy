@@ -13517,6 +13517,13 @@
     if (item) el.completionPriceQuantity.value = String(item.defaultQty || 1);
   }
 
+  function defaultCompletionPriceItemId(type) {
+    if (type === "service") return "service_heatpump";
+    if (type === "reparasjon" || serviceWorkType(type)) return "technician_hour";
+    if (type === "installasjon") return "standard_installation";
+    return jobPriceItems[0]?.id || "";
+  }
+
   function setupCompletionPriceFields(row) {
     if (!el.completionPriceDetails || !el.completionPricePreset || !el.completionPriceLines) return;
     const type = bookingDisplayType(row);
@@ -13529,6 +13536,10 @@
     el.completionPricePreset.innerHTML = jobPriceItems
       .map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.label)} - ${escapeHtml(formatJobPriceAmount(item.price))} / ${escapeHtml(item.unit)}</option>`)
       .join("");
+    const preferredId = defaultCompletionPriceItemId(type);
+    if (preferredId && jobPriceItems.some((item) => item.id === preferredId)) {
+      el.completionPricePreset.value = preferredId;
+    }
     el.completionPriceLines.value = extractJobPriceBasis(row.booking.note);
     syncCompletionPriceQuantity();
     el.completionPriceDetails.open = Boolean(el.completionPriceLines.value) || ["installasjon", "reparasjon"].includes(type);
