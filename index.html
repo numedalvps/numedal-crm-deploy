@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260630-16" />
+    <link rel="stylesheet" href="./styles.css?v=20260630-17" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -691,6 +691,13 @@
           </section>
         </section>
       </main>
+      <div id="mobileMoreMenu" class="mobile-more-menu hidden" aria-label="Flere mobilvalg">
+        <button data-view="routeplanner" data-admin-mobile type="button">Servicerute</button>
+        <button data-view="technician" data-admin-mobile type="button">Min dag</button>
+        <button data-view="insulation" data-admin-mobile type="button">Blåseisolering</button>
+        <button data-view="settings" data-admin-mobile type="button">Innstillinger</button>
+        <button id="mobileLogoutButton" class="mobile-logout" type="button">Logg ut</button>
+      </div>
       <nav id="mobileBottomNav" class="mobile-bottom-nav" aria-label="Mobilmeny">
         <button data-view="dashboard" data-admin-mobile type="button">Start</button>
         <button data-view="leads" data-admin-mobile type="button">Innboks</button>
@@ -698,7 +705,7 @@
         <button data-view="orders" data-admin-mobile type="button">Jobber</button>
         <button data-view="technician" data-tech-mobile type="button">Min dag</button>
         <button data-view="planning" type="button">Plan</button>
-        <button data-mobile-more-toggle type="button">Mer</button>
+        <button id="mobileMoreButton" data-mobile-more-toggle type="button" aria-expanded="false">Mer</button>
       </nav>
     </div>
 
@@ -1096,10 +1103,10 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260630-16"></script>
-    <script src="./supabase-adapter.js?v=20260630-16"></script>
-    <script src="./intake-parser.js?v=20260630-16"></script>
-    <script src="./app-20260630-16.js"></script>
+    <script src="./supabase-config.js?v=20260630-17"></script>
+    <script src="./supabase-adapter.js?v=20260630-17"></script>
+    <script src="./intake-parser.js?v=20260630-17"></script>
+    <script src="./app-20260630-17.js"></script>
   </body>
 </html>
 
