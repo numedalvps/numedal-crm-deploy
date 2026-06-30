@@ -5708,7 +5708,7 @@ label {
 @media (max-width: 760px) {
   .app {
     display: block;
-    padding-bottom: 74px;
+    padding-bottom: calc(82px + env(safe-area-inset-bottom, 0px));
   }
 
   .sidebar {
@@ -5774,6 +5774,7 @@ label {
     grid-auto-flow: column;
     grid-auto-columns: minmax(0, 1fr);
     border-top: 1px solid var(--line);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
     background: #fff;
     box-shadow: 0 -8px 22px rgba(15, 23, 42, 0.08);
   }
@@ -5796,7 +5797,7 @@ label {
     position: fixed;
     z-index: 45;
     right: 10px;
-    bottom: 68px;
+    bottom: calc(68px + env(safe-area-inset-bottom, 0px));
     left: 10px;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -5833,6 +5834,117 @@ label {
     border-color: #fecaca;
     background: #fef2f2;
     color: #991b1b;
+  }
+
+  .planning-head {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-content: stretch;
+    align-items: stretch;
+  }
+
+  .planning-head strong {
+    grid-column: 1 / -1;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .planning-head button,
+  .planning-mode-toggle,
+  .planning-resource-filter {
+    width: 100%;
+  }
+
+  .planning-mode-toggle {
+    justify-content: stretch;
+  }
+
+  .planning-mode-toggle button {
+    flex: 1;
+  }
+
+  .planning-resource-filter {
+    grid-column: 1 / -1;
+    justify-content: space-between;
+  }
+
+  .planning-resource-filter select {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .planning-board {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-inline: -2px;
+    overflow-x: auto;
+    scroll-padding-inline: 2px;
+    scroll-snap-type: x proximity;
+  }
+
+  .planning-day {
+    flex: 0 0 min(86vw, 320px);
+    min-width: 0;
+    scroll-snap-align: start;
+  }
+
+  .day-timeline {
+    grid-template-columns: 36px minmax(0, 1fr);
+  }
+
+  .timeline-axis,
+  .timeline-grid {
+    height: 360px;
+  }
+
+  .planning-day.is-empty .drop-hint,
+  .planning-day.is-empty .day-timeline-wrap {
+    display: none;
+  }
+
+  .planning-day.is-empty .empty-state {
+    min-height: 72px;
+    display: grid;
+    place-items: center;
+  }
+
+  #routeplannerView .route-planner {
+    gap: 12px;
+  }
+
+  #routeplannerView .route-planner > .section-head > div,
+  #routeplannerView .route-step-head p,
+  #routeplannerView .route-selection > .section-head p,
+  #routeplannerView .route-help {
+    display: none;
+  }
+
+  #routeplannerView .route-step,
+  #routeplannerView .route-selection,
+  #routeplannerView .route-controls {
+    border-radius: 8px;
+    padding: 10px;
+  }
+
+  #routeplannerView .route-actions,
+  #routeplannerView .route-card-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  #routeplannerView .route-actions button,
+  #routeplannerView .route-card-actions a,
+  #routeplannerView .route-card-actions button,
+  #routeOpenMapsButton {
+    width: 100%;
+  }
+
+  #routeplannerView .route-card-actions a,
+  #routeplannerView .route-card-actions button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .start-worklist {
