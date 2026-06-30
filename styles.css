@@ -4830,6 +4830,36 @@ textarea {
   align-items: center;
 }
 
+.technician-help {
+  margin: 0 0 16px;
+}
+
+.technician-help article,
+.tech-flow-help {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 12px 14px;
+}
+
+.technician-help strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.technician-help ol {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.technician-help li + li {
+  margin-top: 4px;
+}
+
+.tech-flow-help {
+  margin: 8px 0 0;
+}
+
 .technician-actions input {
   width: auto;
   min-width: 160px;

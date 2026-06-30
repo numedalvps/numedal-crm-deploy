@@ -10,8 +10,68 @@
   const databaseUnavailableMessage = "CRM-et fikk ikke kontakt med databasen. Ingen endringer er lagret. Prøv igjen eller kontakt administrator.";
   const appPublicBaseUrl = "https://app.numedalvps.no/";
   const users = {
-    admin: { name: "Gunnar", role: "Admin", view: "dashboard", key: "admin" },
-    tech: { name: "Hubert", role: "Tekniker", view: "technician", key: "tech" },
+    admin: { name: "Gunnar", role: "Admin", view: "dashboard", key: "admin", language: "nb", extraHelp: false, active: true },
+    tech: { name: "Hubert", role: "Tekniker", view: "technician", key: "tech", language: "pl", extraHelp: true, active: false },
+  };
+  const supportedProfileLanguages = {
+    nb: "Norsk",
+    pl: "Polski",
+  };
+  const technicianCopy = {
+    nb: {
+      viewTitle: "Min dag",
+      viewSubtitle: "Jobbene dine på mobil.",
+      navDay: "Min dag",
+      routeButton: "Åpne dagsrute",
+      routeTitle: "Åpner dagens jobber som kjørerute i Google Maps.",
+      intro: "Mobilvisning med ring, kart og ferdig-knapp.",
+      heading: (name) => `${name || "Min"} sin dagsplan`,
+      empty: (name) => `Ingen jobber for ${name || "deg"} denne dagen.`,
+      helpTitle: "Slik bruker du jobbflyten",
+      helpSteps: [
+        "Start med Ring, Kart eller kundeinfo hvis du må sjekke adresse og adkomst.",
+        "Når jobben er gjort, trykk Marker ferdig. Gunnar tar faktura og videre oppfølging.",
+        "Legg inn kort notat eller bilder ved fullføring hvis noe må huskes.",
+        "Hvis du ikke kommer inn eller jobben må avtales på nytt, trykk Må flyttes.",
+      ],
+      markDone: "Marker ferdig",
+      done: "Utført",
+      needsMove: "Må flyttes",
+      doneTitle: "Jobben er markert utført. Kontakt admin hvis dette må angres.",
+      moveTitle: "Marker at jobben må flyttes fordi kunden ikke var tilgjengelig eller dere ikke kom inn.",
+      completionTitle: "Fullfør",
+      completionHelp: "Sjekk at datoen stemmer, legg inn notat eller bilder hvis det trengs, og trykk Fullfør. Gunnar kontrollerer faktura og videre oppfølging.",
+      noNextStep: "Ingen neste steg nå",
+      cancel: "Avbryt",
+      complete: "Fullfør",
+    },
+    pl: {
+      viewTitle: "Mój dzień",
+      viewSubtitle: "Twoje zlecenia na telefonie.",
+      navDay: "Mój dzień",
+      routeButton: "Otwórz trasę dnia",
+      routeTitle: "Otwiera dzisiejsze zlecenia jako trasę w Google Maps.",
+      intro: "Widok mobilny z telefonem, mapą i przyciskiem zakończenia.",
+      heading: (name) => `Plan dnia - ${name || "technik"}`,
+      empty: (name) => `Brak zleceń dla ${name || "Ciebie"} tego dnia.`,
+      helpTitle: "Jak pracować ze zleceniem",
+      helpSteps: [
+        "Najpierw sprawdź adres, notatkę i dostęp. Użyj Ring, Kart lub otwórz kartę klienta.",
+        "Po zakończeniu pracy naciśnij Marker ferdig. Gunnar zajmie się fakturą i dalszą obsługą.",
+        "Dodaj krótką notatkę lub zdjęcia przy zakończeniu, jeśli coś jest ważne.",
+        "Jeśli nie ma dostępu albo termin trzeba zmienić, naciśnij Må flyttes.",
+      ],
+      markDone: "Marker ferdig",
+      done: "Wykonane",
+      needsMove: "Må flyttes",
+      doneTitle: "Zlecenie jest oznaczone jako wykonane. Skontaktuj się z Gunnarem, jeśli trzeba cofnąć.",
+      moveTitle: "Użyj, jeśli klienta nie było, nie było dostępu albo trzeba ustalić nowy termin.",
+      completionTitle: "Zakończ",
+      completionHelp: "Sprawdź datę, dodaj krótką notatkę lub zdjęcia, jeśli trzeba, i naciśnij Fullfør. Gunnar sprawdzi fakturę i dalsze kroki.",
+      noNextStep: "Bez kolejnego kroku teraz",
+      cancel: "Anuluj",
+      complete: "Fullfør",
+    },
   };
   const hiddenDuplicateLimeIds = new Set(["2396394"]);
   const ignoredDuplicateEmails = new Set([
@@ -435,7 +495,9 @@
     routeClearSelectionButton: document.getElementById("routeClearSelectionButton"),
     technicianDate: document.getElementById("technicianDate"),
     technicianHeading: document.getElementById("technicianHeading"),
+    technicianIntro: document.getElementById("technicianIntro"),
     technicianRouteButton: document.getElementById("technicianRouteButton"),
+    technicianHelp: document.getElementById("technicianHelp"),
     technicianJobs: document.getElementById("technicianJobs"),
     settingsAccessSummary: document.getElementById("settingsAccessSummary"),
     offerTemplateSettings: document.getElementById("offerTemplateSettings"),
@@ -539,6 +601,7 @@
     completionInstallation: document.getElementById("completionInstallation"),
     closeCompletionDialog: document.getElementById("closeCompletionDialog"),
     cancelCompletionButton: document.getElementById("cancelCompletionButton"),
+    completionSubmitButton: document.getElementById("completionSubmitButton"),
     completionDoneDate: document.getElementById("completionDoneDate"),
     completionNextAction: document.getElementById("completionNextAction"),
     completionInterval: document.getElementById("completionInterval"),
@@ -3874,7 +3937,7 @@
         time: normalizeBookingTime(row.startTime || el.routeStartTime?.value || "08:00", "08:00"),
         type: "service",
         duration: String(duration),
-        resource: el.routeResource?.value || "Hubert",
+        resource: el.routeResource?.value || defaultBookingResourceName(),
         status: "booked",
         note: [
           "Utkast fra ruteplanlegger.",
@@ -3954,6 +4017,7 @@
 
   function renderRoutePlanner() {
     if (!el.routeResults) return;
+    renderResourceSelectOptions(el.routeResource, el.routeResource?.value || defaultBookingResourceName());
     if (!el.routeBookingDate.value) el.routeBookingDate.value = isoDate(new Date());
     updateRouteAreaOptions();
     const starredOnly = Boolean(el.routeStarredOnly?.checked);
@@ -4501,6 +4565,169 @@
     return currentUser?.key === "admin" || String(currentUser?.role || "").toLowerCase() === "admin";
   }
 
+  function profileDisplayName(profile) {
+    return String(profile?.full_name || profile?.display_name || profile?.name || "").trim();
+  }
+
+  function profilePreferenceKey(profile) {
+    return String(profile?.id || profile?.key || profileDisplayName(profile) || "").trim();
+  }
+
+  function profileIsActive(profile) {
+    return profile?.active !== false;
+  }
+
+  function profileIsTechnician(profile) {
+    return String(profile?.role || "").toLowerCase() === "technician" || String(profile?.role || "").toLowerCase() === "tekniker";
+  }
+
+  function profileIsHubert(profile) {
+    return normalizeMatch(profileDisplayName(profile)).includes("hubert");
+  }
+
+  function profilePreferencesMap() {
+    const value = crmSettings.profile_preferences;
+    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  }
+
+  function defaultProfilePreferences(profile) {
+    return {
+      language: profileIsHubert(profile) ? "pl" : "nb",
+      extraHelp: profileIsHubert(profile),
+    };
+  }
+
+  function profilePreferences(profile) {
+    const defaults = defaultProfilePreferences(profile);
+    const key = profilePreferenceKey(profile);
+    const saved = key ? profilePreferencesMap()[key] || {} : {};
+    const language = supportedProfileLanguages[saved.language] ? saved.language : defaults.language;
+    return {
+      language,
+      extraHelp: "extraHelp" in saved ? Boolean(saved.extraHelp) : Boolean(defaults.extraHelp),
+    };
+  }
+
+  function profileLanguageOptionsHtml(selected = "nb") {
+    return Object.entries(supportedProfileLanguages)
+      .map(([value, label]) => `<option value="${escapeHtml(value)}" ${value === selected ? "selected" : ""}>${escapeHtml(label)}</option>`)
+      .join("");
+  }
+
+  function currentTechnicianLanguage() {
+    const language = currentUser?.language || "nb";
+    return supportedProfileLanguages[language] ? language : "nb";
+  }
+
+  function technicianText(key, ...args) {
+    const language = currentTechnicianLanguage();
+    const value = technicianCopy[language]?.[key] ?? technicianCopy.nb[key];
+    return typeof value === "function" ? value(...args) : value;
+  }
+
+  function currentTechnicianExtraHelp() {
+    return Boolean(currentUser?.extraHelp);
+  }
+
+  function applyCurrentUserPreferences(profile = null) {
+    if (!currentUser) return;
+    const sourceProfile = profile
+      || profiles.find((item) => String(item.id || "") === String(currentUser.id || ""))
+      || profiles.find((item) => normalizeMatch(profileDisplayName(item)) === normalizeMatch(currentUser.name))
+      || currentUser;
+    const prefs = profilePreferences(sourceProfile);
+    currentUser.language = prefs.language;
+    currentUser.extraHelp = prefs.extraHelp;
+  }
+
+  function activeResourceProfiles() {
+    return (profiles || [])
+      .filter(profileIsActive)
+      .filter((profile) => profileDisplayName(profile));
+  }
+
+  function resourceSortRank(name) {
+    const normalized = normalizeMatch(name);
+    if (normalized === "gunnar") return 1;
+    if (normalized === "hubert") return 2;
+    if (normalized === "gunnar og hubert") return 3;
+    return 10;
+  }
+
+  function sortResourceNames(list) {
+    return [...new Set(list.filter(Boolean).map((name) => String(name).trim()).filter(Boolean))]
+      .sort((a, b) => resourceSortRank(a) - resourceSortRank(b) || a.localeCompare(b, "nb-NO"));
+  }
+
+  function activeResourceNames() {
+    return sortResourceNames(activeResourceProfiles().map(profileDisplayName));
+  }
+
+  function activeTechnicianNames() {
+    return sortResourceNames(activeResourceProfiles().filter(profileIsTechnician).map(profileDisplayName));
+  }
+
+  function profileForResourceName(name) {
+    const normalized = normalizeMatch(name);
+    if (!normalized) return null;
+    return (profiles || []).find((profile) => normalizeMatch(profileDisplayName(profile)) === normalized) || null;
+  }
+
+  function resourceBelongsToInactiveProfile(name) {
+    const profile = profileForResourceName(name);
+    return Boolean(profile && !profileIsActive(profile));
+  }
+
+  function activeNamedResource(name) {
+    const normalized = normalizeMatch(name);
+    return activeResourceNames().some((item) => normalizeMatch(item) === normalized);
+  }
+
+  function jointResourceAvailable() {
+    return activeNamedResource("Gunnar") && activeNamedResource("Hubert");
+  }
+
+  function defaultBookingResourceName() {
+    const technicians = activeTechnicianNames();
+    if (technicians.length) return technicians[0];
+    if (currentUser?.name && activeNamedResource(currentUser.name)) return currentUser.name;
+    return activeNamedResource("Gunnar") ? "Gunnar" : activeResourceNames()[0] || currentUser?.name || "Gunnar";
+  }
+
+  function assignableResourceNames(selected = "") {
+    const resources = activeResourceNames();
+    if (jointResourceAvailable()) resources.push("Gunnar og Hubert");
+    if (selected && !resources.includes(selected)) resources.push(selected);
+    return sortResourceNames(resources);
+  }
+
+  function renderResourceSelectOptions(select, selected = "", options = {}) {
+    if (!select) return "";
+    const selectedValue = selected || defaultBookingResourceName();
+    const resources = assignableResourceNames(options.includeSelected === false ? "" : selectedValue);
+    select.innerHTML = resources.map((resource) => `<option value="${escapeHtml(resource)}">${escapeHtml(resource)}</option>`).join("");
+    select.value = resources.includes(selectedValue) ? selectedValue : resources[0] || "";
+    return select.value;
+  }
+
+  function updateResourceSelects() {
+    renderResourceSelectOptions(el.routeResource, defaultBookingResourceName(), { includeSelected: false });
+    renderResourceSelectOptions(el.bookingResource, defaultBookingResourceName(), { includeSelected: false });
+  }
+
+  async function saveProfilePreferences(profileId, prefs) {
+    const current = profilePreferencesMap();
+    const next = {
+      ...current,
+      [profileId]: {
+        language: supportedProfileLanguages[prefs.language] ? prefs.language : "nb",
+        extraHelp: Boolean(prefs.extraHelp),
+      },
+    };
+    crmSettings.profile_preferences = await saveCrmSettingValue("profile_preferences", next);
+    if (String(currentUser?.id || currentUser?.key || "") === String(profileId)) applyCurrentUserPreferences();
+  }
+
   function canUseLocalDemo() {
     return demoEnabled && !store.isConfigured;
   }
@@ -4565,7 +4792,7 @@
 
   async function saveCrmSettingValue(key, value) {
     crmSettings[key] = value;
-    if (store.saveCrmSetting) {
+    if (store.isConfigured && store.saveCrmSetting) {
       const saved = await store.saveCrmSetting(key, value);
       crmSettings[key] = saved?.value ?? value;
       return crmSettings[key];
@@ -4695,7 +4922,7 @@
       ["#completionPriceLines", "Prisgrunnlag som følger jobben videre til fakturering. Kontroller teksten før faktura sendes."],
       ["#billingPriceBasis", "Prisgrunnlag hentet fra fullført jobb. Kan redigeres før faktura eller betaling markeres."],
       ["#technicianDate", "Velg datoen du vil se dagsplan for."],
-      ["#technicianRouteButton", "Åpner dagens jobber som kjørerute i Google Maps."],
+      ["#technicianRouteButton", technicianText("routeTitle")],
     ];
     help.forEach(([selector, text]) => setElementHelp(selector, text));
   }
@@ -4717,8 +4944,9 @@
       display_name: user.name,
       full_name: user.name,
       role: user.key === "admin" ? "admin" : "technician",
-      active: true,
+      active: user.active !== false,
     }));
+    applyCurrentUserPreferences();
     buildCustomerLocations([]);
     customers = rawData.customers
       .filter((customer) => !deletedCustomers.has(customer.lime_id))
@@ -4792,6 +5020,7 @@
     crmAttachments = loaded.crmAttachments || [];
     profiles = loaded.profiles || [];
     crmSettings = loaded.crmSettings || {};
+    applyCurrentUserPreferences(profile);
     buildCustomerLocations(loaded.customerLocations || []);
     buildInvoices(loaded.invoices || []);
     buildServiceEvents(loaded.serviceEvents || []);
@@ -4996,6 +5225,7 @@
       else if (canUseLocalDemo()) localLoad();
       else throw new Error(databaseUnavailableMessage);
       const repairedOrders = await ensureOrdersForLoadedBookings();
+      updateResourceSelects();
       renderApp();
       if (message) setSyncStatus(message, "ok");
       else if (repairedOrders) setSyncStatus(`Fant ${repairedOrders} avtale${repairedOrders === 1 ? "" : "r"} uten jobb og opprettet jobb automatisk.`, "ok");
@@ -6211,21 +6441,14 @@
   }
 
   function knownPlanningResources(rows = bookingRows()) {
-    const resources = new Set(["Gunnar", "Hubert", "Gunnar og Hubert"]);
-    if (currentUser?.name && !/bruker/i.test(currentUser.name)) resources.add(currentUser.name);
+    const resources = new Set(activeResourceNames());
+    if (jointResourceAvailable()) resources.add("Gunnar og Hubert");
+    if (currentUser?.name && !/bruker/i.test(currentUser.name) && !resourceBelongsToInactiveProfile(currentUser.name)) resources.add(currentUser.name);
     for (const row of rows) {
       const resource = String(row.booking.resource || "").trim();
-      if (resource) resources.add(resource);
+      if (resource && !resourceBelongsToInactiveProfile(resource)) resources.add(resource);
     }
-    return [...resources].sort((a, b) => {
-      const rank = (value) => {
-        if (value === "Gunnar") return 1;
-        if (value === "Hubert") return 2;
-        if (value === "Gunnar og Hubert") return 3;
-        return 10;
-      };
-      return rank(a) - rank(b) || a.localeCompare(b, "nb-NO");
-    });
+    return sortResourceNames([...resources]);
   }
 
   function resourceMatchesFilter(row, filter = planningResourceFilter) {
@@ -6395,7 +6618,8 @@
         : databaseUnavailableMessage;
       return;
     }
-    currentUser = users[userKey];
+    currentUser = { ...users[userKey] };
+    applyCurrentUserPreferences(currentUser);
     localStorage.setItem(storage.user, JSON.stringify(currentUser));
     currentView = currentUser.view;
     renderApp();
@@ -6427,6 +6651,9 @@
     document.querySelectorAll("[data-tech-nav]").forEach((node) => node.classList.toggle("hidden", !technician));
     document.querySelectorAll("[data-admin-mobile]").forEach((node) => node.classList.toggle("hidden", technician));
     document.querySelectorAll("[data-tech-mobile]").forEach((node) => node.classList.toggle("hidden", !technician));
+    document.querySelectorAll('[data-tech-nav][data-view="technician"], [data-tech-mobile][data-view="technician"]').forEach((node) => {
+      node.textContent = technicianText("navDay");
+    });
     document.querySelectorAll("[data-mobile-more-toggle]").forEach((node) => node.classList.toggle("hidden", true));
     el.moreMenuButton?.closest(".more-nav-wrap")?.classList.toggle("hidden", technician);
   }
@@ -6460,8 +6687,13 @@
       technician: ["Min dag", "Jobbene dine på mobil."],
       settings: ["Innstillinger", "Brukere, roller og innlogging."],
     };
-    el.viewTitle.textContent = titles[currentView]?.[0] || "CRM";
-    el.viewSubtitle.textContent = titles[currentView]?.[1] || "";
+    if (currentView === "technician" && isTechnicianUser()) {
+      el.viewTitle.textContent = technicianText("viewTitle");
+      el.viewSubtitle.textContent = technicianText("viewSubtitle");
+    } else {
+      el.viewTitle.textContent = titles[currentView]?.[0] || "CRM";
+      el.viewSubtitle.textContent = titles[currentView]?.[1] || "";
+    }
     renderAll();
   }
 
@@ -7317,15 +7549,17 @@
     el.profileList.innerHTML = rows.map((profile) => {
       const id = String(profile.id || "");
       const name = profile.full_name || profile.display_name || "Uten navn";
-      const self = currentUser?.id && String(currentUser.id) === id;
-      const canEdit = store.isConfigured && store.saveProfile && !self;
+      const self = (currentUser?.id && String(currentUser.id) === id) || (currentUser?.key && String(currentUser.key) === id);
+      const canEdit = ((store.isConfigured && store.saveProfile) || canUseLocalDemo()) && !self;
       const disabled = canEdit ? "" : "disabled";
       const active = profile.active !== false;
+      const prefs = profilePreferences(profile);
+      const resourceStatus = active ? "Synlig i planlegging og booking" : "Skjult til brukeren aktiveres";
       return `
         <article class="${active ? "" : "inactive"}" data-profile-row="${escapeHtml(id)}">
           <div>
             <strong>${escapeHtml(name)}${self ? ` <span class="profile-self">Deg</span>` : ""}</strong>
-            <span>${escapeHtml(profileRoleLabel(profile.role))}${active ? "" : " · Inaktiv"}</span>
+            <span>${escapeHtml(profileRoleLabel(profile.role))}${active ? "" : " · Inaktiv"} · ${escapeHtml(resourceStatus)}</span>
           </div>
           <label>Navn<input data-profile-name="${escapeHtml(id)}" value="${escapeHtml(name)}" ${disabled} /></label>
           <label>Telefon<input data-profile-phone="${escapeHtml(id)}" value="${escapeHtml(profile.phone || "")}" ${disabled} /></label>
@@ -7335,7 +7569,13 @@
               <option value="admin" ${profile.role === "admin" ? "selected" : ""}>Admin</option>
             </select>
           </label>
+          <label>Språk
+            <select data-profile-language="${escapeHtml(id)}" ${disabled}>
+              ${profileLanguageOptionsHtml(prefs.language)}
+            </select>
+          </label>
           <label class="check-row profile-active"><input data-profile-active="${escapeHtml(id)}" type="checkbox" ${active ? "checked" : ""} ${disabled} /> Aktiv</label>
+          <label class="check-row profile-active"><input data-profile-extra-help="${escapeHtml(id)}" type="checkbox" ${prefs.extraHelp ? "checked" : ""} ${disabled} /> Ekstra forklaring for tekniker</label>
           <button data-save-profile="${escapeHtml(id)}" type="button" ${canEdit ? "" : "disabled"}>${self ? "Egen profil" : "Lagre"}</button>
         </article>
       `;
@@ -7374,8 +7614,8 @@
 
   async function saveProfileFromSettings(profileId) {
     if (!isAdmin()) throw new Error("Bare admin kan endre brukerroller.");
-    if (!store.saveProfile) throw new Error("Brukerroller krever Supabase.");
-    if (currentUser?.id && String(currentUser.id) === String(profileId)) {
+    if (!store.saveProfile && !canUseLocalDemo()) throw new Error("Brukerroller krever Supabase.");
+    if ((currentUser?.id && String(currentUser.id) === String(profileId)) || (currentUser?.key && String(currentUser.key) === String(profileId))) {
       throw new Error("Egen rolle/aktiv-status må endres av en annen admin.");
     }
     const row = el.profileList?.querySelector(`[data-profile-row="${CSS.escape(profileId)}"]`);
@@ -7384,17 +7624,25 @@
     const phone = row.querySelector(`[data-profile-phone="${CSS.escape(profileId)}"]`)?.value?.trim() || "";
     const role = row.querySelector(`[data-profile-role="${CSS.escape(profileId)}"]`)?.value === "admin" ? "admin" : "technician";
     const active = Boolean(row.querySelector(`[data-profile-active="${CSS.escape(profileId)}"]`)?.checked);
+    const language = row.querySelector(`[data-profile-language="${CSS.escape(profileId)}"]`)?.value || "nb";
+    const extraHelp = Boolean(row.querySelector(`[data-profile-extra-help="${CSS.escape(profileId)}"]`)?.checked);
     if (!name) throw new Error("Navn kan ikke være tomt.");
-    const saved = await store.saveProfile(profileId, {
+    const patch = {
       display_name: name,
       full_name: name,
       phone,
       role,
       active,
-    });
+    };
+    const existing = profiles.find((profile) => String(profile.id) === String(profileId)) || {};
+    const saved = store.isConfigured && store.saveProfile
+      ? await store.saveProfile(profileId, patch)
+      : { ...existing, id: profileId, ...patch };
+    await saveProfilePreferences(profileId, { language, extraHelp });
     const index = profiles.findIndex((profile) => String(profile.id) === String(saved.id));
     if (index >= 0) profiles[index] = saved;
     else profiles.push(saved);
+    updateResourceSelects();
     renderSettings();
     setSyncStatus("Brukerprofil oppdatert.", "ok");
   }
@@ -12372,14 +12620,34 @@
     return true;
   }
 
+  function technicianHelpHtml() {
+    if (!isTechnicianUser() || !currentTechnicianExtraHelp()) return "";
+    const steps = technicianText("helpSteps") || [];
+    return `
+      <article>
+        <strong>${escapeHtml(technicianText("helpTitle"))}</strong>
+        <ol>
+          ${steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}
+        </ol>
+      </article>
+    `;
+  }
+
   function renderTechnician() {
     if (!el.technicianDate.value) el.technicianDate.value = isoDate(new Date());
     const rows = personalRowsForDate(el.technicianDate.value);
-    if (el.technicianHeading) el.technicianHeading.textContent = `${currentUser?.name || "Min"} sin dagsplan`;
+    if (el.technicianHeading) el.technicianHeading.textContent = technicianText("heading", currentUser?.name || "Min");
+    if (el.technicianIntro) el.technicianIntro.textContent = technicianText("intro");
+    if (el.technicianRouteButton) el.technicianRouteButton.textContent = technicianText("routeButton");
+    if (el.technicianRouteButton) el.technicianRouteButton.title = technicianText("routeTitle");
     if (el.technicianRouteButton) el.technicianRouteButton.disabled = !googleDirectionsUrlForRows(rows);
+    if (el.technicianHelp) {
+      el.technicianHelp.innerHTML = technicianHelpHtml();
+      el.technicianHelp.classList.toggle("hidden", !el.technicianHelp.innerHTML.trim());
+    }
     el.technicianJobs.innerHTML = "";
     if (!rows.length) {
-      el.technicianJobs.innerHTML = `<div class="empty-state">Ingen jobber for ${escapeHtml(currentUser?.name || "deg")} denne dagen.</div>`;
+      el.technicianJobs.innerHTML = `<div class="empty-state">${escapeHtml(technicianText("empty", currentUser?.name || "deg"))}</div>`;
       return;
     }
     for (const row of rows) {
@@ -12389,18 +12657,18 @@
       const doneButton = document.createElement("button");
       doneButton.type = "button";
       doneButton.dataset.doneBooking = row.id;
-      doneButton.textContent = done ? "Utført" : "Marker ferdig";
+      doneButton.textContent = done ? technicianText("done") : technicianText("markDone");
       if (done && !isAdmin()) {
         doneButton.disabled = true;
-        doneButton.title = "Jobben er markert utført. Kontakt admin hvis dette må angres.";
+        doneButton.title = technicianText("doneTitle");
       }
       card.querySelector(".job-actions").appendChild(doneButton);
       if (!done && !needsMove) {
         const moveButton = document.createElement("button");
         moveButton.type = "button";
         moveButton.dataset.moveBooking = row.id;
-        moveButton.title = "Marker at jobben må flyttes fordi kunden ikke var tilgjengelig eller dere ikke kom inn.";
-        moveButton.textContent = "Må flyttes";
+        moveButton.title = technicianText("moveTitle");
+        moveButton.textContent = technicianText("needsMove");
         card.querySelector(".job-actions").appendChild(moveButton);
       }
       el.technicianJobs.appendChild(card);
@@ -12765,7 +13033,7 @@
     renderBookingInstallationOptions(selectedCustomer, linkedInstallationId);
     const linkedInstallation = selectedBookingInstallation(selectedCustomer);
     el.bookingDuration.value = booking?.duration || defaultBookingDuration(el.bookingType.value);
-    el.bookingResource.value = booking?.resource || "Hubert";
+    renderResourceSelectOptions(el.bookingResource, booking?.resource || defaultBookingResourceName());
     const defaultAccessNote = !booking && selectedCustomer && accessInfo(selectedCustomer)
       ? `Kodeboks/nøkkel/adkomst: ${accessInfo(selectedCustomer)}`
       : "";
@@ -13648,16 +13916,19 @@
     const type = bookingDisplayType(row);
     const cleanNote = cleanBookingNote(row.booking.note);
     const priceBasis = extractJobPriceBasis(row.booking.note);
-    el.completionTitle.textContent = `Fullfør ${bookingJobLabel(row).toLowerCase()}`;
+    el.completionTitle.textContent = isTechnicianUser()
+      ? `${technicianText("completionTitle")} ${bookingJobLabel(row).toLowerCase()}`
+      : `Fullfør ${bookingJobLabel(row).toLowerCase()}`;
     el.completionSummary.innerHTML = `
       <strong>${customerStarHtml(row.customer)}${customerCashBadgeHtml(row.customer)}${escapeHtml(cleanDisplayName(row.customer))}</strong>
       <span>${formatDate(row.booking.date)} kl. ${escapeHtml(bookingTimeText(row.booking))} · ${escapeHtml(row.booking.resource || "")}</span>
       <em>${escapeHtml(bookingWorkKind(row).help)}</em>
+      ${isTechnicianUser() && currentTechnicianExtraHelp() ? `<p class="tech-flow-help">${escapeHtml(technicianText("completionHelp"))}</p>` : ""}
       ${cleanNote ? `<p>${escapeHtml(cleanNote)}</p>` : ""}
       ${priceBasis ? `<p>Prisgrunnlag er allerede lagt inn på jobben.</p>` : ""}
     `;
     el.completionDoneDate.value = row.booking.date || isoDate(new Date());
-    const nextOptions = isAdmin() ? completionOptions(type) : [["none", "Ingen neste steg nå"]];
+    const nextOptions = isAdmin() ? completionOptions(type) : [["none", technicianText("noNextStep")]];
     el.completionNextAction.innerHTML = nextOptions
       .map(([value, label]) => `<option value="${value}">${escapeHtml(label)}</option>`)
       .join("");
@@ -13669,6 +13940,13 @@
     setupCompletionPriceFields(row);
     setupCompletionAttachmentField(row);
     el.completionNote.value = "";
+    if (isTechnicianUser()) {
+      if (el.cancelCompletionButton) el.cancelCompletionButton.textContent = technicianText("cancel");
+      if (el.completionSubmitButton) el.completionSubmitButton.textContent = technicianText("complete");
+    } else {
+      if (el.cancelCompletionButton) el.cancelCompletionButton.textContent = "Avbryt";
+      if (el.completionSubmitButton) el.completionSubmitButton.textContent = "Fullfør";
+    }
     syncCompletionFields();
     el.completionDialog.showModal();
   }
@@ -14364,7 +14642,7 @@
         openBookingDialog(shouldOpenInstallation.customerId);
         el.bookingType.value = "installasjon";
         el.bookingDuration.value = "180";
-        el.bookingResource.value = "Hubert";
+        renderResourceSelectOptions(el.bookingResource, defaultBookingResourceName());
         el.bookingNote.value = shouldOpenInstallation.note;
         renderBookingMonth();
       }
@@ -14395,7 +14673,7 @@
       openBookingDialog(shouldOpenInstallation.customerId);
       el.bookingType.value = "installasjon";
       el.bookingDuration.value = "180";
-      el.bookingResource.value = "Hubert";
+      renderResourceSelectOptions(el.bookingResource, defaultBookingResourceName());
       el.bookingNote.value = shouldOpenInstallation.note;
       renderBookingMonth();
     }

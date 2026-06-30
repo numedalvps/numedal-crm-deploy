@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260630-09" />
+    <link rel="stylesheet" href="./styles.css?v=20260630-13" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -526,9 +526,7 @@
                 </label>
                 <label>Ansatt
                   <select id="routeResource">
-                    <option>Hubert</option>
                     <option>Gunnar</option>
-                    <option>Gunnar og Hubert</option>
                   </select>
                 </label>
                 <label>Maks jobber
@@ -651,13 +649,14 @@
             <div class="section-head">
               <div>
                 <h2 id="technicianHeading">Min dagsplan</h2>
-                <p>Mobilvisning med ring, kart og ferdig-knapp.</p>
+                <p id="technicianIntro">Mobilvisning med ring, kart og ferdig-knapp.</p>
               </div>
               <div class="technician-actions">
                 <input id="technicianDate" type="date" />
                 <button id="technicianRouteButton" type="button">Åpne dagsrute</button>
               </div>
             </div>
+            <div id="technicianHelp" class="technician-help hidden"></div>
             <div id="technicianJobs" class="tech-jobs"></div>
           </section>
         </section>
@@ -944,9 +943,7 @@
           </label>
           <label>Ansatt
             <select id="bookingResource">
-              <option>Hubert</option>
               <option>Gunnar</option>
-              <option>Gunnar og Hubert</option>
             </select>
           </label>
         </div>
@@ -1027,7 +1024,7 @@
         <label>Notat<textarea id="completionNote" rows="3"></textarea></label>
         <div class="modal-actions">
           <button class="secondary" id="cancelCompletionButton" type="button">Avbryt</button>
-          <button type="submit">Fullfør</button>
+          <button id="completionSubmitButton" type="submit">Fullfør</button>
         </div>
       </form>
     </dialog>
@@ -1099,10 +1096,10 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260630-09"></script>
-    <script src="./supabase-adapter.js?v=20260630-09"></script>
-    <script src="./intake-parser.js?v=20260630-09"></script>
-    <script src="./app.js?v=20260630-09"></script>
+    <script src="./supabase-config.js?v=20260630-13"></script>
+    <script src="./supabase-adapter.js?v=20260630-13"></script>
+    <script src="./intake-parser.js?v=20260630-13"></script>
+    <script src="./app.js?v=20260630-13"></script>
   </body>
 </html>
 
