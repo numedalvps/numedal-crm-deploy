@@ -9,6 +9,11 @@
   const browserImportEnabled = appEnv === "development" && runtimeConfig.enableBrowserImport === true;
   const databaseUnavailableMessage = "CRM-et fikk ikke kontakt med databasen. Ingen endringer er lagret. Prøv igjen eller kontakt administrator.";
   const appPublicBaseUrl = "https://app.numedalvps.no/";
+
+  function appPublicUrl(path = "/") {
+    return new URL(path || "/", appPublicBaseUrl).href;
+  }
+
   const users = {
     admin: { name: "Gunnar", role: "Admin", view: "dashboard", key: "admin", language: "nb", extraHelp: false, active: true },
     tech: { name: "Hubert", role: "Tekniker", view: "technician", key: "tech", language: "pl", extraHelp: true, active: false },
@@ -6904,7 +6909,7 @@
       el.loginEmail.focus();
       return;
     }
-    const redirectTo = `${window.location.origin}${window.location.pathname}`;
+    const redirectTo = appPublicUrl("/");
     const previousText = el.forgotPasswordButton.textContent;
     el.forgotPasswordButton.disabled = true;
     el.forgotPasswordButton.textContent = "Sender...";
