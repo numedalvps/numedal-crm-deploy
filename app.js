@@ -5377,6 +5377,12 @@
     return Object.values(orders).find((order) => bookingIdsForOrder(order).includes(id)) || null;
   }
 
+  function bookingRowsForOrder(order) {
+    return bookingIdsForOrder(order)
+      .map((id) => bookingRows().find((row) => row.id === id))
+      .filter(Boolean);
+  }
+
   function customerOrders(customer) {
     const key = customerKey(customer);
     return orderRows()
@@ -5388,20 +5394,22 @@
     return Object.entries(orders || {})
       .map(([id, order]) => {
         const normalized = { ...order, id: order.id || id, customerId: orderCustomerId(order) };
+        const linkedBookings = bookingRowsForOrder(normalized);
         return {
           id: normalized.id,
           order: normalized,
           customer: findCustomer(normalized.customerId),
           job: jobForOrder(normalized),
+          linkedBookings,
         };
       })
       .filter((row) => row.order && row.customer)
       .sort((a, b) => {
         const rank = { unscheduled: 0, scheduled: 1, completed: 2, cancelled: 9 };
-        const aStatus = orderEffectiveStatus(a.order, a.job);
-        const bStatus = orderEffectiveStatus(b.order, b.job);
-        const aBilling = orderEffectiveBillingStatus(a.order, a.job);
-        const bBilling = orderEffectiveBillingStatus(b.order, b.job);
+        const aStatus = orderEffectiveStatus(a.order, a.job, a.linkedBookings);
+        const bStatus = orderEffectiveStatus(b.order, b.job, b.linkedBookings);
+        const aBilling = orderEffectiveBillingStatus(a.order, a.job, a.linkedBookings);
+        const bBilling = orderEffectiveBillingStatus(b.order, b.job, b.linkedBookings);
         const billingRank = (status) => status === "ready" ? -1 : status === "sent" ? 4 : 0;
         return billingRank(aBilling) - billingRank(bBilling)
           || (rank[aStatus] ?? 5) - (rank[bStatus] ?? 5)
@@ -5450,8 +5458,8 @@
     return `<span class="order-badge job missing" title="Jobben er ikke koblet til ny jobs-tabell ennå.">Mangler jobbkobling</span>`;
   }
 
-  function orderBadgesHtml(order, job = jobForOrder(order)) {
-    return `${orderStatusBadge(order, orderEffectiveStatus(order, job))}${orderBillingBadge(order, orderEffectiveBillingStatus(order, job))}${orderJobBadge(order, job)}`;
+  function orderBadgesHtml(order, job = jobForOrder(order), linkedRows = null) {
+    return `${orderStatusBadge(order, orderEffectiveStatus(order, job, linkedRows))}${orderBillingBadge(order, orderEffectiveBillingStatus(order, job, linkedRows))}${orderJobBadge(order, job)}`;
   }
 
   function orderJobSummary(order, job = jobForOrder(order)) {
@@ -5473,8 +5481,13 @@
     return "";
   }
 
-  function orderEffectiveStatus(order, job = jobForOrder(order)) {
-    return orderStatusFromJob(job) || order?.status || "unscheduled";
+  function orderEffectiveStatus(order, job = jobForOrder(order), linkedRows = null) {
+    const rows = Array.isArray(linkedRows) ? linkedRows : bookingRowsForOrder(order);
+    const explicit = orderStatusFromJob(job) || order?.status || "";
+    if (explicit === "cancelled") return "cancelled";
+    if (rows.some((row) => row.booking.status === "done" || doneJobs.has(row.id))) return "completed";
+    if (rows.length && explicit !== "completed") return "scheduled";
+    return explicit || "unscheduled";
   }
 
   function orderBillingStatusFromJob(job) {
@@ -5485,8 +5498,12 @@
     return "";
   }
 
-  function orderEffectiveBillingStatus(order, job = jobForOrder(order)) {
-    return orderBillingStatusFromJob(job) || order?.billingStatus || order?.billing_status || "not_ready";
+  function orderEffectiveBillingStatus(order, job = jobForOrder(order), linkedRows = null) {
+    const explicit = orderBillingStatusFromJob(job) || order?.billingStatus || order?.billing_status || "not_ready";
+    if (explicit && explicit !== "not_ready") return explicit;
+    const rows = Array.isArray(linkedRows) ? linkedRows : bookingRowsForOrder(order);
+    if (rows.some((row) => bookingNeedsPaymentAction(row))) return "ready";
+    return explicit || "not_ready";
   }
 
   function jobWorkStatusFromOrder(order) {
@@ -5638,12 +5655,16 @@
     const order = row.order;
     const customer = row.customer;
     const job = row.job || jobForOrder(order);
+    const status = orderEffectiveStatus(order, job, row.linkedBookings);
+    const billing = orderEffectiveBillingStatus(order, job, row.linkedBookings);
     return normalizeMatch([
       order.title,
       order.note,
       order.type,
       order.status,
       order.billingStatus || order.billing_status,
+      orderStatusLabel(status),
+      billingStatusLabel(billing),
       job?.title,
       job?.work_status,
       job?.billing_status,
@@ -5815,8 +5836,8 @@
     if (priorityRow) return bookingWorkflowState(priorityRow, order);
 
     const linkedJob = jobForOrder(order);
-    const status = orderEffectiveStatus(order, linkedJob);
-    const billing = orderEffectiveBillingStatus(order, linkedJob);
+    const status = orderEffectiveStatus(order, linkedJob, linkedRows);
+    const billing = orderEffectiveBillingStatus(order, linkedJob, linkedRows);
     const billable = billableJobType(order.type || "service");
     const steps = [
       workflowStep("Jobb", "done", "Jobben finnes på kundekortet."),
@@ -6194,7 +6215,7 @@
         setSyncStatus("Denne henvendelsen har allerede en jobb. Jeg åpnet eksisterende jobb i stedet.", "ok");
         return;
       }
-      const openOrders = customerOrders(customer).filter((order) => !["completed", "cancelled"].includes(orderEffectiveStatus(order, jobForOrder(order))));
+      const openOrders = customerOrders(customer).filter((order) => !["completed", "cancelled"].includes(orderEffectiveStatus(order, jobForOrder(order), bookingRowsForOrder(order))));
       if (openOrders.length) {
         const ok = await askForConfirmation({
           title: "Kunden har åpen jobb",
@@ -7209,7 +7230,7 @@
         id: `order:${row.id}`,
         kind: "Jobb",
         title: row.order.title || defaultOrderTitle(row.customer, row.order.type),
-        meta: [cleanDisplayName(row.customer), orderStatusLabel(orderEffectiveStatus(row.order, row.job)), billingStatusLabel(orderEffectiveBillingStatus(row.order, row.job))].filter(Boolean).join(" · "),
+        meta: [cleanDisplayName(row.customer), orderStatusLabel(orderEffectiveStatus(row.order, row.job, row.linkedBookings)), billingStatusLabel(orderEffectiveBillingStatus(row.order, row.job, row.linkedBookings))].filter(Boolean).join(" · "),
         orderId: row.id,
         searchText: text,
       });
@@ -8359,7 +8380,7 @@
     for (const row of orderRows()) {
       const time = activityTime(row.order.updated_at || row.order.created_at || row.order.scheduledDate, row.order.scheduledDate);
       const jobText = row.job ? ` · ${jobWorkStatusLabel(row.job.work_status)}` : "";
-      const status = orderEffectiveStatus(row.order, row.job);
+      const status = orderEffectiveStatus(row.order, row.job, row.linkedBookings);
       items.push({
         time,
         kind: "order",
@@ -10044,8 +10065,8 @@
     const filter = currentOrderFilter || "all";
     return orderRows()
       .filter((row) => {
-        const status = orderEffectiveStatus(row.order, row.job);
-        const billing = orderEffectiveBillingStatus(row.order, row.job);
+        const status = orderEffectiveStatus(row.order, row.job, row.linkedBookings);
+        const billing = orderEffectiveBillingStatus(row.order, row.job, row.linkedBookings);
         if (filter === "all") return true;
         if (filter === "billing_ready") return billing === "ready";
         if (filter === "invoiced") return billing === "sent" || billing === "paid";
@@ -10080,10 +10101,10 @@
       if (button.closest(".job-tabs")) button.setAttribute("aria-selected", active ? "true" : "false");
     });
     const rows = orderRows();
-    if (el.orderUnscheduledMetric) el.orderUnscheduledMetric.textContent = rows.filter((row) => orderEffectiveStatus(row.order, row.job) === "unscheduled").length.toLocaleString("nb-NO");
-    if (el.orderScheduledMetric) el.orderScheduledMetric.textContent = rows.filter((row) => orderEffectiveStatus(row.order, row.job) === "scheduled").length.toLocaleString("nb-NO");
-    if (el.orderBillingMetric) el.orderBillingMetric.textContent = rows.filter((row) => orderEffectiveBillingStatus(row.order, row.job) === "ready").length.toLocaleString("nb-NO");
-    if (el.orderCompletedMetric) el.orderCompletedMetric.textContent = rows.filter((row) => orderEffectiveStatus(row.order, row.job) === "completed").length.toLocaleString("nb-NO");
+    if (el.orderUnscheduledMetric) el.orderUnscheduledMetric.textContent = rows.filter((row) => orderEffectiveStatus(row.order, row.job, row.linkedBookings) === "unscheduled").length.toLocaleString("nb-NO");
+    if (el.orderScheduledMetric) el.orderScheduledMetric.textContent = rows.filter((row) => orderEffectiveStatus(row.order, row.job, row.linkedBookings) === "scheduled").length.toLocaleString("nb-NO");
+    if (el.orderBillingMetric) el.orderBillingMetric.textContent = rows.filter((row) => orderEffectiveBillingStatus(row.order, row.job, row.linkedBookings) === "ready").length.toLocaleString("nb-NO");
+    if (el.orderCompletedMetric) el.orderCompletedMetric.textContent = rows.filter((row) => orderEffectiveStatus(row.order, row.job, row.linkedBookings) === "completed").length.toLocaleString("nb-NO");
     if (el.orderMissingJobMetric) el.orderMissingJobMetric.textContent = rows.filter(orderMissingJobMirror).length.toLocaleString("nb-NO");
     const list = filteredOrders();
     const visibleRows = list.slice(0, 250);
@@ -10109,7 +10130,7 @@
       button.type = "button";
       button.dataset.orderId = row.id;
       button.innerHTML = `
-        <strong>${orderBadgesHtml(row.order, row.job)}${escapeHtml(row.order.title || orderTitleFromBooking(row.customer, row.order))}</strong>
+        <strong>${orderBadgesHtml(row.order, row.job, row.linkedBookings)}${escapeHtml(row.order.title || orderTitleFromBooking(row.customer, row.order))}</strong>
         <small>${escapeHtml(cleanDisplayName(row.customer))} · ${escapeHtml(orderTypeLabel(row.order.type))} · ${escapeHtml(orderDateText(row.order))}</small>
         ${installationText ? `<small>${escapeHtml(installationText)}</small>` : ""}
         ${attachmentCount ? `<small>${attachmentCount.toLocaleString("nb-NO")} vedlegg</small>` : ""}
@@ -10171,12 +10192,12 @@
       .filter(Boolean);
     const flow = orderWorkflowState(order, linkedBookings);
     const linkedJob = jobForOrder(order);
-    const effectiveBilling = orderEffectiveBillingStatus(order, linkedJob);
+    const effectiveBilling = orderEffectiveBillingStatus(order, linkedJob, linkedBookings);
     const installationText = orderInstallationText(order, customer, linkedJob);
     const primaryBooking = linkedBookings[0] || null;
     el.orderDetail.innerHTML = `
       <div class="customer-title">
-        <div class="title-pills">${orderBadgesHtml(order, linkedJob)}</div>
+        <div class="title-pills">${orderBadgesHtml(order, linkedJob, linkedBookings)}</div>
         <h2>${customerStarHtml(customer, { showEmpty: true })}${customerCashBadgeHtml(customer)}${escapeHtml(order.title || orderTitleFromBooking(customer, order))}</h2>
         <p>${escapeHtml(cleanDisplayName(customer))} · ${escapeHtml(addressFor(customer) || customer.location_tag || "Adresse mangler")}</p>
       </div>
@@ -10189,7 +10210,7 @@
       <dl class="facts">
         <div><dt>Kunde</dt><dd>${escapeHtml(cleanDisplayName(customer))}</dd></div>
         <div><dt>Type</dt><dd>${escapeHtml(orderTypeLabel(order.type))}</dd></div>
-        <div><dt>Status</dt><dd>${escapeHtml(orderStatusLabel(orderEffectiveStatus(order, linkedJob)))}</dd></div>
+        <div><dt>Status</dt><dd>${escapeHtml(orderStatusLabel(orderEffectiveStatus(order, linkedJob, linkedBookings)))}</dd></div>
         <div><dt>Faktura</dt><dd>${escapeHtml(billingStatusLabel(effectiveBilling))}</dd></div>
         <div><dt>Jobbkobling</dt><dd>${escapeHtml(orderJobSummary(order, linkedJob))}</dd></div>
         <div><dt>Anlegg</dt><dd>${escapeHtml(installationText || "Ikke valgt")}</dd></div>
@@ -10232,8 +10253,8 @@
             return `
               <article>
                 <div>
-                  <strong>${orderBadgesHtml(order, linkedJob)}${escapeHtml(order.title || orderTypeLabel(order.type))}</strong>
-                  <span>${escapeHtml(orderDateText(order))} · ${escapeHtml(billingStatusLabel(orderEffectiveBillingStatus(order, linkedJob)))} · ${escapeHtml(orderJobSummary(order, linkedJob))}</span>
+                  <strong>${orderBadgesHtml(order, linkedJob, linkedBookings)}${escapeHtml(order.title || orderTypeLabel(order.type))}</strong>
+                  <span>${escapeHtml(orderDateText(order))} · ${escapeHtml(billingStatusLabel(orderEffectiveBillingStatus(order, linkedJob, linkedBookings)))} · ${escapeHtml(orderJobSummary(order, linkedJob))}</span>
                   ${installationText ? `<small>${escapeHtml(installationText)}</small>` : ""}
                   <small>${escapeHtml(bookingLine)}</small>
                   ${attachmentCount ? `<small>${attachmentCount.toLocaleString("nb-NO")} bilde(r)/vedlegg på jobben</small>` : ""}
