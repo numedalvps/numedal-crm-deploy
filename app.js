@@ -1785,6 +1785,8 @@
 
   function cleanAiNameCandidate(value) {
     return cleanAiLine(String(value || "")
+      .replace(/\s*[.!?]\s+(?:kan|kunne|onsker|\u00f8nsker|vil|trenger|har|skal|ma|m\u00e5|er|det|jeg|vi|dere|kontakt)\b.*$/i, "")
+      .replace(/\s+(?:kan dere|kan du|kunne dere|kunne du|kontakt meg|ta kontakt|ring meg)\b.*$/i, "")
       .replace(/\b(?:mob|telefon|tlf|adresse|mailadresse|mail|e-post|postnr|sted)\b.*$/i, "")
       .replace(/^(?:ny\s+)?(?:henvendelse|forespørsel|foresporsel|melding|lead)\s+(?:fra\s+)?/i, "")
       .replace(/^(?:fra\s+)?(?:nettside|webskjema|web|kontaktskjema|skjema|facebook|e-post|mail|sms)\s*[:\-]\s*/i, "")
@@ -9719,11 +9721,12 @@
   }
 
   function leadEmailToolsHtml(entry, customer, leadTarget, status) {
+    const offerTarget = leadEntryKey(entry);
     const templateSection = `
       <section class="detail-section lead-template-section">
         <h3>E-postmaler</h3>
         <p title="Velg en mal for å fylle tilbudsfeltet. Hvis tilbudsfeltet ikke er synlig, kopieres teksten.">Fyll tilbudstekst.</p>
-        <div class="lead-template-buttons">${leadTemplateButtons(customer, leadTarget)}</div>
+        <div class="lead-template-buttons">${leadTemplateButtons(customer, offerTarget)}</div>
       </section>
     `;
     const offerSection = isAdmin() ? leadOfferComposerHtml(entry) : "";
@@ -11039,9 +11042,10 @@
     return Boolean(focusTarget);
   }
 
-  function leadOfferPayload(target) {
+  function leadOfferPayload(target, options = {}) {
     const entry = leadEntryForTarget(target);
     if (!entry) throw new Error("Fant ikke leaden.");
+    const requireEmail = options.requireEmail !== false;
     const fields = leadOfferFields(target);
     const customer = entry.customer || {};
     const to = String(fields.to?.value || "").trim();
@@ -11049,7 +11053,7 @@
     const textDraft = applyOfferBuilderLinesToText(target, String(fields.text?.value || "").trim());
     const text = applyOfferDocumentSelection(textDraft, Boolean(fields.priceList?.checked));
     if (fields.text && fields.text.value !== text) fields.text.value = text;
-    if (!isEmailAddress(to)) throw new Error("Mottaker mangler eller har ugyldig e-postadresse.");
+    if (requireEmail && !isEmailAddress(to)) throw new Error("Mottaker mangler eller har ugyldig e-postadresse.");
     if (!subject) throw new Error("Emne mangler.");
     if (!text) throw new Error("Tilbudstekst mangler.");
     const customerId = customerKey(customer);
@@ -11068,8 +11072,8 @@
     };
   }
 
-  function prepareLeadOfferPayload(target) {
-    const payload = leadOfferPayload(target);
+  function prepareLeadOfferPayload(target, options = {}) {
+    const payload = leadOfferPayload(target, options);
     const draft = ensureEmailReference(payload.subject, payload.text, "TILBUD");
     const fields = leadOfferFields(target);
     if (fields.subject) fields.subject.value = draft.subject;
@@ -11083,7 +11087,7 @@
   }
 
   async function copyLeadOfferDraft(target) {
-    const payload = prepareLeadOfferPayload(target);
+    const payload = prepareLeadOfferPayload(target, { requireEmail: false });
     await copyTextToClipboard(`Emne: ${payload.subject}\n\n${payload.text}`);
     const entry = leadEntryForTarget(target);
     const customer = entry?.customer ? (findCustomer(leadEntryCustomerKey(entry)) || entry.customer) : null;
@@ -11126,12 +11130,13 @@
   }
 
   async function markLeadOfferSentManually(target) {
-    const payload = prepareLeadOfferPayload(target);
+    const payload = prepareLeadOfferPayload(target, { requireEmail: false });
     const entry = leadEntryForTarget(target);
     if (!entry) throw new Error("Fant ikke leaden.");
+    const recipientText = payload.to || cleanDisplayName(entry.customer) || "kunden";
     const ok = await askForConfirmation({
       title: "Marker tilbud sendt",
-      message: `Marker at tilbudet til ${payload.to} er sendt utenfor CRM?`,
+      message: `Marker at tilbudet til ${recipientText} er sendt utenfor CRM?`,
       confirmLabel: "Marker sendt",
     });
     if (!ok) return;
@@ -11141,7 +11146,7 @@
     const body = [
       "Tilbud sendt manuelt utenfor CRM.",
       payload.email_reference ? `CRM-ref: ${payload.email_reference}` : "",
-      `Mottaker: ${payload.to}`,
+      `Mottaker: ${payload.to || "Ikke registrert"}`,
       `Avsender: ${payload.from}`,
       `Emne: ${payload.subject}`,
     ].filter(Boolean).join("\n");
@@ -11158,7 +11163,7 @@
       await saveServiceEvent(saved || customer, {
         event_date: isoDate(new Date()),
         event_type: "Tilbud sendt",
-        note: `Tilbud sendt manuelt til ${payload.to}. Emne: ${payload.subject}`,
+        note: `Tilbud sendt manuelt til ${payload.to || recipientText}. Emne: ${payload.subject}`,
       });
       selectedCustomerId = customerKey(saved || customer);
       if (!entry.lead?.id) {

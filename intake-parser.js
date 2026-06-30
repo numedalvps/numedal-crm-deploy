@@ -212,6 +212,8 @@
 
   function cleanNameCandidate(value) {
     return cleanLine(String(value || "")
+      .replace(/\s*[.!?]\s+(?:kan|kunne|onsker|\u00f8nsker|vil|trenger|har|skal|ma|m\u00e5|er|det|jeg|vi|dere|kontakt)\b.*$/i, "")
+      .replace(/\s+(?:kan dere|kan du|kunne dere|kunne du|kontakt meg|ta kontakt|ring meg)\b.*$/i, "")
       .replace(/\b(?:telefon|tlf|mobil|mob|mailadresse|mail|e-post|adresse|postnr|sted)\b.*$/i, "")
       .replace(/^(?:ny\s+)?(?:henvendelse|forespørsel|foresporsel|melding|lead)\s+(?:fra\s+)?/i, "")
       .replace(/^(?:fra\s+)?(?:nettside|webskjema|web|kontaktskjema|skjema|facebook|e-post|mail|sms)\s*[:\-]\s*/i, "")
