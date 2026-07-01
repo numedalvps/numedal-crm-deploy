@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260701-07" />
+    <link rel="stylesheet" href="./styles.css?v=20260701-08" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -87,7 +87,7 @@
             <div class="section-head">
               <div>
                 <h2>Hva må gjøres nå?</h2>
-                <p>Prioritert arbeidsliste fra henvendelser, plan, fakturering og service.</p>
+                <p>Prioritert arbeidsliste fra oppfølging, plan, fakturering og service.</p>
               </div>
             </div>
             <div id="startWorklist" class="start-worklist"></div>
@@ -242,36 +242,36 @@
               <div class="section-head">
                 <div>
                   <h2>Innboks</h2>
-                  <p title="Her ligger nye henvendelser, e-post, nettskjema og tilbud som må følges opp.">Velg kø og jobb videre.</p>
+                  <p title="Her ligger nettskjema, e-post og saker som må følges opp.">Velg hva som skal følges opp.</p>
                 </div>
               </div>
               <div class="lead-metrics inbox-filter-cards" role="tablist" aria-label="Innboksfilter">
-                <button class="active" data-lead-inbox-tab="new" type="button" title="Samlevisning av alt nytt som bør avklares først: nettskjema, e-postutkast og henvendelser som må kontaktes."><strong id="leadFollowupMetric">0</strong><span>Alt nytt</span></button>
-                <button data-lead-inbox-tab="email" type="button" title="Henvendelser som er tolket fra e-post eller CRM-innboks."><strong id="leadEmailMetric">0</strong><span>E-post</span></button>
+                <button class="active" data-lead-inbox-tab="new" type="button" title="Samlevisning av alt nytt som bør avklares først: nettskjema, e-postutkast og saker som må kontaktes."><strong id="leadFollowupMetric">0</strong><span>Alt nytt</span></button>
+                <button data-lead-inbox-tab="email" type="button" title="Meldinger som er tolket fra e-post eller CRM-innboks."><strong id="leadEmailMetric">0</strong><span>E-post</span></button>
                 <button data-lead-inbox-tab="website" type="button" title="Bare skjema fra nettsiden. Ubehandlede nettskjema kan også vises i Alt nytt."><strong id="leadWebsiteMetric">0</strong><span>Fra nettside</span></button>
-                <button data-lead-inbox-tab="followup" type="button" title="Henvendelser der neste steg er tilbud, purring eller svar fra kunde."><strong id="leadNeedsOfferMetric">0</strong><span>Tilbud / oppfølging</span></button>
+                <button data-lead-inbox-tab="followup" type="button" title="Saker der neste steg er tilbud, purring eller svar fra kunde."><strong id="leadNeedsOfferMetric">0</strong><span>Tilbud / oppfølging</span></button>
                 <button data-lead-inbox-tab="archive" type="button" title="Vunne og tapte saker. Vunne saker bør bli jobb hvis de ikke allerede er opprettet."><strong id="leadLostMetric">0</strong><span>Vunnet / tapt</span></button>
               </div>
               <div id="websiteSubmissionInbox" class="website-submission-inbox hidden"></div>
               <div class="search-row">
-                <input id="leadSearch" type="search" placeholder="Søk henvendelse, telefon, sted, produkt" />
+                <input id="leadSearch" type="search" placeholder="Søk navn, telefon, sted eller produkt" />
                 <details class="lead-filter-details">
                   <summary title="Vis statusfilter for innboksen.">Flere filtre</summary>
                   <select id="leadStatusFilter" aria-label="Statusfilter for innboks">
                     <option value="inbox_tab">Valgt innboksfane</option>
-                    <option value="followup">Nye henvendelser - må kontaktes</option>
+                    <option value="followup">Må kontaktes</option>
                     <option value="needs_offer">Tilbud må sendes</option>
                     <option value="offer_sent">Tilbud sendt / venter svar</option>
                     <option value="won">Vunnet</option>
                     <option value="lost">Tapt</option>
-                    <option value="all">Alle henvendelser</option>
+                    <option value="all">Alle saker</option>
                   </select>
                 </details>
               </div>
               <div id="leadList" class="lead-list"></div>
             </section>
             <section id="leadDetail" class="panel lead-detail">
-              <div class="empty-state">Velg en henvendelse til venstre, eller bruk + Ny for ny henvendelse.</div>
+              <div class="empty-state">Velg en sak til venstre, eller bruk + Ny for å lime inn en melding.</div>
             </section>
           </div>
         </section>
@@ -440,7 +440,7 @@
               <div class="section-head">
                 <div>
                   <h2>Blåseisolering kunder</h2>
-                  <p>Taggen betyr aktuell/interessert. Salg følges som henvendelser, og jobb opprettes først når kunden har sagt ja.</p>
+                  <p>Taggen betyr aktuell/interessert. Salg følges som oppfølging, og jobb opprettes først når kunden har sagt ja.</p>
                 </div>
               </div>
               <div class="search-row">
@@ -1102,10 +1102,10 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260701-07"></script>
-    <script src="./supabase-adapter.js?v=20260701-07"></script>
-    <script src="./intake-parser.js?v=20260701-07"></script>
-    <script src="./app-20260701-07.js"></script>
+    <script src="./supabase-config.js?v=20260701-08"></script>
+    <script src="./supabase-adapter.js?v=20260701-08"></script>
+    <script src="./intake-parser.js?v=20260701-08"></script>
+    <script src="./app-20260701-08.js"></script>
   </body>
 </html>
 
