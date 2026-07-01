@@ -2812,13 +2812,16 @@ textarea {
 }
 
 .lead-offer-section {
+  min-width: 0;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
 }
 
 .lead-offer-grid {
+  min-width: 0;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 10px;
 }
 
@@ -2832,6 +2835,7 @@ textarea {
 }
 
 .lead-offer-documents {
+  min-width: 0;
   display: flex;
   flex-wrap: wrap;
   gap: 8px 12px;
@@ -2856,10 +2860,12 @@ textarea {
 }
 
 .lead-offer-documents a {
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .lead-offer-builder {
+  min-width: 0;
   display: grid;
   gap: 8px;
   padding: 10px;
@@ -2885,8 +2891,9 @@ textarea {
 }
 
 .lead-offer-line-grid {
+  min-width: 0;
   display: grid;
-  grid-template-columns: minmax(190px, 1.3fr) minmax(190px, 1.4fr) minmax(74px, 0.45fr) minmax(82px, 0.5fr) minmax(120px, 0.65fr) auto;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
   gap: 8px;
   align-items: end;
 }
@@ -5926,6 +5933,19 @@ label {
   .copy-phone-button {
     padding: 8px 12px;
     font-size: 13px;
+  }
+
+  .payment-control button,
+  .invoice-payment-row .payment-control button,
+  .tag-toggle {
+    min-height: 44px;
+  }
+
+  .view details > summary {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   .lead-stage-box span,
