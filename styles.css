@@ -3028,6 +3028,44 @@ textarea {
   font-size: 16px;
 }
 
+.customer-more-sections {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.customer-more-sections > summary {
+  cursor: pointer;
+  padding: 12px;
+  color: var(--teal);
+  font-weight: 900;
+}
+
+.customer-more-sections > summary::-webkit-details-marker {
+  display: none;
+}
+
+.customer-more-sections > summary::after {
+  content: " +";
+}
+
+.customer-more-sections[open] > summary::after {
+  content: " -";
+}
+
+.customer-more-sections > div {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding: 10px;
+  background: #f8fafc;
+}
+
+.customer-more-sections .detail-section {
+  margin-top: 0;
+}
+
 .section-title-row {
   display: flex;
   flex-wrap: wrap;
