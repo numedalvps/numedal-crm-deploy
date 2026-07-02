@@ -426,6 +426,7 @@
 
   function billingStatusForJob(status) {
     if (status === "ready") return "ready_for_invoice";
+    if (status === "draft") return "exported";
     if (status === "sent") return "invoiced";
     if (status === "paid") return "not_ready";
     return "not_ready";
@@ -433,6 +434,7 @@
 
   function paymentStatusForJob(status) {
     if (status === "paid") return "paid_on_site";
+    if (status === "draft") return "unpaid";
     if (status === "sent") return "unpaid";
     return "unknown";
   }

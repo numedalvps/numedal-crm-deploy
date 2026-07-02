@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260703-03" />
+    <link rel="stylesheet" href="./styles.css?v=20260703-04" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -1153,6 +1153,7 @@
           </label>
           <label id="billingModeLabel">Hva er gjort?
             <select id="billingMode">
+              <option value="draft">Fakturautkast laget</option>
               <option value="invoice">Faktura sendt</option>
               <option value="cash">Betalt på stedet</option>
             </select>
@@ -1214,10 +1215,10 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260703-03"></script>
-    <script src="./supabase-adapter.js?v=20260703-03"></script>
-    <script src="./intake-parser.js?v=20260703-03"></script>
-    <script src="./app-20260703-03.js"></script>
+    <script src="./supabase-config.js?v=20260703-04"></script>
+    <script src="./supabase-adapter.js?v=20260703-04"></script>
+    <script src="./intake-parser.js?v=20260703-04"></script>
+    <script src="./app-20260703-04.js"></script>
   </body>
 </html>
 
