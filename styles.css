@@ -6379,6 +6379,22 @@ label {
     color: var(--teal);
   }
 
+  .app.technician-mode .mobile-bottom-nav [data-tech-mobile] {
+    order: 1;
+  }
+
+  .app.technician-mode .mobile-bottom-nav [data-view="customers"] {
+    order: 2;
+  }
+
+  .app.technician-mode .mobile-bottom-nav [data-view="planning"] {
+    order: 3;
+  }
+
+  .app.technician-mode .mobile-bottom-nav [data-mobile-more-toggle] {
+    order: 4;
+  }
+
   .mobile-more-menu {
     position: fixed;
     z-index: 45;
