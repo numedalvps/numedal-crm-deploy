@@ -145,6 +145,10 @@ button.danger {
   margin-top: 18px;
 }
 
+.login-remember {
+  margin: 2px 0 4px;
+}
+
 .login-message,
 .demo-label,
 .sync-status {
@@ -2904,6 +2908,10 @@ textarea {
 
 .lead-offer-line-grid button {
   min-height: 40px;
+}
+
+.lead-offer-standard-installation {
+  margin: 2px 0 0;
 }
 
 .lead-offer-builder textarea {

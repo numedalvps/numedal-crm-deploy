@@ -4,7 +4,67 @@
   const browserImportEnabled = appEnv === "development" && config.enableBrowserImport === true;
   const databaseUnavailableMessage = "CRM-et fikk ikke kontakt med databasen. Ingen endringer er lagret. Prøv igjen eller kontakt administrator.";
   const isConfigured = Boolean(config.url && config.anonKey && window.supabase);
-  const client = isConfigured ? window.supabase.createClient(config.url, config.anonKey) : null;
+  const rememberLoginKey = "numedalRememberLogin";
+
+  function safeStorage(kind) {
+    try {
+      const storage = kind === "session" ? window.sessionStorage : window.localStorage;
+      const key = "__numedal_storage_test__";
+      storage.setItem(key, "1");
+      storage.removeItem(key);
+      return storage;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  const localAuthStorage = safeStorage("local");
+  const sessionAuthStorage = safeStorage("session");
+
+  function shouldRememberLogin() {
+    return localAuthStorage?.getItem(rememberLoginKey) === "true";
+  }
+
+  function authTokenKeys(storage) {
+    if (!storage) return [];
+    const keys = [];
+    for (let index = 0; index < storage.length; index += 1) {
+      const key = storage.key(index);
+      if ((/^sb-.+-auth-token$/.test(key || "") || key === "supabase.auth.token")) keys.push(key);
+    }
+    return keys;
+  }
+
+  function clearAuthTokens(storage) {
+    authTokenKeys(storage).forEach((key) => storage.removeItem(key));
+  }
+
+  const authStorage = {
+    getItem(key) {
+      const primary = shouldRememberLogin() ? localAuthStorage : sessionAuthStorage;
+      const secondary = shouldRememberLogin() ? sessionAuthStorage : null;
+      return primary?.getItem(key) ?? secondary?.getItem(key) ?? null;
+    },
+    setItem(key, value) {
+      const primary = shouldRememberLogin() ? localAuthStorage : sessionAuthStorage;
+      const secondary = shouldRememberLogin() ? sessionAuthStorage : localAuthStorage;
+      primary?.setItem(key, value);
+      secondary?.removeItem(key);
+    },
+    removeItem(key) {
+      localAuthStorage?.removeItem(key);
+      sessionAuthStorage?.removeItem(key);
+    },
+  };
+
+  const client = isConfigured ? window.supabase.createClient(config.url, config.anonKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      storage: authStorage,
+    },
+  }) : null;
 
   function isDuplicateLegacyLimeError(error) {
     return error?.code === "23505" && /customers_legacy_lime_id_key|legacy_lime_id/i.test(error.message || "");
@@ -725,6 +785,15 @@
     customerFromDb,
     bookingFromDb,
     bookingToDb,
+    setRememberLogin(remember) {
+      if (remember) {
+        localAuthStorage?.setItem(rememberLoginKey, "true");
+        clearAuthTokens(sessionAuthStorage);
+      } else {
+        localAuthStorage?.setItem(rememberLoginKey, "false");
+        clearAuthTokens(localAuthStorage);
+      }
+    },
     async session() {
       if (!client) return null;
       const { data } = await withTimeout(
