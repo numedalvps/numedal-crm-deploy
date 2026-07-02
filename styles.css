@@ -1766,11 +1766,11 @@ textarea {
 .website-submission-list article {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 8px;
+  gap: 10px;
   align-items: stretch;
   border: 1px solid #dbeafe;
   border-radius: 8px;
-  padding: 8px 10px;
+  padding: 10px 12px;
   background: #fff;
 }
 
@@ -1787,7 +1787,7 @@ textarea {
 
 .website-submission-list article > div:first-child {
   display: grid;
-  gap: 3px;
+  gap: 6px;
 }
 
 .website-submission-list span,
@@ -1801,11 +1801,11 @@ textarea {
 
 .website-submission-message {
   display: grid;
-  gap: 4px;
-  margin-top: 4px;
+  gap: 6px;
+  margin-top: 2px;
   border: 1px solid #bfdbfe;
   border-radius: 8px;
-  padding: 8px;
+  padding: 10px 12px;
   background: #f8fbff;
 }
 
@@ -1817,9 +1817,9 @@ textarea {
 .website-submission-message p {
   margin: 0;
   color: #334155;
-  font-size: 13px;
-  font-weight: 800;
-  line-height: 1.45;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.55;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -1852,7 +1852,8 @@ textarea {
 
 .website-submission-fields dd {
   color: #334155;
-  font-weight: 800;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .website-submission-list strong {
