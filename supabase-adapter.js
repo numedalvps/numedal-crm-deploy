@@ -48,6 +48,16 @@
     }
   }
 
+  function syncAuthTokensToRememberChoice() {
+    if (shouldRememberLogin()) {
+      moveAuthTokens(sessionAuthStorage, localAuthStorage);
+      clearAuthTokens(sessionAuthStorage);
+    } else {
+      moveAuthTokens(localAuthStorage, sessionAuthStorage);
+      clearAuthTokens(localAuthStorage);
+    }
+  }
+
   const authStorage = {
     getItem(key) {
       const primary = shouldRememberLogin() ? localAuthStorage : sessionAuthStorage;
@@ -797,13 +807,10 @@
     setRememberLogin(remember) {
       if (remember) {
         localAuthStorage?.setItem(rememberLoginKey, "true");
-        moveAuthTokens(sessionAuthStorage, localAuthStorage);
-        clearAuthTokens(sessionAuthStorage);
       } else {
         localAuthStorage?.setItem(rememberLoginKey, "false");
-        moveAuthTokens(localAuthStorage, sessionAuthStorage);
-        clearAuthTokens(localAuthStorage);
       }
+      syncAuthTokensToRememberChoice();
     },
     async session() {
       if (!client) return null;
@@ -820,6 +827,7 @@
         "Innlogging mot Supabase svarer ikke. Sjekk at e-post/passord er riktig og at Supabase-prosjektet er aktivt.",
       );
       if (error) throw error;
+      syncAuthTokensToRememberChoice();
       return data.session;
     },
     async signOut() {
