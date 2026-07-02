@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260702-07" />
+    <link rel="stylesheet" href="./styles.css?v=20260702-08" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -76,6 +76,7 @@
                 <button data-new-action="booking" type="button">Book avtale</button>
                 <button data-new-action="service" type="button">Book service</button>
                 <button data-new-action="install" type="button">Book installasjon</button>
+                <button data-new-action="reminder" type="button">Påminnelse</button>
                 <button data-new-action="paste" type="button">Lim inn melding</button>
               </div>
             </div>
@@ -119,6 +120,11 @@
               <strong id="dashboardBillingCount">0</strong>
               <small>Utførte jobber som venter</small>
             </button>
+            <button data-dashboard-action="reminders" type="button">
+              <span>Påminnelser</span>
+              <strong id="dashboardReminderCount">0</strong>
+              <small>Ringe tilbake og raske notater</small>
+            </button>
           </div>
           <div class="metric-grid compact-service-metrics">
             <button data-filter-shortcut="red"><strong id="redMetric">0</strong><span>Forfalt service</span></button>
@@ -140,6 +146,13 @@
                 <button data-view-jump="planning" type="button">Åpne plan</button>
               </div>
               <div id="moveQueue" class="compact-action-list"></div>
+            </section>
+            <section class="panel">
+              <div class="section-head">
+                <h2>Påminnelser</h2>
+                <button data-new-action="reminder" type="button">Ny</button>
+              </div>
+              <div id="reminderQueue" class="compact-list reminder-list"></div>
             </section>
             <section class="panel">
               <div class="section-head">
@@ -1107,10 +1120,10 @@
         <div id="billingSummary" class="completion-summary"></div>
         <div id="billingDialogMessage" class="dialog-message hidden"></div>
         <div class="form-grid">
-          <label>Dato
+          <label id="billingDateLabel">Dato
             <input id="billingDate" type="date" required />
           </label>
-          <label>Hva er gjort?
+          <label id="billingModeLabel">Hva er gjort?
             <select id="billingMode">
               <option value="invoice">Faktura sendt</option>
               <option value="cash">Betalt på stedet</option>
@@ -1128,6 +1141,36 @@
       </form>
     </dialog>
 
+    <dialog id="reminderDialog" class="modal compact-modal">
+      <form id="reminderForm" method="dialog">
+        <div class="modal-head">
+          <h2 id="reminderTitle">Ny påminnelse</h2>
+          <button id="closeReminderDialog" type="button" aria-label="Lukk">×</button>
+        </div>
+        <div id="reminderDialogMessage" class="dialog-message hidden"></div>
+        <label>Hva skal huskes?
+          <textarea id="reminderText" rows="3" placeholder="F.eks. lovet å ringe i løpet av dagen"></textarea>
+        </label>
+        <div class="form-grid">
+          <label>Dato
+            <input id="reminderDueDate" type="date" />
+          </label>
+          <label>Tid
+            <input id="reminderDueTime" type="time" step="900" />
+          </label>
+        </div>
+        <label>Kunde
+          <input id="reminderCustomerSearch" type="search" placeholder="Søk kunde, telefon eller sted" autocomplete="off" />
+          <select id="reminderCustomer"></select>
+        </label>
+        <p id="reminderCustomerHint" class="form-hint">Kunde er valgfritt. Påminnelsen vises uansett på forsiden.</p>
+        <div class="modal-actions">
+          <button class="secondary" id="cancelReminderButton" type="button">Avbryt</button>
+          <button id="saveReminderButton" type="submit">Lagre påminnelse</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog id="customerQuickDialog" class="side-modal">
       <div class="side-panel">
         <div class="modal-head">
@@ -1139,10 +1182,10 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260702-07"></script>
-    <script src="./supabase-adapter.js?v=20260702-07"></script>
-    <script src="./intake-parser.js?v=20260702-07"></script>
-    <script src="./app-20260702-07.js"></script>
+    <script src="./supabase-config.js?v=20260702-08"></script>
+    <script src="./supabase-adapter.js?v=20260702-08"></script>
+    <script src="./intake-parser.js?v=20260702-08"></script>
+    <script src="./app-20260702-08.js"></script>
   </body>
 </html>
 
