@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260702-19" />
+    <link rel="stylesheet" href="./styles.css?v=20260703-01" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -1159,6 +1159,10 @@
         <p id="billingHint" class="form-hint">Bruk dette etter at faktura er sendt manuelt, eller betaling på stedet faktisk er mottatt.</p>
         <label id="billingPriceBasisLabel">Prisgrunnlag / tillegg<textarea id="billingPriceBasis" rows="4"></textarea></label>
         <div id="billingPriceTotal" class="completion-price-total"></div>
+        <div class="billing-draft-actions">
+          <button class="secondary" id="copyBillingDraftButton" type="button">Kopier fakturagrunnlag</button>
+          <a id="openEaccountingButton" href="https://eaccounting.vismaonline.com/#/dashboard" target="_blank" rel="noreferrer">Åpne eAccounting</a>
+        </div>
         <label>Notat<textarea id="billingNote" rows="3" placeholder="Valgfritt, f.eks. fakturanr eller kontant beløp"></textarea></label>
         <div class="modal-actions">
           <button class="secondary" id="cancelBillingButton" type="button">Avbryt</button>
@@ -1208,10 +1212,10 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260702-19"></script>
-    <script src="./supabase-adapter.js?v=20260702-19"></script>
-    <script src="./intake-parser.js?v=20260702-19"></script>
-    <script src="./app-20260702-19.js"></script>
+    <script src="./supabase-config.js?v=20260703-01"></script>
+    <script src="./supabase-adapter.js?v=20260703-01"></script>
+    <script src="./intake-parser.js?v=20260703-01"></script>
+    <script src="./app-20260703-01.js"></script>
   </body>
 </html>
 

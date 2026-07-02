@@ -67,6 +67,7 @@ button[data-busy="true"] {
 }
 
 button.secondary,
+.billing-draft-actions a,
 .section-head button,
 .planning-head button,
 .job-actions button,
@@ -5474,6 +5475,23 @@ textarea {
   margin-top: 6px;
   color: var(--muted);
   font-size: 12px;
+  font-weight: 800;
+}
+
+.billing-draft-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.billing-draft-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  border-radius: 8px;
+  padding: 9px 13px;
   font-weight: 800;
 }
 
