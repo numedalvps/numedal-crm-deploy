@@ -2617,6 +2617,12 @@ textarea {
   background: rgba(255, 247, 237, 0.88);
 }
 
+.job-next-action.followup {
+  border-color: #bae6fd;
+  color: #075985 !important;
+  background: rgba(240, 249, 255, 0.92);
+}
+
 .job-next-action.move {
   border-color: #ddd6fe;
   color: #6d28d9 !important;
@@ -4874,6 +4880,11 @@ textarea {
 .invoice-pill.paid {
   background: #fef3c7;
   color: #92400e !important;
+}
+
+.invoice-pill.followup {
+  background: #e0f2fe;
+  color: #075985 !important;
 }
 
 .invoice-pill.move {
