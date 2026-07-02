@@ -5197,6 +5197,71 @@ textarea {
   color: #1e40af;
 }
 
+.lead-status-summary,
+.lead-status-order-fields {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.lead-status-summary {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.lead-status-summary strong {
+  color: var(--ink);
+  font-size: 18px;
+}
+
+.lead-status-summary span {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.lead-status-order-fields {
+  border: 1px solid #bfdbfe;
+  border-left: 4px solid #2563eb;
+  border-radius: 8px;
+  padding: 12px;
+  background: #eff6ff;
+}
+
+.manual-copy-fallback {
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  z-index: 9999;
+  display: grid;
+  gap: 8px;
+  width: min(360px, calc(100vw - 28px));
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  background: #fff;
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.22);
+}
+
+.manual-copy-fallback div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.manual-copy-fallback button {
+  width: 34px;
+  min-height: 34px;
+  padding: 0;
+}
+
+.manual-copy-fallback textarea {
+  min-height: 48px;
+  resize: none;
+}
+
 .completion-summary {
   display: grid;
   gap: 4px;

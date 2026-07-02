@@ -39,6 +39,15 @@
     authTokenKeys(storage).forEach((key) => storage.removeItem(key));
   }
 
+  function moveAuthTokens(fromStorage, toStorage) {
+    if (!fromStorage || !toStorage || fromStorage === toStorage) return;
+    for (const key of authTokenKeys(fromStorage)) {
+      const value = fromStorage.getItem(key);
+      if (value) toStorage.setItem(key, value);
+      fromStorage.removeItem(key);
+    }
+  }
+
   const authStorage = {
     getItem(key) {
       const primary = shouldRememberLogin() ? localAuthStorage : sessionAuthStorage;
@@ -788,9 +797,11 @@
     setRememberLogin(remember) {
       if (remember) {
         localAuthStorage?.setItem(rememberLoginKey, "true");
+        moveAuthTokens(sessionAuthStorage, localAuthStorage);
         clearAuthTokens(sessionAuthStorage);
       } else {
         localAuthStorage?.setItem(rememberLoginKey, "false");
+        moveAuthTokens(localAuthStorage, sessionAuthStorage);
         clearAuthTokens(localAuthStorage);
       }
     },

@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260702-06" />
+    <link rel="stylesheet" href="./styles.css?v=20260702-07" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -843,6 +843,42 @@
       </form>
     </dialog>
 
+    <dialog id="leadStatusDialog" class="modal compact-modal">
+      <form id="leadStatusForm" method="dialog">
+        <div class="modal-head">
+          <h2 id="leadStatusDialogTitle">Neste steg</h2>
+          <button id="closeLeadStatusDialog" type="button" aria-label="Lukk">×</button>
+        </div>
+        <div id="leadStatusDialogMessage" class="dialog-message hidden"></div>
+        <div class="lead-status-summary">
+          <strong id="leadStatusCustomerName"></strong>
+          <span id="leadStatusLabelText"></span>
+        </div>
+        <div id="leadStatusOrderFields" class="lead-status-order-fields hidden">
+          <label>Varmepumpe / produkt
+            <input id="leadStatusProduct" placeholder="F.eks. Panasonic HZ25 Flagship Hvit" />
+          </label>
+          <label>Tilbehør / tillegg
+            <textarea id="leadStatusAccessories" rows="3" placeholder="F.eks. standard montering, varmepumpehus, trevegg, ekstra rør..."></textarea>
+          </label>
+          <label>Gjelder anlegg
+            <select id="leadStatusInstallation">
+              <option value="">Ikke valgt / nytt anlegg</option>
+            </select>
+          </label>
+          <label class="check-row"><input id="leadStatusCreateOrder" type="checkbox" checked /> Opprett jobb fra dette</label>
+          <label class="check-row"><input id="leadStatusBookAfter" type="checkbox" checked /> Book i kalender etterpå</label>
+        </div>
+        <label>Notat til historikk
+          <textarea id="leadStatusNote" rows="4" placeholder="F.eks. tilbud sendt på e-post, kunden sa ja, må følges opp senere, eller hvorfor saken er tapt."></textarea>
+        </label>
+        <div class="modal-actions">
+          <button class="secondary" id="cancelLeadStatusDialog" type="button">Avbryt</button>
+          <button id="saveLeadStatusButton" type="submit">Lagre</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog id="deleteOrdersDialog" class="modal">
       <form id="deleteOrdersForm" method="dialog">
         <div class="modal-head">
@@ -1103,10 +1139,10 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260702-06"></script>
-    <script src="./supabase-adapter.js?v=20260702-06"></script>
-    <script src="./intake-parser.js?v=20260702-06"></script>
-    <script src="./app-20260702-06.js"></script>
+    <script src="./supabase-config.js?v=20260702-07"></script>
+    <script src="./supabase-adapter.js?v=20260702-07"></script>
+    <script src="./intake-parser.js?v=20260702-07"></script>
+    <script src="./app-20260702-07.js"></script>
   </body>
 </html>
 
