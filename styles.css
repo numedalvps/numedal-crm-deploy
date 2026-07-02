@@ -2868,6 +2868,42 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.lead-offer-context {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.lead-offer-context .check-row.compact {
+  justify-self: end;
+  margin: 0;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.lead-offer-context-grid {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 8px;
+}
+
+.lead-offer-context-grid label {
+  min-width: 0;
+}
+
+.lead-offer-context-grid label:last-child {
+  grid-column: 1 / -1;
+}
+
+.lead-offer-context-grid textarea {
+  min-height: 74px;
+}
+
 .lead-offer-builder {
   min-width: 0;
   display: grid;
@@ -5728,6 +5764,7 @@ label {
   .order-metrics,
   .lead-next-action,
   .lead-offer-grid,
+  .lead-offer-context-grid,
   .lead-offer-line-grid,
   .lead-offer-builder-head,
   .lead-offer-builder-footer,
