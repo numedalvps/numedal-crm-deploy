@@ -6299,6 +6299,7 @@ label {
   .customer-detail .action-row,
   .order-detail .action-row,
   .order-detail .job-actions,
+  .job-card .job-actions,
   .lead-contact-actions,
   .lead-next-actions {
     display: grid;
@@ -6314,6 +6315,7 @@ label {
   .customer-detail .action-row > *,
   .order-detail .action-row > *,
   .order-detail .job-actions > *,
+  .job-card .job-actions > *,
   .lead-contact-actions > *,
   .lead-next-actions > * {
     min-width: 0;
@@ -6330,6 +6332,8 @@ label {
   .order-detail .action-row button,
   .order-detail .job-actions a,
   .order-detail .job-actions button,
+  .job-card .job-actions a,
+  .job-card .job-actions button,
   .customer-detail .inline-more-actions,
   .order-detail .inline-more-actions,
   .lead-next-actions .inline-more-actions {
@@ -6634,6 +6638,10 @@ label {
     right: 0;
     width: 100%;
     min-width: 0;
+  }
+
+  .job-card .job-actions {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
