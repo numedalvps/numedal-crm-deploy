@@ -21,10 +21,6 @@
   const localAuthStorage = safeStorage("local");
   const sessionAuthStorage = safeStorage("session");
 
-  function shouldRememberLogin() {
-    return localAuthStorage?.getItem(rememberLoginKey) === "true";
-  }
-
   function authTokenKeys(storage) {
     if (!storage) return [];
     const keys = [];
@@ -33,6 +29,17 @@
       if ((/^sb-.+-auth-token$/.test(key || "") || key === "supabase.auth.token")) keys.push(key);
     }
     return keys;
+  }
+
+  function hasAuthTokens(storage) {
+    return authTokenKeys(storage).length > 0;
+  }
+
+  function shouldRememberLogin() {
+    const preference = localAuthStorage?.getItem(rememberLoginKey);
+    if (preference === "true") return true;
+    if (preference === "false") return false;
+    return hasAuthTokens(localAuthStorage);
   }
 
   function clearAuthTokens(storage) {
@@ -50,6 +57,7 @@
 
   function syncAuthTokensToRememberChoice() {
     if (shouldRememberLogin()) {
+      localAuthStorage?.setItem(rememberLoginKey, "true");
       moveAuthTokens(sessionAuthStorage, localAuthStorage);
       clearAuthTokens(sessionAuthStorage);
     } else {
