@@ -3106,6 +3106,73 @@ textarea {
   gap: 6px;
 }
 
+.compact-tags-section {
+  padding: 0;
+  overflow: visible;
+}
+
+.compact-tags-details {
+  display: grid;
+}
+
+.compact-tags-details > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 44px;
+  padding: 10px 12px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.compact-tags-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.compact-tags-details > summary span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.compact-tags-details > summary strong {
+  margin: 0;
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.compact-tags-details > summary small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.compact-tags-details > summary em {
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 10px;
+  color: var(--teal);
+  background: #fff;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.compact-tags-details[open] > summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.compact-tags-details[open] > summary em {
+  border-color: var(--teal);
+  background: #ecfeff;
+}
+
+.compact-tags-details > .tag-row,
+.compact-tags-details > .muted {
+  margin: 10px 12px 12px;
+}
+
 .tag-details > div {
   min-width: min(320px, 80vw);
 }
