@@ -2436,6 +2436,11 @@ textarea {
   color: #9a3412;
 }
 
+.order-badge.billing.draft {
+  background: #e0f2fe;
+  color: #075985;
+}
+
 .order-badge.billing.sent,
 .order-badge.billing.paid {
   background: #dcfce7;

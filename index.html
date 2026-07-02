@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260703-02" />
+    <link rel="stylesheet" href="./styles.css?v=20260703-03" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -312,6 +312,7 @@
                 <button data-order-filter-shortcut="scheduled" type="button">Planlagt</button>
                 <button data-order-filter-shortcut="completed" type="button">Utført</button>
                 <button data-order-filter-shortcut="billing_ready" type="button">Må faktureres</button>
+                <button data-order-filter-shortcut="billing_draft" type="button">Utkast</button>
                 <button data-order-filter-shortcut="all" type="button">Alle</button>
               </div>
               <div class="search-row">
@@ -321,6 +322,7 @@
                   <option value="scheduled">Planlagt</option>
                   <option value="completed">Utført</option>
                   <option value="billing_ready">Må faktureres</option>
+                  <option value="billing_draft">Utkast i eAccounting</option>
                   <option value="all">Alle jobber</option>
                   <option value="invoiced">Fakturert</option>
                   <option value="missing_job">Mangler jobbkobling</option>
@@ -1212,10 +1214,10 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260703-02"></script>
-    <script src="./supabase-adapter.js?v=20260703-02"></script>
-    <script src="./intake-parser.js?v=20260703-02"></script>
-    <script src="./app-20260703-02.js"></script>
+    <script src="./supabase-config.js?v=20260703-03"></script>
+    <script src="./supabase-adapter.js?v=20260703-03"></script>
+    <script src="./intake-parser.js?v=20260703-03"></script>
+    <script src="./app-20260703-03.js"></script>
   </body>
 </html>
 
