@@ -39,7 +39,7 @@
     const preference = localAuthStorage?.getItem(rememberLoginKey);
     if (preference === "true") return true;
     if (preference === "false") return false;
-    return hasAuthTokens(localAuthStorage);
+    return true;
   }
 
   function clearAuthTokens(storage) {
