@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260702-10" />
+    <link rel="stylesheet" href="./styles.css?v=20260702-11" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -69,14 +69,15 @@
               <input id="globalSearchInput" type="search" placeholder="Søk kunde, anlegg, telefon, adresse, jobb eller faktura" autocomplete="off" />
               <div id="globalSearchResults" class="global-search-results top-search-results"></div>
             </div>
+            <button id="quickReminderButton" class="secondary quick-reminder-button" data-new-action="reminder" type="button" title="Lag en rask påminnelse som vises på forsiden.">Påminnelse</button>
             <div class="new-action-wrap">
               <button id="newActionButton" type="button" aria-expanded="false">+ Ny</button>
               <div id="newActionMenu" class="new-action-menu hidden">
+                <button data-new-action="reminder" type="button">Påminnelse</button>
                 <button data-new-action="customer" type="button">Ny kunde</button>
                 <button data-new-action="booking" type="button">Book avtale</button>
                 <button data-new-action="service" type="button">Book service</button>
                 <button data-new-action="install" type="button">Book installasjon</button>
-                <button data-new-action="reminder" type="button">Påminnelse</button>
                 <button data-new-action="paste" type="button">Lim inn melding</button>
               </div>
             </div>
@@ -848,6 +849,27 @@
           <label class="form-wide">Tittel<input id="orderTitleInput" required /></label>
           <label class="check-row form-wide"><input id="orderBookNow" type="checkbox" /> Book i kalender etterpå</label>
         </div>
+        <details id="orderPriceDetails" class="completion-price-details">
+          <summary>Avtalt produkt / fakturagrunnlag</summary>
+          <div class="completion-price-controls order-price-controls">
+            <label>Søk produkt/tillegg
+              <input id="orderPriceSearch" type="search" placeholder="Søk Panasonic, varmepumpehus, montering..." />
+            </label>
+            <label>Valg
+              <select id="orderPricePreset"></select>
+            </label>
+            <label>Antall
+              <input id="orderPriceQuantity" type="number" min="0" step="0.5" value="1" />
+            </label>
+            <button id="orderAddPriceLine" class="secondary" type="button" title="Legg valgt produkt eller tillegg inn som grunnlag for jobben.">Legg til</button>
+          </div>
+          <label id="orderStandardInstallationWrap" class="check-row compact hidden">
+            <input id="orderIncludeStandardInstallation" type="checkbox" checked />
+            <span>Ta med standard montering automatisk</span>
+          </label>
+          <textarea id="orderPriceLines" rows="4" placeholder="Avtalt varmepumpe, standard montering, varmepumpehus, tillegg eller timer. Kan korrigeres ved fullføring."></textarea>
+          <div id="orderPriceTotal" class="completion-price-total"></div>
+        </details>
         <label>Notat<textarea id="orderNoteInput" rows="4" placeholder="Hva kunden ringte om, avtalt arbeid, pumpeinfo, adkomst eller annet."></textarea></label>
         <div class="modal-actions">
           <button class="secondary" id="cancelOrderDialog" type="button">Avbryt</button>
@@ -1060,6 +1082,9 @@
         <details id="completionPriceDetails" class="completion-price-details">
           <summary>Prisgrunnlag / tillegg</summary>
           <div class="completion-price-controls">
+            <label>Søk
+              <input id="completionPriceSearch" type="search" placeholder="Søk varmepumpe, tak, varmepumpehus..." />
+            </label>
             <label>Valg
               <select id="completionPricePreset"></select>
             </label>
@@ -1182,10 +1207,10 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260702-10"></script>
-    <script src="./supabase-adapter.js?v=20260702-10"></script>
-    <script src="./intake-parser.js?v=20260702-10"></script>
-    <script src="./app-20260702-10.js"></script>
+    <script src="./supabase-config.js?v=20260702-11"></script>
+    <script src="./supabase-adapter.js?v=20260702-11"></script>
+    <script src="./intake-parser.js?v=20260702-11"></script>
+    <script src="./app-20260702-11.js"></script>
   </body>
 </html>
 

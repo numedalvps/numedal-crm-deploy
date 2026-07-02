@@ -332,6 +332,10 @@ small {
   width: min(420px, 42vw);
 }
 
+.quick-reminder-button {
+  white-space: nowrap;
+}
+
 .top-search input {
   width: 100%;
   min-height: 40px;
@@ -5443,10 +5447,14 @@ textarea {
 
 .completion-price-controls {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 110px auto;
+  grid-template-columns: minmax(150px, 0.9fr) minmax(170px, 1.1fr) 110px auto;
   gap: 8px;
   align-items: end;
   margin-top: 10px;
+}
+
+.order-price-controls {
+  grid-template-columns: minmax(150px, 0.9fr) minmax(170px, 1.1fr) 110px auto;
 }
 
 .completion-price-details textarea {
@@ -6143,6 +6151,10 @@ label {
     width: 100%;
   }
 
+  .quick-reminder-button {
+    justify-self: end;
+  }
+
   .top-search-results {
     position: fixed;
     top: 112px;
@@ -6153,6 +6165,7 @@ label {
   }
 
   .new-action-wrap {
+    grid-column: 1 / -1;
     justify-self: end;
   }
 
@@ -6533,6 +6546,11 @@ label {
   .new-action-wrap {
     width: 100%;
     justify-self: stretch;
+  }
+
+  .quick-reminder-button {
+    width: 100%;
+    justify-content: center;
   }
 
   #newActionButton {
