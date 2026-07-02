@@ -2768,6 +2768,16 @@ textarea {
   color: #0f766e;
 }
 
+.lead-next-actions [data-lead-set-status="won"] {
+  border-color: #86efac;
+  background: #fff;
+  color: #166534;
+}
+
+.lead-next-actions [data-lead-set-status="won"]:hover {
+  background: #f0fdf4;
+}
+
 .lead-current-status {
   display: inline-flex;
   align-items: center;
