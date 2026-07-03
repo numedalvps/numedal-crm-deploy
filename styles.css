@@ -1805,23 +1805,32 @@ textarea {
   margin-top: 2px;
   border: 1px solid #bfdbfe;
   border-radius: 8px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   background: #f8fbff;
 }
 
 .website-submission-message strong {
   color: var(--ink);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .website-submission-message p {
   margin: 0;
   color: #334155;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 650;
-  line-height: 1.55;
+  line-height: 1.6;
+  max-height: 260px;
+  overflow: auto;
+  overscroll-behavior: contain;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+@media (max-width: 620px) {
+  .website-submission-message p {
+    max-height: 220px;
+  }
 }
 
 .website-submission-fields {
