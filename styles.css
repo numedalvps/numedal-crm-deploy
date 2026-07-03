@@ -5448,8 +5448,12 @@ textarea {
 }
 
 .manual-copy-fallback button {
-  width: 34px;
   min-height: 34px;
+  padding: 0 10px;
+}
+
+.manual-copy-fallback [aria-label="Lukk kopieringsboks"] {
+  width: 34px;
   padding: 0;
 }
 
@@ -5462,7 +5466,7 @@ textarea {
 
 .manual-copy-fallback textarea {
   font-size: 16px;
-  min-height: 48px;
+  min-height: 84px;
   resize: none;
 }
 
