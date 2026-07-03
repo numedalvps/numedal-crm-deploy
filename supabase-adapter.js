@@ -66,6 +66,17 @@
     }
   }
 
+  async function refreshRememberedSession() {
+    if (!client || !shouldRememberLogin() || !hasAuthTokens(localAuthStorage)) return null;
+    const { data, error } = await withTimeout(
+      client.auth.refreshSession(),
+      "Supabase svarer ikke på lagret innlogging. Sjekk nett/refresh siden.",
+    );
+    if (error) return null;
+    syncAuthTokensToRememberChoice();
+    return data.session || null;
+  }
+
   const authStorage = {
     getItem(key) {
       const primary = shouldRememberLogin() ? localAuthStorage : sessionAuthStorage;
@@ -828,7 +839,7 @@
         client.auth.getSession(),
         "Supabase svarer ikke på sesjonssjekk. Sjekk nett/refresh siden.",
       );
-      return data.session || null;
+      return data.session || await refreshRememberedSession();
     },
     async signIn(email, password) {
       const supabase = await requireClient();
