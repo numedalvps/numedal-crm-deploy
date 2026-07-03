@@ -5019,6 +5019,9 @@ textarea {
 
 .modal {
   width: min(820px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  max-height: calc(100dvh - 24px);
+  overflow: auto;
   border: 0;
   border-radius: 10px;
   padding: 0;
@@ -5229,6 +5232,7 @@ textarea {
 }
 
 .modal form {
+  min-width: 0;
   padding: 18px;
 }
 
@@ -5377,6 +5381,7 @@ textarea {
 
 .lead-status-summary,
 .lead-status-order-fields {
+  min-width: 0;
   display: grid;
   gap: 10px;
   margin-bottom: 12px;
@@ -5511,11 +5516,22 @@ textarea {
 }
 
 .completion-price-controls {
+  min-width: 0;
   display: grid;
   grid-template-columns: minmax(150px, 0.9fr) minmax(170px, 1.1fr) 110px auto;
   gap: 8px;
   align-items: end;
   margin-top: 10px;
+}
+
+.completion-price-controls > label,
+.completion-price-controls > button,
+.lead-status-order-fields label,
+.lead-status-order-fields textarea,
+.lead-status-order-fields select,
+.lead-status-order-fields input {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .order-price-controls {
@@ -5586,6 +5602,40 @@ textarea {
   }
 }
 
+@media (max-width: 560px) {
+  .modal {
+    width: calc(100vw - 12px);
+    max-width: calc(100vw - 12px);
+    max-height: calc(100dvh - 12px);
+    border-radius: 8px;
+  }
+
+  .modal form {
+    padding: 12px;
+  }
+
+  .compact-modal {
+    max-width: calc(100vw - 12px);
+  }
+
+  .lead-status-order-fields {
+    padding: 10px;
+  }
+
+  .lead-status-price-controls button {
+    width: 100%;
+  }
+
+  .modal-actions {
+    gap: 8px;
+  }
+
+  .modal-actions button {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
 .choice-stack {
   display: grid;
   gap: 8px;
@@ -5621,7 +5671,7 @@ textarea {
 }
 
 .compact-modal {
-  max-width: 520px;
+  max-width: min(520px, calc(100vw - 12px));
 }
 
 .confirm-text {

@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260703-40" />
+    <link rel="stylesheet" href="./styles.css?v=20260703-41" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -894,8 +894,8 @@
         </div>
         <div id="leadStatusOrderFields" class="lead-status-order-fields hidden">
           <div class="completion-price-controls lead-status-price-controls">
-            <label>Søk vare/tillegg
-              <input id="leadStatusProductSearch" type="search" placeholder="Søk Panasonic, varmepumpehus, montering..." />
+            <label>Skriv/søk vare
+              <input id="leadStatusProductSearch" type="search" placeholder="Skriv modell hvis den ikke finnes i listen" />
             </label>
             <label>Valg
               <select id="leadStatusProductPreset"></select>
@@ -910,7 +910,7 @@
             <span>Ta med standard montering automatisk</span>
           </label>
           <label>Avtalt varegrunnlag
-            <textarea id="leadStatusProduct" rows="4" placeholder="Velg varmepumpe, montering og tillegg fra listen. Kan redigeres før jobben opprettes."></textarea>
+            <textarea id="leadStatusProduct" rows="4" placeholder="Legg inn faktisk modell, standard montering og tillegg. Kan rettes når jobben fullføres."></textarea>
           </label>
           <div id="leadStatusProductTotal" class="completion-price-total"></div>
           <label>Tilbehør / notat utenom listen
@@ -1248,10 +1248,10 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260703-40"></script>
-    <script src="./supabase-adapter.js?v=20260703-40"></script>
-    <script src="./intake-parser.js?v=20260703-40"></script>
-    <script src="./app-20260703-40.js"></script>
+    <script src="./supabase-config.js?v=20260703-41"></script>
+    <script src="./supabase-adapter.js?v=20260703-41"></script>
+    <script src="./intake-parser.js?v=20260703-41"></script>
+    <script src="./app-20260703-41.js"></script>
   </body>
 </html>
 
