@@ -1017,6 +1017,10 @@ textarea {
   display: block;
 }
 
+.ai-registration-panel:not([open]) > .ai-registration-body {
+  display: none;
+}
+
 .ai-registration-summary {
   list-style: none;
   cursor: pointer;
