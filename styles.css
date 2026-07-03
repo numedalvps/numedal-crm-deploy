@@ -5403,6 +5403,19 @@ textarea {
   background: #eff6ff;
 }
 
+.lead-status-price-controls {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) 86px auto;
+  margin-top: 0;
+}
+
+.lead-status-price-controls button {
+  min-height: 40px;
+}
+
+.lead-status-order-fields .completion-price-total {
+  margin-top: -4px;
+}
+
 .manual-copy-fallback {
   position: fixed;
   right: 14px;
