@@ -6208,6 +6208,36 @@ label {
     padding: 12px;
   }
 
+  #leadsView .lead-list-panel {
+    display: flex;
+    flex-direction: column;
+  }
+
+  #leadsView .lead-list-panel > .section-head {
+    order: 1;
+  }
+
+  #leadsView .lead-list-panel > .search-row {
+    order: 2;
+    margin-bottom: 8px;
+  }
+
+  #leadsView .lead-list-panel > .lead-metrics {
+    order: 3;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 0 0 10px;
+  }
+
+  #leadsView .lead-list-panel > #websiteSubmissionInbox {
+    order: 4;
+  }
+
+  #leadsView .lead-list-panel > #leadList {
+    order: 5;
+    max-height: none;
+    overflow: visible;
+  }
+
   .topbar {
     position: static;
     padding: 10px 0 8px;
