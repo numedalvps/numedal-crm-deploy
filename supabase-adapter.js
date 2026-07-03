@@ -608,11 +608,14 @@
     };
   }
 
-  function orderToJobDb(orderId, order) {
+  function orderToJobDb(orderId, order, existingJob = null) {
     const billingStatus = order.billingStatus || order.billing_status || "not_ready";
+    const hasLeadId = Object.prototype.hasOwnProperty.call(order, "lead_id")
+      || Object.prototype.hasOwnProperty.call(order, "leadId");
+    const leadId = order.lead_id || order.leadId;
     return {
       customer_id: order.customerId || order.customer_id || null,
-      lead_id: isUuid(order.lead_id || order.leadId) ? (order.lead_id || order.leadId) : null,
+      lead_id: isUuid(leadId) ? leadId : (hasLeadId ? null : existingJob?.lead_id || null),
       location_id: isUuid(order.location_id || order.locationId) ? (order.location_id || order.locationId) : null,
       installation_id: isUuid(order.installation_id || order.installationId) ? (order.installation_id || order.installationId) : null,
       title: order.title || "Jobb",
@@ -694,8 +697,8 @@
 
   async function syncJobForOrder(supabase, orderId, order) {
     if (!isUuid(orderId)) return null;
-    const dbJob = orderToJobDb(orderId, order);
     const existing = await findSingleBySource(supabase, "jobs", "orders", orderId);
+    const dbJob = orderToJobDb(orderId, order, existing);
     const query = existing
       ? supabase.from("jobs").update(dbJob).eq("id", existing.id).select("*").single()
       : supabase.from("jobs").insert(dbJob).select("*").single();
