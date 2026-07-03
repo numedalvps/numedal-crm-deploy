@@ -3484,6 +3484,7 @@ textarea {
 }
 
 @media (max-width: 620px) {
+  .lead-match-list article,
   .duplicate-link-row {
     grid-template-columns: 1fr;
   }
