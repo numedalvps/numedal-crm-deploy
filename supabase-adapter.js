@@ -361,8 +361,50 @@
     };
   }
 
+  function timezoneOffsetLabel(dateIso, time = "09:00", timeZone = "Europe/Oslo") {
+    const date = normalizeDate(dateIso) || localIsoDate(new Date());
+    const cleanTime = String(time || "09:00").slice(0, 5);
+    const utcGuess = new Date(`${date}T${cleanTime}:00Z`);
+    if (Number.isNaN(utcGuess.getTime())) return "+01:00";
+    try {
+      const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      }).formatToParts(utcGuess).reduce((result, part) => {
+        if (part.type !== "literal") result[part.type] = part.value;
+        return result;
+      }, {});
+      const asUtc = Date.UTC(
+        Number(parts.year),
+        Number(parts.month) - 1,
+        Number(parts.day),
+        Number(parts.hour),
+        Number(parts.minute),
+        Number(parts.second),
+      );
+      const offsetMinutes = Math.round((asUtc - utcGuess.getTime()) / 60000);
+      const sign = offsetMinutes >= 0 ? "+" : "-";
+      const abs = Math.abs(offsetMinutes);
+      return `${sign}${String(Math.floor(abs / 60)).padStart(2, "0")}:${String(abs % 60).padStart(2, "0")}`;
+    } catch (_error) {
+      return "+01:00";
+    }
+  }
+
+  function localBookingTimestamp(dateIso, time = "09:00") {
+    const date = normalizeDate(dateIso) || localIsoDate(new Date());
+    const cleanTime = String(time || "09:00").slice(0, 5);
+    return `${date}T${cleanTime}:00${timezoneOffsetLabel(date, cleanTime)}`;
+  }
+
   function bookingToDb(booking) {
-    const startsAt = `${booking.date}T${booking.time || "09:00"}:00`;
+    const startsAt = localBookingTimestamp(booking.date, booking.time || "09:00");
     const jobType = jobTypeFor(booking.type || "service");
     return {
       customer_id: booking.customerId,
