@@ -1230,10 +1230,11 @@
       const supabase = await requireClient();
       const completedAt = options.completedAt || new Date().toISOString();
       if (done) {
+        const completionNote = options.note || options.bookingNote || null;
         const { error } = await withDbTimeout(
           supabase.rpc("complete_job", {
             p_booking_id: id,
-            p_note: options.note || null,
+            p_note: completionNote,
             p_completed_at: completedAt,
           }),
           "fullføre jobb",
@@ -1241,11 +1242,13 @@
         if (!error) return;
         if (!/function .*complete_job/i.test(error.message || "")) throw error;
       }
+      const updateValues = {
+        status: done ? "done" : "booked",
+        done_at: done ? completedAt : null,
+      };
+      if (done && "bookingNote" in options) updateValues.note = options.bookingNote || null;
       const { error } = await withDbTimeout(
-        supabase.from("bookings").update({
-          status: done ? "done" : "booked",
-          done_at: done ? completedAt : null,
-        }).eq("id", id),
+        supabase.from("bookings").update(updateValues).eq("id", id),
         done ? "fullføre booking" : "gjenåpne booking",
       );
       if (error) throw error;
