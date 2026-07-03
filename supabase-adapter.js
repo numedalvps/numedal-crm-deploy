@@ -884,7 +884,11 @@
         client.auth.getSession(),
         "Supabase svarer ikke på sesjonssjekk. Sjekk nett/refresh siden.",
       );
-      return data.session || await refreshRememberedSession();
+      if (data.session) {
+        syncAuthTokensToRememberChoice();
+        return data.session;
+      }
+      return await refreshRememberedSession();
     },
     async signIn(email, password) {
       const supabase = await requireClient();
@@ -902,7 +906,10 @@
     },
     onAuthStateChange(callback) {
       if (!client || !callback) return { data: { subscription: { unsubscribe() {} } } };
-      return client.auth.onAuthStateChange(callback);
+      return client.auth.onAuthStateChange((event, session) => {
+        syncAuthTokensToRememberChoice();
+        callback(event, session);
+      });
     },
     async resetPassword(email, redirectTo) {
       const supabase = await requireClient();
