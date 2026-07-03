@@ -3566,6 +3566,16 @@ textarea {
   background: #f8fafc;
 }
 
+.installation-card.metadata-ghost {
+  border-left-color: #f59e0b;
+  background: #fff7ed;
+}
+
+.installation-card .installation-warning {
+  color: #9a3412;
+  font-weight: 900;
+}
+
 .installation-card > div {
   display: flex;
   align-items: center;
