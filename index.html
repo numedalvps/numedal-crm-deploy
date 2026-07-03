@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260703-19" />
+    <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -1160,6 +1160,22 @@
           </label>
         </div>
         <p id="billingHint" class="form-hint">Bruk dette etter at faktura er sendt manuelt, eller betaling på stedet faktisk er mottatt.</p>
+        <div class="completion-price-controls billing-price-controls">
+          <label>Søk produkt/tillegg
+            <input id="billingPriceSearch" type="search" placeholder="Søk Panasonic, service, varmepumpehus..." />
+          </label>
+          <label>Valg
+            <select id="billingPricePreset"></select>
+          </label>
+          <label>Antall
+            <input id="billingPriceQuantity" type="number" min="0" step="0.5" value="1" />
+          </label>
+          <button id="billingAddPriceLine" class="secondary" type="button" title="Legg valgt produkt eller tillegg inn i fakturagrunnlaget.">Legg til</button>
+        </div>
+        <label id="billingStandardInstallationWrap" class="check-row compact hidden">
+          <input id="billingIncludeStandardInstallation" type="checkbox" checked />
+          <span>Ta med standard montering automatisk</span>
+        </label>
         <label id="billingPriceBasisLabel">Prisgrunnlag / tillegg<textarea id="billingPriceBasis" rows="4"></textarea></label>
         <div id="billingPriceTotal" class="completion-price-total"></div>
         <div class="billing-draft-actions">
@@ -1215,12 +1231,11 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260703-19"></script>
-    <script src="./supabase-adapter.js?v=20260703-19"></script>
-    <script src="./intake-parser.js?v=20260703-19"></script>
-    <script src="./app-20260703-19.js"></script>
+    <script src="./supabase-config.js"></script>
+    <script src="./supabase-adapter.js"></script>
+    <script src="./intake-parser.js"></script>
+    <script src="./app-20260703-20.js"></script>
   </body>
 </html>
-
 
 
