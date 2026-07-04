@@ -5465,11 +5465,12 @@ textarea {
 }
 
 .lead-status-price-controls {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) 86px auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   margin-top: 0;
 }
 
 .lead-status-price-controls button {
+  grid-column: 1 / -1;
   min-height: 40px;
 }
 
