@@ -3913,6 +3913,19 @@ textarea {
   line-height: 1.35;
 }
 
+.timeline-note {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.timeline-note.expandable-text {
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
 .timeline-hint {
   color: #1d4ed8;
   font-size: 12px;
@@ -3978,6 +3991,50 @@ textarea {
   padding: 12px;
   color: var(--muted);
   background: #f8fafc;
+}
+
+.expandable-text {
+  overflow-wrap: anywhere;
+}
+
+.expandable-text > summary {
+  display: grid;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.expandable-text > summary::-webkit-details-marker {
+  display: none;
+}
+
+.expandable-text > summary span {
+  display: block;
+  color: inherit;
+}
+
+.expandable-text > summary em {
+  width: fit-content;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 9px;
+  color: var(--teal);
+  background: #fff;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.expandable-text[open] > summary em {
+  border-color: var(--teal);
+  background: #ecfeff;
+}
+
+.expandable-text > div {
+  margin-top: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+  color: inherit;
 }
 
 .empty-state.compact {
