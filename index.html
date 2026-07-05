@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260705-74" />
+    <link rel="stylesheet" href="./styles.css?v=20260705-75" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -1246,6 +1246,54 @@
       </form>
     </dialog>
 
+    <dialog id="contactLogDialog" class="modal compact-modal">
+      <form id="contactLogForm" method="dialog">
+        <div class="modal-head">
+          <h2 id="contactLogTitle">Logg kontakt</h2>
+          <button id="closeContactLogDialog" type="button" aria-label="Lukk">×</button>
+        </div>
+        <div id="contactLogDialogMessage" class="dialog-message hidden"></div>
+        <label>Kontaktmåte
+          <select id="contactLogChannel">
+            <option value="call">Ringte / snakket</option>
+            <option value="sms">SMS</option>
+            <option value="email">E-post</option>
+            <option value="meeting">Møte / befaring</option>
+            <option value="note">Annet notat</option>
+          </select>
+        </label>
+        <label>Hva ble sagt eller avtalt?
+          <textarea id="contactLogBody" rows="4" placeholder="F.eks. kunden ønsker tilbud på Panasonic HZ25. Avtalte å ringe tilbake i ettermiddag."></textarea>
+        </label>
+        <label>Neste steg
+          <select id="contactLogNextAction">
+            <option value="none">Bare lagre i historikk</option>
+            <option value="reminder">Lag vanlig påminnelse</option>
+            <option value="offer">Send tilbud</option>
+            <option value="book">Book jobb / avtale</option>
+            <option value="followup">Følg opp senere</option>
+          </select>
+        </label>
+        <div id="contactLogDueFields" class="form-grid hidden">
+          <label>Dato
+            <input id="contactLogDueDate" type="date" />
+          </label>
+          <label>Tid
+            <input id="contactLogDueTime" type="time" step="900" />
+          </label>
+        </div>
+        <label class="check-row compact">
+          <input id="contactLogImportant" type="checkbox" />
+          <span>Legg også inn som viktig notat på kundekortet</span>
+        </label>
+        <p id="contactLogHint" class="form-hint">Loggen havner i Aktivitet / e-post på kundekortet.</p>
+        <div class="modal-actions">
+          <button class="secondary" id="cancelContactLogButton" type="button">Avbryt</button>
+          <button id="saveContactLogButton" type="submit">Lagre kontakt</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog id="customerQuickDialog" class="side-modal">
       <div class="side-panel">
         <div class="modal-head">
@@ -1257,10 +1305,10 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260705-74"></script>
-    <script src="./supabase-adapter.js?v=20260705-74"></script>
-    <script src="./intake-parser.js?v=20260705-74"></script>
-    <script src="./app-20260705-74.js"></script>
+    <script src="./supabase-config.js?v=20260705-75"></script>
+    <script src="./supabase-adapter.js?v=20260705-75"></script>
+    <script src="./intake-parser.js?v=20260705-75"></script>
+    <script src="./app-20260705-75.js"></script>
   </body>
 </html>
 
