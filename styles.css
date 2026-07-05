@@ -5311,6 +5311,7 @@ textarea {
   max-width: calc(100vw - 24px);
   max-height: calc(100dvh - 24px);
   overflow: auto;
+  overflow-x: hidden;
   border: 0;
   border-radius: 10px;
   padding: 0;
@@ -5676,6 +5677,20 @@ textarea {
   margin-bottom: 12px;
 }
 
+#leadStatusDialog,
+#leadStatusDialog form,
+#leadStatusDialog label,
+#leadStatusDialog textarea,
+#leadStatusDialog select,
+#leadStatusDialog input {
+  min-width: 0;
+  max-width: 100%;
+}
+
+#leadStatusDialog form {
+  overflow-x: hidden;
+}
+
 .lead-status-summary {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -5699,11 +5714,24 @@ textarea {
   border-radius: 8px;
   padding: 12px;
   background: #eff6ff;
+  overflow-x: hidden;
 }
 
 .lead-status-price-controls {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(88px, 0.28fr);
   margin-top: 0;
+}
+
+.lead-status-search-field {
+  grid-column: 1 / -1;
+}
+
+.lead-status-preset-field {
+  grid-column: 1 / 2;
+}
+
+.lead-status-qty-field {
+  grid-column: 2 / 3;
 }
 
 .lead-status-price-controls button {
@@ -5914,6 +5942,13 @@ textarea {
 
   .lead-status-order-fields {
     padding: 10px;
+  }
+
+  .lead-status-price-controls,
+  .lead-status-search-field,
+  .lead-status-preset-field,
+  .lead-status-qty-field {
+    grid-column: 1 / -1;
   }
 
   .lead-status-price-controls button {
