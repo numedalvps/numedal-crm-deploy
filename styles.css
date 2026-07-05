@@ -550,6 +550,12 @@ small {
   color: #166534;
 }
 
+.action-row .reminder-primary {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
 .action-row .order-primary,
 .quick-actions .order-primary {
   border-color: #99f6e4;
