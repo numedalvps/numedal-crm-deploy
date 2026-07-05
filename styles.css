@@ -1772,7 +1772,7 @@ textarea {
 .order-list button {
   grid-template-columns: 1fr;
   align-items: start;
-  gap: 5px;
+  gap: 6px;
 }
 
 .lead-list button.active,
@@ -1791,6 +1791,15 @@ textarea {
 .order-list span {
   color: var(--muted);
   font-size: 12px;
+}
+
+.lead-list .lead-card-next {
+  color: var(--teal);
+  font-weight: 950;
+}
+
+.lead-list .lead-card-preview {
+  line-height: 1.35;
 }
 
 .lead-list strong,
@@ -2853,9 +2862,9 @@ textarea {
 
 .lead-next-action {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
-  align-items: center;
+  align-items: start;
   margin: 12px 0;
   border: 1px solid #bfdbfe;
   border-left: 5px solid var(--teal);
@@ -2912,7 +2921,7 @@ textarea {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 .lead-next-actions button,
@@ -3046,6 +3055,22 @@ textarea {
   margin: 10px 0;
 }
 
+.lead-advanced-actions {
+  background: #fbfdff;
+}
+
+.lead-advanced-actions > details > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-weight: 950;
+}
+
+.lead-advanced-grid {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
 .lead-status-actions button,
 .lead-template-buttons button {
   min-height: 36px;
@@ -3076,8 +3101,12 @@ textarea {
 }
 
 .lead-offer-section textarea {
-  min-height: 240px;
+  min-height: 108px;
   resize: vertical;
+}
+
+.lead-offer-text-details textarea {
+  min-height: 180px;
 }
 
 .lead-offer-documents {
