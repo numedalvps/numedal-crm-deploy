@@ -4425,6 +4425,7 @@ textarea {
   position: absolute;
   inset: 0;
   z-index: 3;
+  pointer-events: none;
 }
 
 .timeline-drop-zones {
@@ -4485,6 +4486,7 @@ textarea {
   position: absolute;
   left: 5px;
   right: 5px;
+  pointer-events: auto;
   min-height: 42px;
   overflow: hidden;
   border: 1px solid rgba(22, 163, 74, 0.28);
