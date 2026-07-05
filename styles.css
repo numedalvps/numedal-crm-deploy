@@ -1464,6 +1464,32 @@ textarea {
   font-weight: 950;
 }
 
+.ai-selected-customer-notice {
+  display: grid;
+  gap: 3px;
+  margin-bottom: 10px;
+  border: 1px solid #9fd2c8;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #e9f8f4;
+  color: #0c5f55;
+}
+
+.ai-selected-customer-notice.empty {
+  border-color: #f1c37d;
+  background: #fff7e8;
+  color: #7a4a00;
+}
+
+.ai-selected-customer-notice strong {
+  font-weight: 950;
+}
+
+.ai-selected-customer-notice span {
+  font-size: 13px;
+  font-weight: 750;
+}
+
 .intake-link-hints span {
   width: fit-content;
   max-width: 100%;
