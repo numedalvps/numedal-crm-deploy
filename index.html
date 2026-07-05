@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260705-55" />
+    <link rel="stylesheet" href="./styles.css?v=20260705-56" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -95,44 +95,49 @@
             </div>
             <div id="startWorklist" class="start-worklist"></div>
           </section>
-          <div class="dashboard-focus-grid compact-dashboard-metrics">
-            <button data-dashboard-action="service" type="button">
-              <span>Serviceoppfølging</span>
-              <strong id="dashboardServiceCount">0</strong>
-              <small>Kunder/anlegg som kan kontaktes</small>
-            </button>
-            <button data-dashboard-action="leads" type="button">
-              <span>Innboks</span>
-              <strong id="dashboardLeadCount">0</strong>
-              <small>Befaringer, tilbud og nye nettsidesaker</small>
-            </button>
-            <button data-dashboard-action="booking" type="button">
-              <span>Plan</span>
-              <strong id="dashboardBookingCount">0</strong>
-              <small>Kommende avtaler i kalender</small>
-            </button>
-            <button data-dashboard-action="move" type="button">
-              <span>Må flyttes</span>
-              <strong id="dashboardMoveCount">0</strong>
-              <small>Jobber som må avtales på nytt</small>
-            </button>
-            <button data-dashboard-action="billing" type="button">
-              <span>Må faktureres</span>
-              <strong id="dashboardBillingCount">0</strong>
-              <small>Utførte jobber som venter</small>
-            </button>
-            <button data-dashboard-action="reminders" type="button">
-              <span>Påminnelser</span>
-              <strong id="dashboardReminderCount">0</strong>
-              <small>Ringe tilbake og raske notater</small>
-            </button>
-          </div>
-          <div class="metric-grid compact-service-metrics">
-            <button data-filter-shortcut="red"><strong id="redMetric">0</strong><span>Forfalt service</span></button>
-            <button data-filter-shortcut="yellow"><strong id="yellowMetric">0</strong><span>Aktuell for service</span></button>
-            <button data-filter-shortcut="green"><strong id="greenMetric">0</strong><span>Neste service senere</span></button>
-            <button data-filter-shortcut="booked"><strong id="bookedMetric">0</strong><span>Booket</span></button>
-          </div>
+          <details class="dashboard-extra-actions">
+            <summary>Flere snarveier og servicefiltre</summary>
+            <div class="dashboard-extra-body">
+              <div class="dashboard-focus-grid compact-dashboard-metrics">
+                <button data-dashboard-action="service" type="button">
+                  <span>Serviceoppfølging</span>
+                  <strong id="dashboardServiceCount">0</strong>
+                  <small>Kunder/anlegg som kan kontaktes</small>
+                </button>
+                <button data-dashboard-action="leads" type="button">
+                  <span>Innboks</span>
+                  <strong id="dashboardLeadCount">0</strong>
+                  <small>Befaringer, tilbud og nye nettsidesaker</small>
+                </button>
+                <button data-dashboard-action="booking" type="button">
+                  <span>Plan</span>
+                  <strong id="dashboardBookingCount">0</strong>
+                  <small>Kommende avtaler i kalender</small>
+                </button>
+                <button data-dashboard-action="move" type="button">
+                  <span>Må flyttes</span>
+                  <strong id="dashboardMoveCount">0</strong>
+                  <small>Jobber som må avtales på nytt</small>
+                </button>
+                <button data-dashboard-action="billing" type="button">
+                  <span>Må faktureres</span>
+                  <strong id="dashboardBillingCount">0</strong>
+                  <small>Utførte jobber som venter</small>
+                </button>
+                <button data-dashboard-action="reminders" type="button">
+                  <span>Påminnelser</span>
+                  <strong id="dashboardReminderCount">0</strong>
+                  <small>Ringe tilbake og raske notater</small>
+                </button>
+              </div>
+              <div class="metric-grid compact-service-metrics">
+                <button data-filter-shortcut="red"><strong id="redMetric">0</strong><span>Forfalt service</span></button>
+                <button data-filter-shortcut="yellow"><strong id="yellowMetric">0</strong><span>Aktuell for service</span></button>
+                <button data-filter-shortcut="green"><strong id="greenMetric">0</strong><span>Neste service senere</span></button>
+                <button data-filter-shortcut="booked"><strong id="bookedMetric">0</strong><span>Booket</span></button>
+              </div>
+            </div>
+          </details>
           <div class="dashboard-grid">
             <section class="panel">
               <div class="section-head">
@@ -1248,10 +1253,10 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260705-55"></script>
-    <script src="./supabase-adapter.js?v=20260705-55"></script>
-    <script src="./intake-parser.js?v=20260705-55"></script>
-    <script src="./app-20260705-55.js"></script>
+    <script src="./supabase-config.js?v=20260705-56"></script>
+    <script src="./supabase-adapter.js?v=20260705-56"></script>
+    <script src="./intake-parser.js?v=20260705-56"></script>
+    <script src="./app-20260705-56.js"></script>
   </body>
 </html>
 

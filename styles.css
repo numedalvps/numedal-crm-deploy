@@ -680,6 +680,57 @@ small {
   overflow-wrap: anywhere;
 }
 
+.dashboard-extra-actions {
+  margin-bottom: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.dashboard-extra-actions summary {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  padding: 9px 12px;
+  color: var(--teal);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.dashboard-extra-actions summary::-webkit-details-marker {
+  display: none;
+}
+
+.dashboard-extra-actions summary::after {
+  content: "Vis";
+  margin-left: auto;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: #f8fafc;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.dashboard-extra-actions[open] summary::after {
+  content: "Skjul";
+}
+
+.dashboard-extra-body {
+  display: grid;
+  gap: 12px;
+  padding: 0 12px 12px;
+}
+
+.dashboard-extra-actions:not([open]) .dashboard-extra-body {
+  display: none;
+}
+
+.dashboard-extra-body .dashboard-focus-grid,
+.dashboard-extra-body .metric-grid {
+  margin-bottom: 0;
+}
+
 .reminder-list .reminder-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
