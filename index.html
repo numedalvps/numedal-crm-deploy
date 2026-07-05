@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260705-73" />
+    <link rel="stylesheet" href="./styles.css?v=20260705-74" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -872,13 +872,13 @@
             <label>Antall
               <input id="orderPriceQuantity" type="number" min="0" step="0.5" value="1" />
             </label>
-            <button id="orderAddPriceLine" class="secondary" type="button" title="Legg valgt produkt eller tillegg inn som grunnlag for jobben.">Legg til</button>
+            <button id="orderAddPriceLine" class="secondary" type="button" title="Legg valgt produkt, tillegg eller egen vare inn som grunnlag for jobben.">Legg til valgt/egen</button>
           </div>
           <label id="orderStandardInstallationWrap" class="check-row compact hidden">
             <input id="orderIncludeStandardInstallation" type="checkbox" checked />
             <span>Ta med standard montering automatisk</span>
           </label>
-          <textarea id="orderPriceLines" rows="4" placeholder="Avtalt varmepumpe, standard montering, varmepumpehus, tillegg eller timer. Kan korrigeres ved fullføring."></textarea>
+          <textarea id="orderPriceLines" rows="4" placeholder="Avtalt varmepumpe, standard montering, varmepumpehus, tillegg eller timer. Skriv egen vare med pris, f.eks. Mitsubishi Kaiteki 29 900. Kan korrigeres ved fullføring."></textarea>
           <div id="orderPriceTotal" class="completion-price-total"></div>
         </details>
         <label>Notat<textarea id="orderNoteInput" rows="4" placeholder="Hva kunden ringte om, avtalt arbeid, pumpeinfo, adkomst eller annet."></textarea></label>
@@ -911,14 +911,14 @@
             <label class="lead-status-qty-field">Antall
               <input id="leadStatusProductQuantity" type="number" min="0" step="0.5" value="1" />
             </label>
-            <button id="leadStatusAddProduct" class="secondary" type="button" title="Legg valgt vare eller tillegg inn som avtalt grunnlag.">Legg til</button>
+            <button id="leadStatusAddProduct" class="secondary" type="button" title="Legg valgt vare, tillegg eller egen vare inn som avtalt grunnlag.">Legg til valgt/egen</button>
           </div>
           <label id="leadStatusStandardInstallationWrap" class="check-row compact hidden">
             <input id="leadStatusIncludeStandardInstallation" type="checkbox" checked />
             <span>Ta med standard montering automatisk</span>
           </label>
           <label>Avtalt varegrunnlag
-            <textarea id="leadStatusProduct" rows="4" placeholder="Legg inn faktisk modell, standard montering og tillegg. Kan rettes når jobben fullføres."></textarea>
+            <textarea id="leadStatusProduct" rows="4" placeholder="Legg inn faktisk modell, standard montering og tillegg. Egen vare kan skrives med pris, f.eks. Mitsubishi Kaiteki 29 900. Kan rettes når jobben fullføres."></textarea>
           </label>
           <div id="leadStatusProductTotal" class="completion-price-total"></div>
           <label>Tilbehør / notat utenom listen
@@ -1120,7 +1120,7 @@
             <label>Antall
               <input id="completionPriceQuantity" type="number" min="0" step="0.5" value="1" />
             </label>
-            <button id="completionAddPriceLine" class="secondary" type="button" title="Legg valgt tillegg inn i prisgrunnlaget for jobben.">Legg til</button>
+            <button id="completionAddPriceLine" class="secondary" type="button" title="Legg valgt tillegg eller egen vare inn i prisgrunnlaget for jobben.">Legg til valgt/egen</button>
           </div>
           <textarea id="completionPriceLines" rows="4" placeholder="Tillegg eller prisgrunnlag som bør kontrolleres før faktura."></textarea>
           <div id="completionPriceTotal" class="completion-price-total"></div>
@@ -1196,7 +1196,7 @@
           <label>Antall
             <input id="billingPriceQuantity" type="number" min="0" step="0.5" value="1" />
           </label>
-          <button id="billingAddPriceLine" class="secondary" type="button" title="Legg valgt produkt eller tillegg inn i fakturagrunnlaget.">Legg til</button>
+          <button id="billingAddPriceLine" class="secondary" type="button" title="Legg valgt produkt, tillegg eller egen vare inn i fakturagrunnlaget.">Legg til valgt/egen</button>
         </div>
         <label id="billingStandardInstallationWrap" class="check-row compact hidden">
           <input id="billingIncludeStandardInstallation" type="checkbox" checked />
@@ -1257,10 +1257,10 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260705-73"></script>
-    <script src="./supabase-adapter.js?v=20260705-73"></script>
-    <script src="./intake-parser.js?v=20260705-73"></script>
-    <script src="./app-20260705-73.js"></script>
+    <script src="./supabase-config.js?v=20260705-74"></script>
+    <script src="./supabase-adapter.js?v=20260705-74"></script>
+    <script src="./intake-parser.js?v=20260705-74"></script>
+    <script src="./app-20260705-74.js"></script>
   </body>
 </html>
 
