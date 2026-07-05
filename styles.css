@@ -3546,7 +3546,15 @@ textarea {
   gap: 8px;
 }
 
+.inline-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
 .lead-contact-actions a,
+.inline-action-row button,
 .section-actions button {
   min-height: 34px;
   padding: 7px 10px;
