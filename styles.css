@@ -557,6 +557,22 @@ small {
   color: #92400e;
 }
 
+.contact-log-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: -2px 0 4px;
+}
+
+.contact-log-presets button {
+  min-height: 34px;
+  border: 1px solid #fed7aa;
+  background: #fff7ed;
+  color: #9a3412;
+  padding: 6px 9px;
+  font-size: 12px;
+}
+
 .action-row .reminder-primary {
   border-color: #bfdbfe;
   background: #eff6ff;
@@ -746,6 +762,37 @@ small {
   border-radius: 8px;
   padding: 10px;
   background: #fff;
+}
+
+.reminder-group {
+  display: grid;
+  gap: 7px;
+}
+
+.reminder-group h3 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 4px 0 0;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.reminder-group h3 span {
+  min-width: 24px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 7px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.reminder-group > div {
+  display: grid;
+  gap: 7px;
 }
 
 .reminder-list .reminder-card.overdue {
@@ -3352,6 +3399,120 @@ textarea {
 .customer-work-summary.compact {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   margin-bottom: 0;
+}
+
+.customer-contact-pulse {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 0 0 12px;
+  background: #f8fbff;
+}
+
+.customer-pulse-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+}
+
+.customer-pulse-head h3 {
+  margin: 0 0 3px;
+  font-size: 15px;
+}
+
+.customer-pulse-head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.customer-pulse-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  justify-content: flex-end;
+}
+
+.customer-pulse-actions button {
+  min-height: 34px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.customer-pulse-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.customer-pulse-grid article {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  padding: 10px;
+  background: #fff;
+}
+
+.customer-pulse-grid article > span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.customer-pulse-grid ul {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.customer-pulse-grid li {
+  display: grid;
+  gap: 2px;
+  border-left: 4px solid #93c5fd;
+  padding: 1px 0 1px 8px;
+  min-width: 0;
+}
+
+.customer-pulse-grid li.overdue,
+.customer-pulse-grid li.today {
+  border-left-color: var(--orange);
+}
+
+.customer-pulse-grid li.muted {
+  border-left-color: #cbd5e1;
+}
+
+.customer-pulse-grid time,
+.customer-pulse-grid strong,
+.customer-pulse-grid span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.customer-pulse-grid time {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.customer-pulse-grid strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.customer-pulse-grid li span {
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .tag-row,
@@ -6800,6 +6961,28 @@ label {
 
   .customer-work-summary article {
     min-height: 64px;
+  }
+
+  .customer-pulse-head,
+  .customer-pulse-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .customer-pulse-head {
+    display: grid;
+  }
+
+  .customer-pulse-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-content: stretch;
+  }
+
+  .customer-pulse-actions button,
+  .contact-log-presets button {
+    min-width: 0;
+    width: 100%;
+    white-space: normal;
   }
 
   .lead-next-action {

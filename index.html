@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260705-75" />
+    <link rel="stylesheet" href="./styles.css?v=20260705-76" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -1265,6 +1265,12 @@
         <label>Hva ble sagt eller avtalt?
           <textarea id="contactLogBody" rows="4" placeholder="F.eks. kunden ønsker tilbud på Panasonic HZ25. Avtalte å ringe tilbake i ettermiddag."></textarea>
         </label>
+        <div class="contact-log-presets" aria-label="Raske kontaktvalg">
+          <button type="button" data-contact-log-preset="offer">Send tilbud</button>
+          <button type="button" data-contact-log-preset="call_back">Ring senere</button>
+          <button type="button" data-contact-log-preset="book">Kunde sa ja</button>
+          <button type="button" data-contact-log-preset="info">Info mottatt</button>
+        </div>
         <label>Neste steg
           <select id="contactLogNextAction">
             <option value="none">Bare lagre i historikk</option>
@@ -1305,10 +1311,10 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260705-75"></script>
-    <script src="./supabase-adapter.js?v=20260705-75"></script>
-    <script src="./intake-parser.js?v=20260705-75"></script>
-    <script src="./app-20260705-75.js"></script>
+    <script src="./supabase-config.js?v=20260705-76"></script>
+    <script src="./supabase-adapter.js?v=20260705-76"></script>
+    <script src="./intake-parser.js?v=20260705-76"></script>
+    <script src="./app-20260705-76.js"></script>
   </body>
 </html>
 
