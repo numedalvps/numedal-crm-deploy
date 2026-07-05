@@ -2904,6 +2904,26 @@ textarea {
   align-items: flex-start;
 }
 
+.lead-extra-facts {
+  margin-top: 8px;
+}
+
+.lead-extra-facts > summary {
+  width: fit-content;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 10px;
+  background: #fff;
+  color: var(--teal);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.lead-extra-facts .facts {
+  margin-top: 8px;
+}
+
 .lead-quick-note {
   display: grid;
   gap: 10px;
