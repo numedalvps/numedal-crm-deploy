@@ -4924,6 +4924,45 @@ textarea {
   gap: 8px;
 }
 
+.day-job-details {
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.day-job-details > summary {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 8px 10px;
+  color: var(--teal);
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.day-job-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.day-job-details > summary::after {
+  content: " +";
+  margin-left: auto;
+}
+
+.day-job-details[open] > summary::after {
+  content: " -";
+}
+
+.day-job-details > .day-jobs {
+  border-top: 1px solid var(--line);
+  padding: 8px;
+  max-height: min(520px, 68vh);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
 .job-card {
   border: 1px solid rgba(22, 163, 74, 0.28);
   border-left: 4px solid var(--service);

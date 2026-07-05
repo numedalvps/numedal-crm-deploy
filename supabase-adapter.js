@@ -340,10 +340,10 @@
 
   function bookingFromDb(row) {
     const starts = new Date(row.starts_at);
-    const note = row.note || "";
+    const note = repairTextEncoding(row.note || "");
     const isBefaring = /^\[Befaring\]/i.test(note);
-    const isInsulation = /^\[(Blåseisolering|BlÃ¥seisolering|Blaseisolering)\]/i.test(note);
-    const cleanNote = note.replace(/^\[(Befaring|Blåseisolering|BlÃ¥seisolering|Blaseisolering)\]\s*/i, "").trim();
+    const isInsulation = /^\[(Blåseisolering|Blaseisolering)\]/i.test(note);
+    const cleanNote = note.replace(/^\[(Befaring|Blåseisolering|Blaseisolering)\]\s*/i, "").trim();
     return {
       id: row.id,
       customerId: row.customer_id,
@@ -520,8 +520,8 @@
 
   function orderFromDb(row) {
     const bookingIds = Array.isArray(row.booking_ids) ? row.booking_ids : [];
-    const note = row.note || "";
-    const isInsulation = /^\[(Blåseisolering|BlÃ¥seisolering|Blaseisolering)\]/i.test(note);
+    const note = repairTextEncoding(row.note || "");
+    const isInsulation = /^\[(Blåseisolering|Blaseisolering)\]/i.test(note);
     return {
       id: row.id,
       customerId: row.customer_id,
@@ -543,7 +543,7 @@
       location_id: row.location_id || "",
       installationId: row.installation_id || "",
       installation_id: row.installation_id || "",
-      note: isInsulation ? note.replace(/^\[(Blåseisolering|BlÃ¥seisolering|Blaseisolering)\]\s*/i, "").trim() : note,
+      note: isInsulation ? note.replace(/^\[(Blåseisolering|Blaseisolering)\]\s*/i, "").trim() : note,
       created_at: row.created_at || null,
       updated_at: row.updated_at || null,
     };

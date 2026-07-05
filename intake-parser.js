@@ -20,8 +20,29 @@
     "3630": "Rodberg",
   };
 
+  function repairTextEncoding(value) {
+    let text = String(value || "");
+    if (!/[ÃÂâ]/.test(text)) return text;
+    const replacements = [
+      ["Ã¦", "æ"], ["Ã†", "Æ"],
+      ["Ã¸", "ø"], ["Ã˜", "Ø"],
+      ["Ã¥", "å"], ["Ã…", "Å"],
+      ["Ã©", "é"], ["Ã¨", "è"], ["Ã¼", "ü"],
+      ["Ã¶", "ö"], ["Ã¤", "ä"],
+      ["Â·", "·"], ["Â ", " "], ["Â", ""],
+      ["â€“", "-"], ["â€”", "-"],
+      ["â€˜", "'"], ["â€™", "'"],
+      ["â€œ", '"'], ["â€", '"'],
+      ["â€¦", "..."], ["â€¢", "-"],
+    ];
+    for (const [bad, good] of replacements) {
+      text = text.replaceAll(bad, good);
+    }
+    return text;
+  }
+
   function normalize(value) {
-    return String(value || "")
+    return repairTextEncoding(value)
       .toLowerCase()
       .replaceAll("æ", "ae")
       .replaceAll("ø", "o")
@@ -34,7 +55,7 @@
   }
 
   function cleanLine(value) {
-    return String(value || "")
+    return repairTextEncoding(value)
       .replace(/^[>\-\s]+/, "")
       .replace(/\s+/g, " ")
       .replace(/[.,;:]+$/, "")
@@ -221,7 +242,7 @@
   }
 
   function extractName(text, emails) {
-    const raw = String(text || "");
+    const raw = repairTextEncoding(text);
     const first = labelValue(raw, ["Navn", "Fornavn"]);
     const last = labelValue(raw, ["Etternavn"]);
     if (first && last && !/\d|@/.test(`${first} ${last}`) && !isOwnName(`${first} ${last}`)) {
@@ -229,7 +250,7 @@
     }
     const explicitPatterns = [
       /^\s*(?:navn|kunde)\s*:\s*([^\n\r.]+)/im,
-      /^\s*(?:navn|kunde)\s+([A-ZÆØÅÃ†Ã˜Ã…][^\n\r.]+)/im,
+      /^\s*(?:navn|kunde)\s+([A-ZÆØÅ][^\n\r.]+)/im,
       /henvendelse\s+fra\s+([^\n\r]+)/i,
     ];
     for (const pattern of explicitPatterns) {
