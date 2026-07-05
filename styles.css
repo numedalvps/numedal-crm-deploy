@@ -639,12 +639,12 @@ small {
 
 .start-worklist {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 10px;
 }
 
 .start-worklist button {
-  min-height: 108px;
+  min-height: 76px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 5px 10px;
@@ -668,16 +668,9 @@ small {
 }
 
 .start-worklist strong {
-  grid-row: span 2;
   align-self: center;
-  font-size: 28px;
+  font-size: 26px;
   line-height: 1;
-}
-
-.start-worklist small {
-  color: var(--muted);
-  font-weight: 700;
-  overflow-wrap: anywhere;
 }
 
 .dashboard-extra-actions {
@@ -3271,6 +3264,63 @@ textarea {
   line-height: 1.4;
 }
 
+.customer-work-summary {
+  display: grid;
+  grid-template-columns: 1.25fr repeat(2, minmax(130px, 0.7fr));
+  gap: 8px;
+  margin: 10px 0 12px;
+}
+
+.customer-work-summary article {
+  min-height: 74px;
+  display: grid;
+  gap: 3px;
+  align-content: center;
+  border: 1px solid var(--line);
+  border-left: 5px solid #94a3b8;
+  border-radius: 8px;
+  padding: 10px;
+  background: #fff;
+}
+
+.customer-work-summary article.attention {
+  border-left-color: var(--orange);
+  background: #fff7ed;
+}
+
+.customer-work-summary article.warning {
+  border-left-color: #d97706;
+  background: #fffbeb;
+}
+
+.customer-work-summary article.ok {
+  border-left-color: var(--green);
+}
+
+.customer-work-summary span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.customer-work-summary strong {
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.customer-work-summary small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.customer-work-summary.compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 0;
+}
+
 .tag-row,
 .tag-details > div {
   display: flex;
@@ -3440,12 +3490,17 @@ textarea {
 .customer-more-sections > div {
   display: grid;
   gap: 10px;
-  max-height: min(720px, 70vh);
+  max-height: min(560px, 62vh);
   overflow: auto;
   overscroll-behavior: contain;
   border-top: 1px solid var(--line);
   padding: 10px;
   background: #f8fafc;
+}
+
+.embedded-customer-details > div,
+.customer-warning-group > div {
+  max-height: min(440px, 58vh);
 }
 
 .customer-more-sections .detail-section {
@@ -6601,6 +6656,15 @@ label {
   .lead-stage-box span,
   .lead-next-action p {
     display: none;
+  }
+
+  .customer-work-summary,
+  .customer-work-summary.compact {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .customer-work-summary article {
+    min-height: 64px;
   }
 
   .lead-next-action {
