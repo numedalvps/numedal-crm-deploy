@@ -3064,12 +3064,57 @@ textarea {
   min-height: 40px;
 }
 
+.lead-offer-line-advanced {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #fff;
+}
+
+.lead-offer-line-advanced > summary {
+  cursor: pointer;
+  color: var(--teal);
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.lead-offer-line-advanced-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(92px, 0.35fr) minmax(120px, 0.45fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.lead-offer-line-advanced-grid label {
+  min-width: 0;
+}
+
 .lead-offer-standard-installation {
   margin: 2px 0 0;
 }
 
 .lead-offer-builder textarea {
   min-height: 96px;
+}
+
+.lead-offer-text-details {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #f8fafc;
+}
+
+.lead-offer-text-details > summary {
+  cursor: pointer;
+  color: var(--teal);
+  font-weight: 950;
+}
+
+.lead-offer-text-details textarea {
+  width: 100%;
+  min-height: 180px;
+  margin-top: 10px;
+  background: #fff;
 }
 
 .lead-offer-actions {
@@ -3313,10 +3358,20 @@ textarea {
 }
 
 .customer-more-sections > summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  align-items: center;
   cursor: pointer;
   padding: 12px;
   color: var(--teal);
   font-weight: 900;
+}
+
+.customer-more-sections > summary span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .customer-more-sections > summary::-webkit-details-marker {
@@ -3334,6 +3389,9 @@ textarea {
 .customer-more-sections > div {
   display: grid;
   gap: 10px;
+  max-height: min(720px, 70vh);
+  overflow: auto;
+  overscroll-behavior: contain;
   border-top: 1px solid var(--line);
   padding: 10px;
   background: #f8fafc;
@@ -4154,6 +4212,10 @@ textarea {
 
 .planning-day.drag-over .drop-hint {
   display: block;
+}
+
+.planning-day.drag-over .drop-hint::before {
+  content: "Slipp i tidslinjen for klokkeslett i 15-minutters steg, eller over en jobb for før/etter.";
 }
 
 .drop-hint[data-drop-label]::after {
@@ -6166,6 +6228,7 @@ label {
   .lead-offer-grid,
   .lead-offer-context-grid,
   .lead-offer-line-grid,
+  .lead-offer-line-advanced-grid,
   .lead-offer-builder-head,
   .lead-offer-builder-footer,
   .insulation-offer-customer,
