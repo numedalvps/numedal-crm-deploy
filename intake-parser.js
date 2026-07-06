@@ -345,7 +345,7 @@
       };
     }
 
-    const withZip = raw.match(/([A-ZÆØÅ][A-Za-zÆØÅæøå0-9 .,'-]{2,70}?\s+\d+[A-Za-z]?)\s*,?\s+(\d{4})\s+([A-ZÆØÅ][A-Za-zÆØÅæøå .'-]+)/);
+    const withZip = raw.match(/([A-ZÆØÅ][A-Za-zÆØÅæøå0-9 .,'-]{2,70}?\s+\d+[A-Za-z]?)\s*,?\s+(\d{4})\s*,?\s+([A-ZÆØÅ][A-Za-zÆØÅæøå .'-]+)/);
     if (withZip) {
       return {
         street: field(cleanStreetCandidate(withZip[1]), "high", withZip[0]),
