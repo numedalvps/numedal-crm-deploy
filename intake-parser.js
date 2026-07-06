@@ -429,9 +429,14 @@
       /\bNZ\s*25\s*Etherea\s*Eco(?:\s*6[,.]5\s*kw)?\b/i,
       /\bZ\s*25\s*Gulvmodell\b/i,
       /\bNorgespumpa\s*5[,.][79]\s*Dempet\s*Sort\b/i,
+      /\bNorgespumpa\s*6[,.]4\b/i,
       /\bExtreme\s*Gulv\s*5[,.]5\b/i,
       /\bSignature\s*(?:25|35)\b/i,
       /\bSeiya\s*Nordic\s*(?:25|35)\b/i,
+      /\b(?:Polar|Daisekai)\b/i,
+      /\b(?:Narvik|Trysil)\s*(?:25|35)?\b/i,
+      /\bArctic\s*12\b/i,
+      /\b(?:Kaiteki|Iguru|Kirigamine|Hara|Gussuri)\b/i,
     ];
     for (const pattern of patterns) {
       const match = String(raw || "").match(pattern);
@@ -442,17 +447,20 @@
 
   function inferBrandFromModel(model) {
     const normalized = normalize(model);
-    if (/\b(signature|seiya)\b/.test(normalized)) return "Toshiba";
+    if (/\b(signature|seiya|polar|daisekai)\b/.test(normalized)) return "Toshiba";
     if (/\b(norgespumpa|extreme)\b/.test(normalized)) return "Fujitsu";
-    if (/\b(hz25|hz 25|nz25|nz 25|z25|z 25|flagship|etherea)\b/.test(normalized)) return "Panasonic";
+    if (/\b(hz25|hz 25|nz25|nz 25|nz35|nz 35|cz25|cz 25|z25|z 25|z35|z 35|flagship|etherea)\b/.test(normalized)) return "Panasonic";
+    if (/\b(kaiteki|iguru|kirigamine|hara|gussuri)\b/.test(normalized)) return "Mitsubishi";
+    if (/\b(narvik|trysil)\b/.test(normalized)) return "Wilfa";
+    if (/\barctic\s*12\b/.test(normalized)) return "Cooper Hunter";
     return "";
   }
 
   function extractEquipment(text) {
     const raw = String(text || "");
-    const brandMatch = raw.match(/\b(Panasonic|Fujitsu|Mitsubishi|Toshiba|Daikin|LG|Samsung|Cooper\s*Hunter|Cooper&Hunter|Norgespumpa)\b/i);
+    const brandMatch = raw.match(/\b(Panasonic|Fujitsu|Mitsubishi|Toshiba|Daikin|LG|Samsung|Wilfa|Cooper\s*Hunter|Cooper&Hunter|Norgespumpa)\b/i);
     const knownModel = knownProductModelMatch(raw);
-    const modelMatch = knownModel ? null : raw.match(/\b(HZ\d{2}[A-Z0-9-]*|NZ\d{2}[A-Z0-9-]*|Z\d{2}[A-Z0-9-]*|Kaiteki|Norgespumpa\s*\d(?:[.,]\d)?|Extreme\s*(?:Gulv\s*)?\d(?:[.,]\d)?|Signature\s*(?:25|35)|Seiya\s*Nordic\s*(?:25|35))\b/i);
+    const modelMatch = knownModel ? null : raw.match(/\b(HZ\d{2}[A-Z0-9-]*|NZ\d{2}[A-Z0-9-]*|CZ\d{2}[A-Z0-9-]*|Z\d{2}[A-Z0-9-]*|Kaiteki|Iguru|Kirigamine|Hara|Gussuri|Norgespumpa\s*\d(?:[.,]\d)?|Extreme\s*(?:Gulv\s*)?\d(?:[.,]\d)?|Signature\s*(?:25|35)|Seiya\s*Nordic\s*(?:25|35)|Polar|Daisekai|Narvik\s*(?:25|35)?|Trysil|Arctic\s*12)\b/i);
     const model = knownModel || cleanLine(modelMatch?.[0] || "");
     const inferredBrand = brandMatch?.[0] || inferBrandFromModel(model);
     return [{
