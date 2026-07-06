@@ -10803,17 +10803,25 @@
   }
 
   function websiteSubmissionSpamText(row) {
+    const customer = websiteSubmissionCustomer(row);
+    const request = websiteSubmissionRequest(row);
+    const support = websiteSubmissionSupport(row);
+    const payload = websiteSubmissionPayload(row);
     return [
-      row?.name,
-      row?.customer_name,
-      row?.email,
-      row?.normalized_email,
-      row?.phone,
-      row?.normalized_phone,
+      customer.name,
+      customer.email,
+      customer.phone,
+      customer.address,
       websiteSubmissionName(row),
       websiteSubmissionMessage(row),
-      websiteSubmissionSourcePage(row),
-      JSON.stringify(websiteSubmissionPayload(row)).slice(0, 5000),
+      request.request_type,
+      request.service_reason,
+      support.symptom_slug,
+      support.severity,
+      payload.product_name,
+      payload.product_slug,
+      payload.preferred_product_name,
+      payload.preferred_brand,
     ].filter(Boolean).join(" ");
   }
 
