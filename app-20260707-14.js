@@ -4893,7 +4893,7 @@
   function installationShortLabel(installation, customer) {
     const location = locationForInstallation(installation, customer);
     const product = installationLooksLikeLeadMetadata(installation)
-      ? "Gammel leadtekst"
+      ? "Gammel importtekst"
       : [installation?.brand, installation?.model].filter(Boolean).join(" ");
     return [
       installation?.label || "Anlegg",
@@ -9535,7 +9535,7 @@
         .map((installation) => `<button class="secondary danger" data-archive-metadata-installation="${escapeHtml(installation.id)}" data-installation-customer="${escapeHtml(key)}" type="button" title="Skjul denne posten fra anlegg uten å slette historikk.">${escapeHtml(`Arkiver ${installation.label || "feil-anlegg"}`)}</button>`)
         .join("");
       parts.push(`
-        <p>${metadataGhostCount.toLocaleString("nb-NO")} aktiv post i anleggslisten ser ut som gammel leadtekst, ikke ekte varmepumpe. Den er skjult fra vanlig anleggsvisning og teller ikke som kundens anlegg.</p>
+        <p>${metadataGhostCount.toLocaleString("nb-NO")} aktiv post i anleggslisten ser ut som gammel importtekst, ikke ekte varmepumpe. Den er skjult fra vanlig anleggsvisning og teller ikke som kundens anlegg.</p>
         ${buttons ? `<div class="inline-action-row">${buttons}</div>` : ""}
       `);
     }
@@ -9641,7 +9641,7 @@
       ["quality_home_address", "Mulig hjemmeadresse på hyttekunde", "Tagg tyder hytte/fjell, men anleggsadresse ser ut som bosted."],
       ["quality_multi_pump", "Flere varmepumper", "Bør sjekkes per anlegg slik at riktig servicefrist kommer opp."],
       ["quality_legacy_installation", "Serviceinfo må bli anlegg", "Gammel pumpe-/serviceinfo ligger i kundekortets samlefelt. Opprett eget anlegg før videre booking/service."],
-      ["quality_metadata_installation", "Feil leadtekst som anlegg", "Gamle lead-tags har blitt liggende som anlegg. Arkiver feil-anlegget eller rediger det hvis det faktisk er en varmepumpe."],
+      ["quality_metadata_installation", "Feil importtekst som anlegg", "Gamle importtags har blitt liggende som anlegg. Arkiver feil-anlegget eller rediger det hvis det faktisk er en varmepumpe."],
       ["quality_due", "Usikker servicefrist", "Mangler tydelig neste service eller status."],
     ];
     return definitions.map(([id, label, help]) => {
@@ -12858,7 +12858,7 @@
   function customerNextAction(customer, options = {}) {
     const counts = customerWorkCounters(customer, options);
     if (counts.metadataCleanup) {
-      return { label: "Rydd feil-anlegg", detail: "Gammel leadtekst ligger som anlegg.", tone: "warning" };
+      return { label: "Rydd feil-anlegg", detail: "Gammel importtekst ligger som anlegg.", tone: "warning" };
     }
     if (counts.legacyCleanup) {
       return { label: "Gjør serviceinfo til anlegg", detail: "Flytt gammel pumpeinfo til eget anlegg.", tone: "warning" };
@@ -15200,7 +15200,7 @@
 
   function installationDisplayName(installation) {
     const product = installationLooksLikeLeadMetadata(installation)
-      ? "Gammel leadtekst"
+      ? "Gammel importtekst"
       : [installation.brand, installation.model].filter(Boolean).join(" ");
     return [
       installation.label || "Anlegg",
@@ -15290,11 +15290,11 @@
       </div>
     ` : "";
     const hiddenMetadataText = [
-      activeMetadataCount ? `${activeMetadataCount.toLocaleString("nb-NO")} feil leadtekst som anlegg` : "",
+      activeMetadataCount ? `${activeMetadataCount.toLocaleString("nb-NO")} feil importtekst som anlegg` : "",
       archivedMetadataCount ? `${archivedMetadataCount.toLocaleString("nb-NO")} arkivert` : "",
     ].filter(Boolean).join(" · ");
     const archivedNotice = metadataRows.length
-      ? `<div class="empty-state compact">${escapeHtml(hiddenMetadataText || "Gammel leadtekst")} er skjult fra anleggslisten. Se Sjekk før booking for rydding.</div>`
+      ? `<div class="empty-state compact">${escapeHtml(hiddenMetadataText || "Gammel importtekst")} er skjult fra anleggslisten. Se Sjekk før booking for rydding.</div>`
       : "";
     if (!visible.length) {
       return `<section class="detail-section"><div class="section-title-row"><h3>Varmepumper / anlegg</h3>${actions}</div><div class="empty-state">Ingen varmepumpe/anlegg registrert ennå. Legg inn egen pumpe for hytte, ekstra pumpe hjemme eller ulik servicefrist.</div>${archivedNotice}</section>`;
@@ -15306,7 +15306,7 @@
           ${visible.map((installation) => {
             const metadataGhost = installationLooksLikeLeadMetadata(installation);
             const dueKind = statusKindForDueDate(installation.next_service_due);
-            const title = metadataGhost ? "Gammel leadtekst, ikke varmepumpe/anlegg" : ([installation.brand, installation.model].filter(Boolean).join(" · ") || "Modell ikke tolket");
+            const title = metadataGhost ? "Gammel importtekst, ikke varmepumpe/anlegg" : ([installation.brand, installation.model].filter(Boolean).join(" · ") || "Modell ikke tolket");
             const dates = installationDateFacts(installation);
             const note = String(installation.notes || "").replace(/\n?Kilde:.*$/is, "").trim();
             const location = locationForInstallation(installation, customer);
@@ -15317,7 +15317,7 @@
             const primaryInstallationActions = [];
             const secondaryInstallationActions = [];
             if (isAdmin() && realInstallation && metadataGhost) {
-              primaryInstallationActions.push(`<button class="secondary danger" data-archive-metadata-installation="${escapeHtml(installation.id)}" data-installation-customer="${escapeHtml(key)}" type="button" title="Skjul denne gamle leadteksten fra anleggslisten. Den slettes ikke, men settes inaktiv.">Arkiver feil anlegg</button>`);
+              primaryInstallationActions.push(`<button class="secondary danger" data-archive-metadata-installation="${escapeHtml(installation.id)}" data-installation-customer="${escapeHtml(key)}" type="button" title="Skjul denne gamle importteksten fra anleggslisten. Den slettes ikke, men settes inaktiv.">Arkiver feil anlegg</button>`);
               secondaryInstallationActions.push(`<button class="secondary" data-edit-installation="${escapeHtml(installation.id)}" data-installation-customer="${escapeHtml(key)}" type="button">Rediger anlegg</button>`);
             } else if (isAdmin() && realInstallation) {
               primaryInstallationActions.push(`<button data-book-customer="${escapeHtml(key)}" data-book-type="service" data-book-installation="${escapeHtml(installation.id || "")}" type="button" title="Book service på akkurat dette anlegget. Anlegg, adresse og adkomst legges i notatet.">Book service på dette anlegget</button>`);
@@ -15339,7 +15339,7 @@
                   <span>${escapeHtml(metadataGhost ? "Ikke ekte anlegg" : installation.active === false ? "Inaktiv" : installationServiceStatusLabel(installation))}</span>
                 </div>
                 <p>${escapeHtml(title)}</p>
-                ${metadataGhost ? `<small class="installation-warning">Denne posten ser ut som gamle lead-tags. Arkiver den hvis den ikke er en faktisk varmepumpe.</small>` : ""}
+                ${metadataGhost ? `<small class="installation-warning">Denne posten ser ut som gamle importtags. Arkiver den hvis den ikke er en faktisk varmepumpe.</small>` : ""}
                 ${servicePills.length ? `<div class="installation-meta-pills">${servicePills.map((pill) => `<span>${escapeHtml(pill)}</span>`).join("")}</div>` : ""}
                 ${address ? `<small>${escapeHtml(location.location_name || "Anleggsadresse")}: ${escapeHtml(address)}</small>` : `<small>Anleggsadresse ikke registrert</small>`}
                 ${dates.length ? `<small>${escapeHtml(dates.join(" · "))}</small>` : `<small>Datoer mangler</small>`}
@@ -18487,16 +18487,16 @@
     if (!customer) throw new Error("Fant ikke kunden for anlegget.");
     const installation = installationsForCustomer(customer).find((item) => String(item.id || "") === String(installationId));
     if (!installation) throw new Error("Fant ikke anlegget som skulle arkiveres.");
-    if (!installationLooksLikeLeadMetadata(installation)) throw new Error("Dette ser ikke ut som et automatisk lead-metadata-anlegg.");
+    if (!installationLooksLikeLeadMetadata(installation)) throw new Error("Dette ser ikke ut som et automatisk importtekst-anlegg.");
     const ok = await askForConfirmation({
       title: "Arkiver feil anlegg",
-      message: "Denne posten ser ut som gamle lead-tags, ikke en faktisk varmepumpe. Arkivere den fra anleggslisten? Den slettes ikke.",
+      message: "Denne posten ser ut som gamle importtags, ikke en faktisk varmepumpe. Arkivere den fra anleggslisten? Den slettes ikke.",
       confirmLabel: "Arkiver",
       tone: "danger",
     });
     if (!ok) return;
     const today = isoDate(new Date());
-    const archiveNote = `Arkivert ${formatDate(today)}: gammel leadtekst som ikke er et faktisk anlegg.`;
+    const archiveNote = `Arkivert ${formatDate(today)}: gammel importtekst som ikke er et faktisk anlegg.`;
     await saveInstallationAfterCompletion(customer, installationId, {
       active: false,
       notes: [String(installation.notes || "").trim(), archiveNote].filter(Boolean).join("\n"),
