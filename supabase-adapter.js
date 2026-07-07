@@ -587,8 +587,15 @@
     return { first_name: parts[0], last_name: parts.slice(1).join(" "), company_name: null };
   }
 
+  function leadProductInterestFromNote(note) {
+    const match = String(note || "").match(/Varmepumpe\/produkt\s*:\s*([^\n\r]+)/i);
+    return match?.[1] ? match[1].trim() : "";
+  }
+
   function leadFromCustomerToDb(customer, status, note) {
     const names = customerNameParts(customer);
+    const productInterest = leadProductInterestFromNote(note)
+      || [customer.brand, customer.model_or_note].filter(Boolean).join(" ");
     return {
       existing_customer_id: customer.id || null,
       ...names,
@@ -599,7 +606,7 @@
       city: customer.visit_city || customer.location_tag || null,
       source: customer.source || "CRM",
       source_detail: "CRM lead-fane",
-      product_interest: [customer.brand, customer.model_or_note].filter(Boolean).join(" ") || null,
+      product_interest: productInterest || null,
       preferred_brand: customer.brand || null,
       status: leadStatusToDb(status),
       last_contact_at: new Date().toISOString(),

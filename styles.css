@@ -3446,7 +3446,8 @@ textarea {
   min-width: 0;
 }
 
-.lead-offer-standard-installation {
+.lead-offer-standard-installation,
+.lead-offer-option-prices {
   margin: 2px 0 0;
 }
 
