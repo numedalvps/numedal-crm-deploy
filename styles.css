@@ -3292,9 +3292,31 @@ textarea {
   min-width: 0;
 }
 
+.lead-offer-main-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+}
+
 .lead-offer-section textarea {
   min-height: 108px;
   resize: vertical;
+}
+
+.lead-offer-settings {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #fff;
+}
+
+.lead-offer-settings > summary {
+  cursor: pointer;
+  color: var(--teal);
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.lead-offer-settings .lead-offer-grid {
+  margin-top: 8px;
 }
 
 .lead-offer-text-details textarea {
