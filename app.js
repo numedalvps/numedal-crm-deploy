@@ -15526,11 +15526,18 @@
 
   function openLeadEntriesForCustomer(customer) {
     const key = customerKey(customer);
-    const dbEntries = allLeadEntries().filter((entry) => leadEntryCustomerKey(entry) === key && !["won", "lost"].includes(leadStatusForEntry(entry)));
+    const dbEntries = allLeadEntries().filter((entry) => leadEntryCustomerKey(entry) === key && leadEntryShouldShowOnCustomerCard(entry));
     if (dbEntries.length) return dbEntries;
-    return isLeadCustomer(customer) && !["won", "lost"].includes(leadStatusForCustomer(customer))
-      ? [{ customer, lead: leadForCustomer(customer) }]
-      : [];
+    if (!isLeadCustomer(customer)) return [];
+    const fallbackEntry = { customer, lead: leadForCustomer(customer) };
+    return leadEntryShouldShowOnCustomerCard(fallbackEntry) ? [fallbackEntry] : [];
+  }
+
+  function leadEntryShouldShowOnCustomerCard(entry) {
+    const status = leadStatusForEntry(entry);
+    if (status === "lost") return false;
+    if (status === "won") return !orderForLeadEntry(entry);
+    return true;
   }
 
   function leadTypeLabelForEntry(entry) {
