@@ -1963,6 +1963,22 @@ textarea {
   margin-top: 8px;
 }
 
+.website-hidden-cleanup {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 7px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.website-hidden-cleanup button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 .website-submission-list article {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -2030,6 +2046,15 @@ textarea {
 @media (max-width: 620px) {
   .website-submission-message p {
     max-height: 220px;
+  }
+
+  .website-hidden-cleanup {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .website-hidden-cleanup button {
+    width: 100%;
   }
 }
 
