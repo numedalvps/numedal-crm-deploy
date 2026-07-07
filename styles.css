@@ -3393,6 +3393,18 @@ textarea {
   line-height: 1.35;
 }
 
+.lead-offer-builder-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.lead-offer-builder-actions button {
+  min-height: 40px;
+}
+
 .lead-offer-line-grid {
   min-width: 0;
   display: grid;
@@ -7246,6 +7258,12 @@ label {
   .lead-offer-primary-actions {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+
+  .lead-offer-builder-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-content: stretch;
   }
 
   .lead-offer-more-actions {
