@@ -2105,6 +2105,59 @@ textarea {
   white-space: normal;
 }
 
+.website-import-health {
+  display: grid;
+  gap: 2px;
+  width: fit-content;
+  max-width: 100%;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: #eff6ff;
+}
+
+.website-import-health strong,
+.website-import-health span {
+  display: block;
+  color: #1d4ed8;
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.website-import-health span {
+  font-weight: 800;
+}
+
+.website-import-health.ok {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.website-import-health.ok strong,
+.website-import-health.ok span {
+  color: #166534;
+}
+
+.website-import-health.warning {
+  border-color: #fde68a;
+  background: #fffbeb;
+}
+
+.website-import-health.warning strong,
+.website-import-health.warning span {
+  color: #92400e;
+}
+
+.website-import-health.danger {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.website-import-health.danger strong,
+.website-import-health.danger span {
+  color: #991b1b;
+}
+
 .website-raw-details {
   width: 100%;
 }
