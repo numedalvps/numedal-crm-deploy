@@ -3463,13 +3463,26 @@ textarea {
 }
 
 .lead-offer-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+}
+
+.lead-offer-primary-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  min-width: 0;
 }
 
-.lead-offer-actions button {
+.lead-offer-actions button,
+.lead-offer-actions summary {
   min-height: 36px;
+}
+
+.lead-offer-more-actions {
+  justify-self: end;
 }
 
 .dot {
@@ -7224,6 +7237,23 @@ label {
     grid-template-columns: minmax(0, 1fr);
     align-items: stretch;
     padding: 12px;
+  }
+
+  .lead-offer-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lead-offer-primary-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+
+  .lead-offer-more-actions {
+    justify-self: stretch;
+  }
+
+  .lead-offer-more-actions summary {
+    justify-content: center;
   }
 
   .lead-workflow {
