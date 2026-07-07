@@ -423,28 +423,6 @@
     return "lead";
   }
 
-  function knownProductModelMatch(raw) {
-    const patterns = [
-      /\bHZ\s*25\s*Flagship\s*(?:Hvit|Graphite\s*Grey)?(?:\s*7[,.]5\s*kw)?\b/i,
-      /\bNZ\s*25\s*Etherea\s*Eco(?:\s*6[,.]5\s*kw)?\b/i,
-      /\bZ\s*25\s*Gulvmodell\b/i,
-      /\bNorgespumpa\s*5[,.][79]\s*Dempet\s*Sort\b/i,
-      /\bNorgespumpa\s*6[,.]4\b/i,
-      /\bExtreme\s*Gulv\s*5[,.]5\b/i,
-      /\bSignature\s*(?:25|35)\b/i,
-      /\bSeiya\s*Nordic\s*(?:25|35)\b/i,
-      /\b(?:Polar|Daisekai)\b/i,
-      /\b(?:Narvik|Trysil)\s*(?:25|35)?\b/i,
-      /\bArctic\s*12\b/i,
-      /\b(?:Kaiteki|Iguru|Kirigamine|Hara|Gussuri)\b/i,
-    ];
-    for (const pattern of patterns) {
-      const match = String(raw || "").match(pattern);
-      if (match?.[0]) return cleanLine(match[0]);
-    }
-    return "";
-  }
-
   function inferBrandFromModel(model) {
     const normalized = normalize(model);
     if (/\b(signature|seiya|polar|daisekai)\b/.test(normalized)) return "Toshiba";
@@ -456,16 +434,86 @@
     return "";
   }
 
+  function normalizeKnownProductModel(matchText) {
+    const text = cleanLine(matchText);
+    const normalized = normalize(text);
+    if (/^hz\s*25/.test(normalized)) return `HZ25${(text.match(/\b(XKE|ZKE|YKE)\b/i)?.[1] || "").toUpperCase()}`;
+    if (/^nz\s*25/.test(normalized)) return /etherea/.test(normalized) ? "NZ25 Etherea Eco" : `NZ25${(text.match(/\b(YKE)\b/i)?.[1] || "").toUpperCase()}`;
+    if (/^nz\s*35/.test(normalized)) return `NZ35${(text.match(/\b(YKE)\b/i)?.[1] || "").toUpperCase()}`;
+    if (/^cz\s*25/.test(normalized)) return `CZ25${(text.match(/\b(TKE)\b/i)?.[1] || "").toUpperCase()}`;
+    if (/^z\s*25/.test(normalized)) return "Z25 Gulvmodell";
+    if (/^z\s*35/.test(normalized)) return "Z35 Gulvmodell";
+    return text;
+  }
+
+  function knownProductModelMatches(raw) {
+    const patterns = [
+      /\bHZ\s*25\s*Flagship\s*(?:Hvit|Graphite\s*Grey)?(?:\s*7[,.]5\s*kw)?\b/gi,
+      /\bHZ\s*25\s*(?:XKE|ZKE|YKE)?\b/gi,
+      /\bNZ\s*(?:25|35)\s*(?:YKE)?\b/gi,
+      /\bNZ\s*25\s*Etherea\s*Eco(?:\s*6[,.]5\s*kw)?\b/gi,
+      /\bCZ\s*25\s*(?:TKE)?\b/gi,
+      /\bZ\s*(?:25|35)\s*(?:Gulvmodell)?\b/gi,
+      /\bNorgespumpa\s*5[,.][79]\s*Dempet\s*Sort\b/gi,
+      /\bNorgespumpa\s*6[,.]4\b/gi,
+      /\bExtreme\s*Gulv\s*5[,.]5\b/gi,
+      /\bSignature\s*(?:25|35)\b/gi,
+      /\bSeiya\s*Nordic\s*(?:25|35)\b/gi,
+      /\b(?:Polar|Daisekai)\b/gi,
+      /\b(?:Narvik|Trysil)\s*(?:25|35)?\b/gi,
+      /\bArctic\s*12\b/gi,
+      /\b(?:Kaiteki|Iguru|Kirigamine|Hara|Gussuri)\b/gi,
+    ];
+    const found = [];
+    for (const pattern of patterns) {
+      pattern.lastIndex = 0;
+      let match;
+      while ((match = pattern.exec(String(raw || "")))) {
+        const model = normalizeKnownProductModel(match[0]);
+        if (!model) continue;
+        found.push({
+          model,
+          brand: inferBrandFromModel(model),
+          evidence: cleanLine(match[0]),
+          index: match.index,
+          end: match.index + match[0].length,
+        });
+      }
+    }
+    const selected = [];
+    const usedKeys = new Set();
+    for (const item of found.sort((a, b) => a.index - b.index || b.evidence.length - a.evidence.length)) {
+      const overlaps = selected.some((existing) => item.index < existing.end && item.end > existing.index);
+      const key = normalize(`${item.brand} ${item.model}`);
+      if (overlaps || usedKeys.has(key)) continue;
+      selected.push(item);
+      usedKeys.add(key);
+    }
+    return selected;
+  }
+
+  function knownProductModelMatch(raw) {
+    return knownProductModelMatches(raw)[0]?.model || "";
+  }
+
   function extractEquipment(text) {
     const raw = String(text || "");
+    const knownModels = knownProductModelMatches(raw);
+    if (knownModels.length) {
+      return knownModels.map((item) => ({
+        brand: field(item.brand, item.brand ? "medium" : "low", item.evidence, item.index),
+        model: field(item.model, "medium", item.evidence, item.index),
+        serialNumber: field("", "low", null),
+        errorCode: field("", "low", null),
+      }));
+    }
     const brandMatch = raw.match(/\b(Panasonic|Fujitsu|Mitsubishi|Toshiba|Daikin|LG|Samsung|Wilfa|Cooper\s*Hunter|Cooper&Hunter|Norgespumpa)\b/i);
-    const knownModel = knownProductModelMatch(raw);
-    const modelMatch = knownModel ? null : raw.match(/\b(HZ\d{2}[A-Z0-9-]*|NZ\d{2}[A-Z0-9-]*|CZ\d{2}[A-Z0-9-]*|Z\d{2}[A-Z0-9-]*|Kaiteki|Iguru|Kirigamine|Hara|Gussuri|Norgespumpa\s*\d(?:[.,]\d)?|Extreme\s*(?:Gulv\s*)?\d(?:[.,]\d)?|Signature\s*(?:25|35)|Seiya\s*Nordic\s*(?:25|35)|Polar|Daisekai|Narvik\s*(?:25|35)?|Trysil|Arctic\s*12)\b/i);
-    const model = knownModel || cleanLine(modelMatch?.[0] || "");
-    const inferredBrand = brandMatch?.[0] || inferBrandFromModel(model);
+    const modelMatch = raw.match(/\b(HZ\d{2}[A-Z0-9-]*|NZ\d{2}[A-Z0-9-]*|CZ\d{2}[A-Z0-9-]*|Z\d{2}[A-Z0-9-]*|Kaiteki|Iguru|Kirigamine|Hara|Gussuri|Norgespumpa\s*\d(?:[.,]\d)?|Extreme\s*(?:Gulv\s*)?\d(?:[.,]\d)?|Signature\s*(?:25|35)|Seiya\s*Nordic\s*(?:25|35)|Polar|Daisekai|Narvik\s*(?:25|35)?|Trysil|Arctic\s*12)\b/i);
+    const model = cleanLine(modelMatch?.[0] || "");
+    const inferredBrand = inferBrandFromModel(model) || brandMatch?.[0] || "";
     return [{
       brand: field(cleanLine(inferredBrand), inferredBrand ? "medium" : "low", brandMatch?.[0] || model || null),
-      model: field(model, model ? "medium" : "low", knownModel || modelMatch?.[0] || null),
+      model: field(model, model ? "medium" : "low", modelMatch?.[0] || null),
       serialNumber: field("", "low", null),
       errorCode: field("", "low", null),
     }];

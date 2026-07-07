@@ -4000,12 +4000,14 @@ textarea {
 }
 
 .customer-order-list,
+.customer-offer-list,
 .order-booking-list {
   display: grid;
   gap: 8px;
 }
 
 .customer-order-list article,
+.customer-offer-list article,
 .order-booking-list article {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -4017,7 +4019,31 @@ textarea {
   background: #f8fafc;
 }
 
+.customer-offer-summary .section-title-row > span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.customer-offer-list article {
+  grid-template-columns: 1fr;
+  border-left: 4px solid #0f766e;
+}
+
+.customer-offer-list article.draft {
+  border-left-color: #f59e0b;
+}
+
+.customer-offer-list time {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .customer-order-list strong,
+.customer-offer-list strong,
 .order-booking-list strong {
   display: flex;
   flex-wrap: wrap;
@@ -4026,6 +4052,7 @@ textarea {
 }
 
 .customer-order-list span,
+.customer-offer-list span,
 .order-booking-list span {
   display: block;
   margin-top: 3px;
@@ -4033,7 +4060,8 @@ textarea {
   font-size: 13px;
 }
 
-.customer-order-list small {
+.customer-order-list small,
+.customer-offer-list small {
   display: block;
   margin-top: 3px;
   color: var(--muted);
