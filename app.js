@@ -13543,6 +13543,31 @@
     return summary ? `Vedlegg: ${summary}` : "";
   }
 
+  function offerAttachmentsConfirmed(requested = [], returned = []) {
+    const returnedKeys = new Set((returned || []).flatMap((attachment) => [
+      String(attachment?.id || "").toLowerCase(),
+      String(attachment?.filename || "").toLowerCase(),
+      String(attachment?.title || "").toLowerCase(),
+    ].filter(Boolean)));
+    return (requested || []).every((attachment) => {
+      const keys = [
+        String(attachment?.id || "").toLowerCase(),
+        String(attachment?.filename || "").toLowerCase(),
+        String(attachment?.title || "").toLowerCase(),
+      ].filter(Boolean);
+      return keys.some((key) => returnedKeys.has(key));
+    });
+  }
+
+  async function ensureOfferAttachmentSendSupport(payload) {
+    const attachments = payload?.attachments || [];
+    if (!attachments.length || !store.sendOfferEmail) return;
+    const dryRun = await store.sendOfferEmail({ ...payload, dry_run: true });
+    if (!dryRun?.ok || !offerAttachmentsConfirmed(attachments, dryRun.attachments || [])) {
+      throw new Error("CRM-serveren er ikke oppdatert for PDF-vedlegg ennå. Bruk e-postutkast/kopier tilbud, eller deploy send-offer-email først.");
+    }
+  }
+
   function offerTemplateUsesPriceList(templateId) {
     return ["heatpump_standard_offer", "general_price_offer", "fujitsu_floor", "norgespumpa_black"].includes(String(templateId || ""));
   }
@@ -14630,6 +14655,10 @@
   async function sendLeadOfferEmail(target) {
     if (!store.sendOfferEmail) throw new Error("Tilbudsutsending krever oppdatert serverfunksjon.");
     const payload = prepareLeadOfferPayload(target);
+    if ((payload.attachments || []).length) {
+      setSyncStatus("Kontrollerer at CRM-serveren kan sende PDF-vedlegg...", "");
+      await ensureOfferAttachmentSendSupport(payload);
+    }
     const ok = await askForConfirmation({
       title: "Send tilbud",
       message: [
