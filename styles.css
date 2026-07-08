@@ -2158,6 +2158,29 @@ textarea {
   color: #991b1b;
 }
 
+.website-attachment-alert {
+  display: grid;
+  gap: 3px;
+  width: fit-content;
+  max-width: 100%;
+  border: 1px solid #fbbf24;
+  border-radius: 8px;
+  padding: 7px 9px;
+  background: #fffbeb;
+}
+
+.website-attachment-alert strong,
+.website-attachment-alert span {
+  display: block;
+  color: #92400e;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.website-attachment-alert span {
+  font-weight: 800;
+}
+
 .website-raw-details {
   width: 100%;
 }
