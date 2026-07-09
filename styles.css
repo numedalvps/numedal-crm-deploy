@@ -441,6 +441,13 @@ small {
 }
 
 .inline-more-actions .danger {
+  border-color: #fecaca;
+  background: #fff;
+  color: var(--red);
+}
+
+.inline-more-actions .danger:hover {
+  background: #fef2f2;
   color: var(--red);
 }
 
@@ -3427,6 +3434,22 @@ textarea {
 .lead-offer-documents a {
   white-space: normal;
   overflow-wrap: anywhere;
+}
+
+.offer-product-documents {
+  flex: 1 1 100%;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.offer-product-documents strong {
+  color: var(--ink);
+}
+
+.offer-product-documents a {
+  display: inline-block;
+  margin-right: 8px;
 }
 
 .lead-offer-context {
