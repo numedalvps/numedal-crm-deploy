@@ -14889,14 +14889,7 @@
   function renderOfferDocumentHint(target) {
     const fields = leadOfferFields(target);
     if (!fields.productDocuments) return;
-    const offerText = [
-      fields.lines?.value,
-      fields.lineLabel?.value,
-      fields.linePreset?.selectedOptions?.[0]?.textContent,
-      fields.contextSubject?.value,
-      fields.text?.value,
-    ].filter(Boolean).join("\n");
-    const attachments = selectedOfferAttachments(false, offerText);
+    const attachments = selectedOfferAttachments(false, offerAttachmentSourceText(target, fields.text?.value || ""));
     if (!attachments.length) {
       fields.productDocuments.textContent = "Produktdatablad legges ved automatisk når valgt pumpe matcher listen.";
       return;
@@ -14905,6 +14898,18 @@
       "<strong>Produktdatablad som følger tilbudet:</strong>",
       attachments.map((attachment) => `<a href="${escapeHtml(attachment.url)}" target="_blank" rel="noreferrer" download>${escapeHtml(attachment.title || attachment.filename)}</a>`).join(" "),
     ].join(" ");
+  }
+
+  function offerAttachmentSourceText(target, text = "") {
+    const fields = leadOfferFields(target);
+    return [
+      text,
+      fields.lines?.value,
+      fields.lineLabel?.value,
+      fields.linePreset?.selectedOptions?.[0]?.textContent,
+      fields.contextSubject?.value,
+      fields.linePreset?.value,
+    ].filter(Boolean).join("\n");
   }
 
   function normalizeOfferLinesForCompare(text) {
@@ -15100,7 +15105,7 @@
     const subject = String(fields.subject?.value || "").trim();
     const textDraft = applyOfferBuilderLinesToText(target, String(fields.text?.value || "").trim());
     const includePriceList = Boolean(fields.priceList?.checked);
-    const offerAttachments = selectedOfferAttachments(includePriceList, textDraft);
+    const offerAttachments = selectedOfferAttachments(includePriceList, offerAttachmentSourceText(target, textDraft));
     const text = options.includeDocumentLinks
       ? applyOfferDocumentSelection(textDraft, includePriceList, offerAttachments)
       : offerTextWithoutDocumentLinks(textDraft);
