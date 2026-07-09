@@ -15376,16 +15376,29 @@
 
   async function sendLeadOfferEmail(target) {
     if (!store.sendOfferEmail) throw new Error("Tilbudsutsending krever oppdatert serverfunksjon.");
-    const payload = prepareLeadOfferPayload(target);
+    let payload = prepareLeadOfferPayload(target);
+    let attachmentFallbackNotice = "";
     if ((payload.attachments || []).length) {
       setSyncStatus("Kontrollerer at CRM-serveren kan sende PDF-vedlegg...", "");
-      await ensureOfferAttachmentSendSupport(payload);
+      try {
+        await ensureOfferAttachmentSendSupport(payload);
+      } catch (error) {
+        payload = {
+          ...prepareLeadOfferPayload(target, { includeDocumentLinks: true }),
+          attachments: [],
+          include_price_list: false,
+          price_list_url: "",
+        };
+        attachmentFallbackNotice = "PDF-er sendes som lenker i e-posten fordi serveren ikke bekreftet vedlegg ennå.";
+        setSyncStatus(attachmentFallbackNotice, "");
+      }
     }
     const ok = await askForConfirmation({
       title: "Send tilbud",
       message: [
         `Sende tilbud fra ${payload.from} til ${payload.to}?`,
         offerAttachmentBodyLine(payload.attachments || []),
+        attachmentFallbackNotice,
       ].filter(Boolean).join("\n"),
       confirmLabel: "Send tilbud",
     });
@@ -15427,6 +15440,7 @@
         `Tilbud sendt fra CRM til ${payload.to}.`,
         payload.email_reference ? `CRM-ref ${payload.email_reference}.` : "",
         offerAttachmentSummary(payload.attachments || []) ? `Vedlegg: ${offerAttachmentSummary(payload.attachments || [])}.` : "",
+        attachmentFallbackNotice ? "PDF-lenker ligger i e-postteksten." : "",
         result.message_id ? `Meldings-ID ${result.message_id}.` : "",
         "Saken ligger under Tilbud sendt / venter svar.",
       ].filter(Boolean).join(" "),
