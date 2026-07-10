@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260710-04" />
+    <link rel="stylesheet" href="./styles.css?v=20260710-05" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -74,10 +74,9 @@
               <button id="newActionButton" type="button" aria-expanded="false">+ Ny</button>
               <div id="newActionMenu" class="new-action-menu hidden">
                 <button data-new-action="reminder" type="button">Påminnelse</button>
-                <button data-new-action="customer" type="button">Ny kunde</button>
-                <button data-new-action="booking" type="button">Book tid</button>
-                <button data-new-action="service" type="button">Book service</button>
-                <button data-new-action="install" type="button">Book installasjon</button>
+                <button data-new-action="customer" type="button">Nytt kundekort</button>
+                <button data-new-action="booking" type="button">Book jobb i kalender</button>
+                <button data-new-action="unscheduled-job" type="button">Ny jobb uten dato</button>
                 <button data-new-action="paste" type="button">Lim inn melding</button>
               </div>
             </div>
@@ -185,12 +184,10 @@
               <div id="dataQualityList" class="quality-list"></div>
             </section>
           </div>
-          <section class="panel recent-panel">
-            <div class="section-head">
-              <h2>Sist endret</h2>
-            </div>
+          <details class="panel recent-panel">
+            <summary>Sist endret</summary>
             <div id="recentActivity" class="recent-list"></div>
-          </section>
+          </details>
         </section>
 
         <section id="customersView" class="view hidden">
@@ -264,21 +261,23 @@
               <div class="section-head">
                 <div>
                   <h2>Innboks</h2>
-                  <p title="Her ligger nettskjema, e-post og saker som må følges opp.">Velg hva som skal følges opp.</p>
+                  <p title="Her ligger nettskjema, e-post og saker som må følges opp.">Velg neste oppgave. Kilden ligger under Flere filtre.</p>
                 </div>
               </div>
               <div class="lead-metrics inbox-filter-cards" role="tablist" aria-label="Innboksfilter">
-                <button class="active" data-lead-inbox-tab="new" type="button" title="Samlevisning av alt nytt som bør avklares først: nettskjema, e-postutkast og saker som må kontaktes."><strong id="leadFollowupMetric">0</strong><span>Alt nytt</span></button>
-                <button data-lead-inbox-tab="email" type="button" title="Meldinger som er tolket fra e-post eller CRM-innboks."><strong id="leadEmailMetric">0</strong><span>E-post</span></button>
-                <button data-lead-inbox-tab="website" type="button" title="Bare skjema fra nettsiden. Ubehandlede nettskjema kan også vises i Alt nytt."><strong id="leadWebsiteMetric">0</strong><span>Fra nettside</span></button>
-                <button data-lead-inbox-tab="followup" type="button" title="Saker der neste steg er tilbud, purring eller svar fra kunde."><strong id="leadNeedsOfferMetric">0</strong><span>Tilbud / oppfølging</span></button>
+                <button class="active" data-lead-inbox-tab="new" type="button" title="Nye meldinger og saker der kunden må kontaktes eller retningen må avklares."><strong id="leadFollowupMetric">0</strong><span>Nytt / må kontaktes</span></button>
+                <button data-lead-inbox-tab="followup" type="button" title="Saker der neste steg er å skrive tilbud, vente på svar eller følge opp kunden."><strong id="leadNeedsOfferMetric">0</strong><span>Tilbud / svar</span></button>
                 <button data-lead-inbox-tab="archive" type="button" title="Ferdig koblede og tapte saker. Arkiv er ikke en aktiv arbeidsliste."><strong id="leadLostMetric">0</strong><span>Arkiv</span></button>
               </div>
               <div id="websiteSubmissionInbox" class="website-submission-inbox hidden"></div>
               <div class="search-row">
                 <input id="leadSearch" type="search" placeholder="Søk navn, telefon, sted eller produkt" />
                 <details class="lead-filter-details">
-                  <summary title="Vis statusfilter for innboksen.">Flere filtre</summary>
+                  <summary title="Filtrer på kilde eller en bestemt status.">Flere filtre</summary>
+                  <div class="lead-source-filters" aria-label="Filtrer etter kilde">
+                    <button data-lead-inbox-tab="email" type="button" title="Vis bare saker fra e-post eller CRM-innboks."><strong id="leadEmailMetric">0</strong> E-post</button>
+                    <button data-lead-inbox-tab="website" type="button" title="Vis bare meldinger fra nettsiden."><strong id="leadWebsiteMetric">0</strong> Nettside</button>
+                  </div>
                   <select id="leadStatusFilter" aria-label="Statusfilter for innboks">
                     <option value="inbox_tab">Valgt innboksfane</option>
                     <option value="followup">Må kontaktes</option>
@@ -307,38 +306,35 @@
                   <p>Arbeid som er avtalt eller solgt, uavhengig av om det er planlagt i kalenderen ennå.</p>
                 </div>
               </div>
-              <div class="order-metrics">
+              <div class="order-metrics" role="tablist" aria-label="Jobbfilter">
                 <button data-order-filter-shortcut="active" type="button" title="Jobber som fortsatt skal planlegges, utføres eller faktureres."><strong id="orderActiveMetric">0</strong><span>Aktive</span></button>
                 <button data-order-filter-shortcut="unscheduled" type="button"><strong id="orderUnscheduledMetric">0</strong><span>Ikke planlagt</span></button>
                 <button data-order-filter-shortcut="scheduled" type="button"><strong id="orderScheduledMetric">0</strong><span>Planlagt</span></button>
                 <button data-order-filter-shortcut="billing_ready" type="button"><strong id="orderBillingMetric">0</strong><span>Må faktureres</span></button>
                 <button data-order-filter-shortcut="completed" type="button"><strong id="orderCompletedMetric">0</strong><span>Utført</span></button>
-              </div>
-              <div class="job-tabs" role="tablist" aria-label="Jobbfilter">
-                <button class="active" data-order-filter-shortcut="active" type="button">Aktive</button>
-                <button data-order-filter-shortcut="unscheduled" type="button">Ikke planlagt</button>
-                <button data-order-filter-shortcut="scheduled" type="button">Planlagt</button>
-                <button data-order-filter-shortcut="billing_ready" type="button">Må faktureres</button>
-                <button data-order-filter-shortcut="all" type="button">Alle</button>
+                <button data-order-filter-shortcut="all" type="button"><strong id="orderAllMetric">0</strong><span>Alle</span></button>
               </div>
               <div class="search-row">
                 <input id="orderSearch" type="search" placeholder="Søk jobb, kunde, telefon, sted" />
-                <select id="orderStatusFilter">
-                  <option value="active">Aktive jobber</option>
-                  <option value="unscheduled">Ikke planlagt</option>
-                  <option value="scheduled">Planlagt</option>
-                  <option value="completed">Utført</option>
-                  <option value="billing_ready">Må faktureres</option>
-                  <option value="billing_draft">Utkast i eAccounting</option>
-                  <option value="all">Alle jobber</option>
-                  <option value="invoiced">Fakturert</option>
-                  <option value="missing_job">Mangler jobbkobling</option>
-                </select>
+                <details class="order-filter-details">
+                  <summary title="Vis sjeldnere jobbfiltre.">Flere filtre</summary>
+                  <select id="orderStatusFilter" aria-label="Flere jobbfiltre">
+                    <option value="active">Aktive jobber</option>
+                    <option value="unscheduled">Ikke planlagt</option>
+                    <option value="scheduled">Planlagt</option>
+                    <option value="completed">Utført</option>
+                    <option value="billing_ready">Må faktureres</option>
+                    <option value="billing_draft">Utkast i eAccounting</option>
+                    <option value="all">Alle jobber</option>
+                    <option value="invoiced">Fakturert</option>
+                    <option value="missing_job">Eldre jobb må oppdateres</option>
+                  </select>
+                </details>
               </div>
               <details class="order-admin-tools">
                 <summary>Flere valg</summary>
                 <div class="order-bulk-actions">
-                  <button data-order-filter-shortcut="missing_job" class="secondary" type="button" title="Teknisk kontroll av aktive jobber som mangler intern jobbkobling."><strong id="orderMissingJobMetric">0</strong> Mangler intern jobbkobling</button>
+                  <button data-order-filter-shortcut="missing_job" class="secondary" type="button" title="Eldre jobber som må oppdateres før bilder, fullføring eller fakturering."><strong id="orderMissingJobMetric">0</strong> Eldre jobber må oppdateres</button>
                   <label><input id="orderSelectAll" type="checkbox" /> Velg viste</label>
                   <button id="deleteSelectedOrdersButton" class="secondary" type="button" disabled>Slett valgte</button>
                   <span id="orderSelectionSummary">Ingen valgt</span>
@@ -754,7 +750,7 @@
     <dialog id="customerDialog" class="modal">
       <form id="customerForm" method="dialog">
         <div class="modal-head">
-          <h2 id="customerDialogTitle">Kunde</h2>
+          <h2 id="customerDialogTitle">Kundekort</h2>
           <button id="closeCustomerDialog" type="button" aria-label="Lukk">×</button>
         </div>
         <div id="customerDialogMessage" class="dialog-message hidden"></div>
@@ -762,34 +758,51 @@
           <label>Navn<input id="formName" required /></label>
           <label>Telefon<input id="formPhone" /></label>
           <label>E-post<input id="formEmail" /></label>
-          <label>Org.nr / referanse<input id="formOrg" /></label>
           <label>Adresse<input id="formStreet" /></label>
           <label>Postnr<input id="formZip" /></label>
           <label>Sted<input id="formCity" /></label>
           <input id="formTag" type="hidden" />
-          <label class="check-row form-wide"><input id="formDifferentPostal" type="checkbox" /> Annen post-/bostedsadresse enn anleggsadresse</label>
-          <label class="postal-extra hidden">Postadresse<input id="formPostalStreet" /></label>
-          <label class="postal-extra hidden">Postnr. post<input id="formPostalZip" /></label>
-          <label class="postal-extra hidden">Poststed<input id="formPostalCity" /></label>
-          <label>GPS-koordinater<input id="formGps" placeholder="Valgfritt, f.eks. hyttekoordinater" /></label>
-          <label>Google Maps-lenke<input id="formGoogleMaps" /></label>
-          <label>Merke<input id="formBrand" /></label>
-          <label>Modell<input id="formModel" /></label>
-          <label>Installert<input id="formInstallDate" type="date" /></label>
-          <label>Siste service<input id="formLastService" type="date" /></label>
-          <label>Neste service<input id="formNextService" type="date" /></label>
-          <label>Adkomst/nøkkelboks<input id="formAccess" /></label>
           <label class="check-row"><input id="formIsCustomer" type="checkbox" /> Er kunde</label>
           <label class="check-row"><input id="formPaysCash" type="checkbox" /> Betaling på stedet</label>
-          <label class="check-row"><input id="formInsulation" type="checkbox" /> Blåseisolering / Isobygg</label>
         </div>
-        <label>Servicehistorikk<textarea id="formServiceDates" rows="2" placeholder="2024-05-10; 2026-05-10"></textarea></label>
-        <label>Tags<textarea id="formTags" rows="2" placeholder="Prioritert servicekunde; Vegglifjell nord; Vegglifjell sør; Blåseisolering"></textarea></label>
-        <div id="formTagCatalog" class="tag-catalog"></div>
-        <label>Notat<textarea id="formNote" rows="4"></textarea></label>
+        <p class="form-hint">Adresse her er kundens hovedadresse. Hytte eller annet monteringssted registreres på varmepumpen/anlegget.</p>
+        <details class="form-advanced-details">
+          <summary>Flere kundeopplysninger</summary>
+          <div class="form-advanced-body">
+            <div class="form-grid">
+              <label>Org.nr / referanse<input id="formOrg" /></label>
+              <label>Adkomst/nøkkelboks<input id="formAccess" /></label>
+              <label class="check-row form-wide"><input id="formDifferentPostal" type="checkbox" /> Annen post-/bostedsadresse</label>
+              <label class="postal-extra hidden">Postadresse<input id="formPostalStreet" /></label>
+              <label class="postal-extra hidden">Postnr. post<input id="formPostalZip" /></label>
+              <label class="postal-extra hidden">Poststed<input id="formPostalCity" /></label>
+              <label>GPS-koordinater<input id="formGps" placeholder="Valgfritt, f.eks. hyttekoordinater" /></label>
+              <label>Google Maps-lenke<input id="formGoogleMaps" /></label>
+              <label class="check-row"><input id="formInsulation" type="checkbox" /> Blåseisolering / Isobygg</label>
+            </div>
+            <label>Tags<textarea id="formTags" rows="2" placeholder="Prioritert servicekunde; Vegglifjell nord; Vegglifjell sør; Blåseisolering"></textarea></label>
+            <div id="formTagCatalog" class="tag-catalog"></div>
+            <label>Notat<textarea id="formNote" rows="3"></textarea></label>
+          </div>
+        </details>
+        <details class="form-advanced-details legacy-customer-fields">
+          <summary>Eldre serviceinfo på kundekortet</summary>
+          <div class="form-advanced-body">
+            <p class="form-hint">Bruk normalt «Lagre + legg til anlegg». Feltene her beholdes for eldre importerte kundekort.</p>
+            <div class="form-grid">
+              <label>Merke<input id="formBrand" /></label>
+              <label>Modell<input id="formModel" /></label>
+              <label>Installert<input id="formInstallDate" type="date" /></label>
+              <label>Siste service<input id="formLastService" type="date" /></label>
+              <label>Neste service<input id="formNextService" type="date" /></label>
+            </div>
+            <label>Servicehistorikk<textarea id="formServiceDates" rows="2" placeholder="2024-05-10; 2026-05-10"></textarea></label>
+          </div>
+        </details>
         <div class="modal-actions">
           <button class="secondary" id="deleteCustomerButton" type="button">Sett inaktiv</button>
-          <button type="submit">Lagre</button>
+          <button class="secondary" id="saveCustomerAndInstallationButton" type="submit">Lagre + legg til anlegg</button>
+          <button type="submit">Lagre kunde</button>
         </div>
       </form>
     </dialog>
@@ -1312,10 +1325,10 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260710-04"></script>
-    <script src="./supabase-adapter.js?v=20260710-04"></script>
-    <script src="./intake-parser.js?v=20260710-04"></script>
-    <script src="./app-20260710-04.js"></script>
+    <script src="./supabase-config.js?v=20260710-05"></script>
+    <script src="./supabase-adapter.js?v=20260710-05"></script>
+    <script src="./intake-parser.js?v=20260710-05"></script>
+    <script src="./app-20260710-05.js"></script>
   </body>
 </html>
 
