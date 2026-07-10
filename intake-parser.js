@@ -78,6 +78,7 @@
     const text = repairTextEncoding(value).replace(/\r\n?/g, "\n").trim();
     if (!text) return "";
     const quoteMarkers = [
+      /^\s*On\s(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b.*$/im,
       /^\s*(?:On\s.{1,300}\swrote:|Den\s.{1,300}\sskrev(?:\s.{0,120})?:?)\s*$/im,
       /^\s*-{2,}\s*(?:Original Message|Opprinnelig melding)\s*-{2,}\s*$/im,
       /^\s*_{5,}\s*$/m,
@@ -91,7 +92,7 @@
   }
 
   function shouldAnalyzeLatestEmailMessage(raw) {
-    if (!/opprinnelig melding|original message|^\s*>|^\s*(?:on\s.+wrote:|den\s.+skrev)/im.test(raw)) return false;
+    if (!/opprinnelig melding|original message|^\s*>|^\s*on\s(?:mon|tue|wed|thu|fri|sat|sun)\b|^\s*(?:on\s.+wrote:|den\s.+skrev)/im.test(raw)) return false;
     const fromLine = String(raw || "").match(/^\s*fra\s*:\s*([^\n\r]+)/im)?.[1] || "";
     const fromEmail = fromLine.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || "";
     return Boolean(fromEmail && !isOwnEmail(fromEmail));
@@ -615,7 +616,7 @@
 
   function analyzeText(text, options = {}) {
     const raw = String(text || "").trim();
-    const quotedThreadDetected = /opprinnelig melding|original message|on .* wrote|den .* skrev|^>/im.test(raw);
+    const quotedThreadDetected = /opprinnelig melding|original message|^\s*on\s(?:mon|tue|wed|thu|fri|sat|sun)\b|on .* wrote|den .* skrev|^>/im.test(raw);
     const latestMessage = latestEmailMessageText(raw);
     const analysisText = shouldAnalyzeLatestEmailMessage(raw) ? latestMessage : withoutCrmReferences(raw);
     const emails = extractEmails(analysisText);
