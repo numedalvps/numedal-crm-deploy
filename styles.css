@@ -5622,30 +5622,39 @@ textarea {
   position: absolute;
   inset: 0;
   z-index: 2;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .timeline-drop-zone {
   position: absolute;
   left: 0;
   right: 0;
-  display: none;
-  border-top: 1px solid rgba(245, 158, 11, 0.28);
-  background: rgba(255, 247, 237, 0.54);
+  display: block;
+  pointer-events: auto;
+  border-top: 1px solid transparent;
+  background: transparent;
 }
 
 .timeline-drop-zone.hour {
-  border-top-color: rgba(245, 158, 11, 0.62);
+  border-top-color: transparent;
 }
 
 .timeline-drop-zone.half {
   border-top-style: dashed;
-  border-top-color: rgba(245, 158, 11, 0.44);
+  border-top-color: transparent;
 }
 
 .planning-day.drag-over .timeline-drop-zone {
-  display: block;
-  pointer-events: auto;
+  border-top-color: rgba(245, 158, 11, 0.28);
+  background: rgba(255, 247, 237, 0.54);
+}
+
+.planning-day.drag-over .timeline-drop-zone.hour {
+  border-top-color: rgba(245, 158, 11, 0.62);
+}
+
+.planning-day.drag-over .timeline-drop-zone.half {
+  border-top-color: rgba(245, 158, 11, 0.44);
 }
 
 .timeline-drop-zone span {
@@ -5661,8 +5670,8 @@ textarea {
   font-weight: 950;
 }
 
-.timeline-drop-zone.active,
-.timeline-drop-zone:hover {
+.planning-day.drag-over .timeline-drop-zone.active,
+.planning-day.drag-over .timeline-drop-zone:hover {
   background: rgba(255, 237, 213, 0.88);
   box-shadow: inset 0 0 0 2px rgba(245, 158, 11, 0.35);
 }
