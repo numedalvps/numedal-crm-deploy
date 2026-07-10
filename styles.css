@@ -673,6 +673,40 @@ small {
   margin-bottom: 12px;
 }
 
+.dashboard-queue-details {
+  margin: 12px 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.dashboard-queue-details > summary {
+  min-height: 46px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  align-items: center;
+  padding: 10px 14px;
+  color: var(--ink);
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.dashboard-queue-details > summary span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.dashboard-queue-details[open] > summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.dashboard-queue-details > .dashboard-grid {
+  padding: 12px;
+}
+
 .start-worklist {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -3122,6 +3156,35 @@ textarea {
   padding: 10px;
 }
 
+.job-flow.summary-only {
+  gap: 0;
+}
+
+.settled-order-details {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.settled-order-details > summary {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  color: #334155;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.settled-order-details[open] > summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.settled-order-details > div {
+  padding: 12px;
+}
+
 .job-flow.billing,
 .job-flow.overdue {
   border-color: #fed7aa;
@@ -3462,6 +3525,31 @@ textarea {
   border-color: #cbd5e1;
   border-left-color: #64748b;
   background: #f8fafc;
+}
+
+.lead-archived-details {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.lead-archived-details > summary {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  color: #334155;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.lead-archived-details[open] > summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.lead-archived-details > div {
+  padding: 12px;
 }
 
 .lead-readiness {
@@ -4065,6 +4153,19 @@ textarea {
 
 .customer-work-summary article.ok {
   border-left-color: var(--green);
+}
+
+.customer-work-summary article.next-action {
+  align-content: start;
+}
+
+.customer-next-action-button {
+  width: fit-content;
+  min-height: 32px;
+  margin-top: 5px;
+  padding: 6px 10px;
+  font-size: 12px;
+  text-decoration: none;
 }
 
 .customer-work-summary span {

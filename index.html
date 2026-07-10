@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260710-05" />
+    <link rel="stylesheet" href="./styles.css?v=20260710-06" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -89,46 +89,14 @@
             <div class="section-head">
               <div>
                 <h2>Hva må gjøres nå?</h2>
-                <p>Prioritert arbeidsliste fra oppfølging, plan, fakturering og service.</p>
+                <p>Velg oppgaven du skal jobbe med nå.</p>
               </div>
             </div>
             <div id="startWorklist" class="start-worklist"></div>
           </section>
           <details class="dashboard-extra-actions">
-            <summary>Flere snarveier og servicefiltre</summary>
+            <summary>Servicefiltre</summary>
             <div class="dashboard-extra-body">
-              <div class="dashboard-focus-grid compact-dashboard-metrics">
-                <button data-dashboard-action="service" type="button">
-                  <span>Serviceoppfølging</span>
-                  <strong id="dashboardServiceCount">0</strong>
-                  <small>Kunder/anlegg som kan kontaktes</small>
-                </button>
-                <button data-dashboard-action="leads" type="button">
-                  <span>Innboks</span>
-                  <strong id="dashboardLeadCount">0</strong>
-                  <small>Befaringer, tilbud og nye nettsidesaker</small>
-                </button>
-                <button data-dashboard-action="booking" type="button">
-                  <span>Plan</span>
-                  <strong id="dashboardBookingCount">0</strong>
-                  <small>Kommende avtaler i kalender</small>
-                </button>
-                <button data-dashboard-action="move" type="button">
-                  <span>Må flyttes</span>
-                  <strong id="dashboardMoveCount">0</strong>
-                  <small>Jobber som må avtales på nytt</small>
-                </button>
-                <button data-dashboard-action="billing" type="button">
-                  <span>Må faktureres</span>
-                  <strong id="dashboardBillingCount">0</strong>
-                  <small>Utførte jobber som venter</small>
-                </button>
-                <button data-dashboard-action="reminders" type="button">
-                  <span>Påminnelser</span>
-                  <strong id="dashboardReminderCount">0</strong>
-                  <small>Ringe tilbake og raske notater</small>
-                </button>
-              </div>
               <div class="metric-grid compact-service-metrics">
                 <button data-filter-shortcut="red"><strong id="redMetric">0</strong><span>Forfalt service</span></button>
                 <button data-filter-shortcut="yellow"><strong id="yellowMetric">0</strong><span>Aktuell for service</span></button>
@@ -137,7 +105,9 @@
               </div>
             </div>
           </details>
-          <div class="dashboard-grid">
+          <details id="dashboardQueueDetails" class="dashboard-queue-details">
+            <summary>Se oppgavelister <span>jobber, påminnelser, service og faktura</span></summary>
+            <div class="dashboard-grid">
             <section class="panel">
               <div class="section-head">
                 <h2>Neste jobber</h2>
@@ -183,7 +153,8 @@
               </div>
               <div id="dataQualityList" class="quality-list"></div>
             </section>
-          </div>
+            </div>
+          </details>
           <details class="panel recent-panel">
             <summary>Sist endret</summary>
             <div id="recentActivity" class="recent-list"></div>
@@ -783,7 +754,8 @@
             <label>Tags<textarea id="formTags" rows="2" placeholder="Prioritert servicekunde; Vegglifjell nord; Vegglifjell sør; Blåseisolering"></textarea></label>
             <div id="formTagCatalog" class="tag-catalog"></div>
             <label>Notat<textarea id="formNote" rows="3"></textarea></label>
-          </div>
+            </div>
+          </details>
         </details>
         <details class="form-advanced-details legacy-customer-fields">
           <summary>Eldre serviceinfo på kundekortet</summary>
@@ -967,7 +939,7 @@
         <div id="deleteOrdersBookingOptions" class="choice-stack">
           <label>
             <input id="deleteOrdersKeepBookings" name="deleteOrdersBookingAction" type="radio" value="keep" checked />
-            <span><strong>Behold eventuelle avtaler i kalender</strong><small>Jobbkoblingen fjernes, men avtalen står i planen hvis den fortsatt er booket.</small></span>
+            <span><strong>Behold eventuelle avtaler i kalender</strong><small>Jobben slettes, men avtalen står i planen hvis den fortsatt er booket.</small></span>
           </label>
           <label>
             <input id="deleteOrdersCancelBookings" name="deleteOrdersBookingAction" type="radio" value="cancel" />
@@ -1325,10 +1297,10 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260710-05"></script>
-    <script src="./supabase-adapter.js?v=20260710-05"></script>
-    <script src="./intake-parser.js?v=20260710-05"></script>
-    <script src="./app-20260710-05.js"></script>
+    <script src="./supabase-config.js?v=20260710-06"></script>
+    <script src="./supabase-adapter.js?v=20260710-06"></script>
+    <script src="./intake-parser.js?v=20260710-06"></script>
+    <script src="./app-20260710-06.js"></script>
   </body>
 </html>
 
