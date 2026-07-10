@@ -243,6 +243,7 @@
       name: customer.name || "Uten navn",
       phone: customer.phone || null,
       email: customer.email || null,
+      contact_people: Array.isArray(customer.contact_people) ? customer.contact_people : [],
       organization_number: customer.organization_number || null,
       visit_street: customer.visit_street || null,
       visit_zip: customer.visit_zip || null,

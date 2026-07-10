@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260710-19" />
+    <link rel="stylesheet" href="./styles.css?v=20260710-20" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -743,6 +743,7 @@
             <div class="form-grid">
               <label>Org.nr / referanse<input id="formOrg" /></label>
               <label>Adkomst/nøkkelboks<input id="formAccess" /></label>
+              <label class="form-wide">Andre kontaktpersoner<textarea id="formContactPeople" rows="3" placeholder="Navn | telefon | e-post | rolle"></textarea></label>
               <label class="check-row form-wide"><input id="formDifferentPostal" type="checkbox" /> Annen post-/bostedsadresse</label>
               <label class="postal-extra hidden">Postadresse<input id="formPostalStreet" /></label>
               <label class="postal-extra hidden">Postnr. post<input id="formPostalZip" /></label>
@@ -1305,10 +1306,10 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260710-19"></script>
-    <script src="./supabase-adapter.js?v=20260710-19"></script>
-    <script src="./intake-parser.js?v=20260710-19"></script>
-    <script src="./app-20260710-19.js"></script>
+    <script src="./supabase-config.js?v=20260710-20"></script>
+    <script src="./supabase-adapter.js?v=20260710-20"></script>
+    <script src="./intake-parser.js?v=20260710-20"></script>
+    <script src="./app-20260710-20.js"></script>
   </body>
 </html>
 
