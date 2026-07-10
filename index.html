@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260710-03" />
+    <link rel="stylesheet" href="./styles.css?v=20260710-04" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -272,7 +272,7 @@
                 <button data-lead-inbox-tab="email" type="button" title="Meldinger som er tolket fra e-post eller CRM-innboks."><strong id="leadEmailMetric">0</strong><span>E-post</span></button>
                 <button data-lead-inbox-tab="website" type="button" title="Bare skjema fra nettsiden. Ubehandlede nettskjema kan også vises i Alt nytt."><strong id="leadWebsiteMetric">0</strong><span>Fra nettside</span></button>
                 <button data-lead-inbox-tab="followup" type="button" title="Saker der neste steg er tilbud, purring eller svar fra kunde."><strong id="leadNeedsOfferMetric">0</strong><span>Tilbud / oppfølging</span></button>
-                <button data-lead-inbox-tab="archive" type="button" title="Saker som er koblet videre til jobb/anlegg eller er tapte. Dette er arkiv, ikke aktiv arbeidsliste."><strong id="leadLostMetric">0</strong><span>Koblet / tapt</span></button>
+                <button data-lead-inbox-tab="archive" type="button" title="Ferdig koblede og tapte saker. Arkiv er ikke en aktiv arbeidsliste."><strong id="leadLostMetric">0</strong><span>Arkiv</span></button>
               </div>
               <div id="websiteSubmissionInbox" class="website-submission-inbox hidden"></div>
               <div class="search-row">
@@ -308,23 +308,23 @@
                 </div>
               </div>
               <div class="order-metrics">
+                <button data-order-filter-shortcut="active" type="button" title="Jobber som fortsatt skal planlegges, utføres eller faktureres."><strong id="orderActiveMetric">0</strong><span>Aktive</span></button>
                 <button data-order-filter-shortcut="unscheduled" type="button"><strong id="orderUnscheduledMetric">0</strong><span>Ikke planlagt</span></button>
                 <button data-order-filter-shortcut="scheduled" type="button"><strong id="orderScheduledMetric">0</strong><span>Planlagt</span></button>
                 <button data-order-filter-shortcut="billing_ready" type="button"><strong id="orderBillingMetric">0</strong><span>Må faktureres</span></button>
                 <button data-order-filter-shortcut="completed" type="button"><strong id="orderCompletedMetric">0</strong><span>Utført</span></button>
-                <button data-order-filter-shortcut="missing_job" type="button" title="Vis aktive jobber som mangler kobling til ny jobbmodell."><strong id="orderMissingJobMetric">0</strong><span>Mangler jobbkobling</span></button>
               </div>
               <div class="job-tabs" role="tablist" aria-label="Jobbfilter">
-                <button class="active" data-order-filter-shortcut="unscheduled" type="button">Ikke planlagt</button>
+                <button class="active" data-order-filter-shortcut="active" type="button">Aktive</button>
+                <button data-order-filter-shortcut="unscheduled" type="button">Ikke planlagt</button>
                 <button data-order-filter-shortcut="scheduled" type="button">Planlagt</button>
-                <button data-order-filter-shortcut="completed" type="button">Utført</button>
                 <button data-order-filter-shortcut="billing_ready" type="button">Må faktureres</button>
-                <button data-order-filter-shortcut="billing_draft" type="button">Utkast</button>
                 <button data-order-filter-shortcut="all" type="button">Alle</button>
               </div>
               <div class="search-row">
                 <input id="orderSearch" type="search" placeholder="Søk jobb, kunde, telefon, sted" />
                 <select id="orderStatusFilter">
+                  <option value="active">Aktive jobber</option>
                   <option value="unscheduled">Ikke planlagt</option>
                   <option value="scheduled">Planlagt</option>
                   <option value="completed">Utført</option>
@@ -338,6 +338,7 @@
               <details class="order-admin-tools">
                 <summary>Flere valg</summary>
                 <div class="order-bulk-actions">
+                  <button data-order-filter-shortcut="missing_job" class="secondary" type="button" title="Teknisk kontroll av aktive jobber som mangler intern jobbkobling."><strong id="orderMissingJobMetric">0</strong> Mangler intern jobbkobling</button>
                   <label><input id="orderSelectAll" type="checkbox" /> Velg viste</label>
                   <button id="deleteSelectedOrdersButton" class="secondary" type="button" disabled>Slett valgte</button>
                   <span id="orderSelectionSummary">Ingen valgt</span>
@@ -1311,10 +1312,10 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260710-03"></script>
-    <script src="./supabase-adapter.js?v=20260710-03"></script>
-    <script src="./intake-parser.js?v=20260710-03"></script>
-    <script src="./app-20260710-03.js"></script>
+    <script src="./supabase-config.js?v=20260710-04"></script>
+    <script src="./supabase-adapter.js?v=20260710-04"></script>
+    <script src="./intake-parser.js?v=20260710-04"></script>
+    <script src="./app-20260710-04.js"></script>
   </body>
 </html>
 
