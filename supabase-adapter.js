@@ -985,7 +985,7 @@
         fetchAllRows(() => supabase.from("customer_locations").select("*").order("created_at")),
         orderRequest,
         supabase.from("leads").select("*").order("updated_at", { ascending: false }).limit(2000),
-        supabase.from("activities").select("*").order("occurred_at", { ascending: false }).limit(2000),
+        fetchAllRows(() => supabase.from("activities").select("*").order("occurred_at", { ascending: false }), 1000, 20000),
         supabase.from("jobs").select("*").neq("work_status", "cancelled").order("updated_at", { ascending: false }).limit(2000),
         supabase.from("appointments").select("*").neq("status", "cancelled").order("start_at", { ascending: true }).limit(2000),
         supabase.from("access_notes").select("*").eq("active", true).order("updated_at", { ascending: false }).limit(2000),
