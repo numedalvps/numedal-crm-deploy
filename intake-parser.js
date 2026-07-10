@@ -284,6 +284,13 @@
     if (first && last && !/\d|@/.test(`${first} ${last}`) && !isOwnName(`${first} ${last}`)) {
       return field(`${first} ${last}`, "high", `${first} ${last}`);
     }
+    const introductionMatch = raw.match(/\b(?:[Jj]eg\s+heter|[Mm]itt\s+navn\s+er)\s+([A-ZÆØÅ][A-Za-zÆØÅæøå.'-]+(?:\s+(?:[A-ZÆØÅ][A-Za-zÆØÅæøå.'-]+|[a-zæøå]{1,4})){0,3})(?=\s*(?:[,.!?;]|\r?\n|$|\bog\b|\bsom\b))/);
+    if (introductionMatch?.[1]) {
+      const name = cleanNameCandidate(introductionMatch[1]);
+      if (name && !/\d|@/.test(name) && !isOwnName(name)) {
+        return field(name, name.split(/\s+/).length >= 2 ? "high" : "medium", introductionMatch[0]);
+      }
+    }
     const explicitPatterns = [
       /^\s*(?:navn|kunde)\s*:\s*([^\n\r.]+)/im,
       /^\s*(?:navn|kunde)\s+([A-ZÆØÅ][^\n\r.]+)/im,
