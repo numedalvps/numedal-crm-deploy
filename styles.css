@@ -2123,6 +2123,12 @@ textarea {
   color: #0f766e;
 }
 
+.lead-list .lead-card-focus.reply {
+  border-color: #5eead4;
+  background: #ccfbf1;
+  color: #115e59;
+}
+
 .lead-list .lead-card-focus.missing {
   border-color: #fde68a;
   background: #fffbeb;
@@ -3611,6 +3617,12 @@ textarea {
 .lead-focus-schedule.today {
   border-color: #99f6e4;
   background: #f0fdfa;
+}
+
+.lead-focus-schedule.reply {
+  border-color: #5eead4;
+  background: #ecfdf5;
+  box-shadow: inset 4px 0 0 #0f766e;
 }
 
 .lead-focus-schedule.missing {

@@ -62,6 +62,41 @@
       .trim();
   }
 
+  function emailReferencePattern() {
+    return /\[?\b(?:NVS-[A-Z0-9]+-\d{8}-[A-Z0-9]{6}|NVS-\d{4}-[A-Z0-9]{8})\b\]?/gi;
+  }
+
+  function withoutCrmReferences(value) {
+    return repairTextEncoding(value)
+      .replace(emailReferencePattern(), "")
+      .replace(/\[\s*\]/g, "")
+      .replace(/[ \t]+\n/g, "\n")
+      .trim();
+  }
+
+  function latestEmailMessageText(value) {
+    const text = repairTextEncoding(value).replace(/\r\n?/g, "\n").trim();
+    if (!text) return "";
+    const quoteMarkers = [
+      /^\s*(?:On\s.{1,300}\swrote:|Den\s.{1,300}\sskrev(?:\s.{0,120})?:?)\s*$/im,
+      /^\s*-{2,}\s*(?:Original Message|Opprinnelig melding)\s*-{2,}\s*$/im,
+      /^\s*_{5,}\s*$/m,
+      /^\s*>/m,
+    ];
+    const indexes = quoteMarkers
+      .map((pattern) => pattern.exec(text)?.index)
+      .filter((index) => Number.isInteger(index) && index > 0);
+    const end = indexes.length ? Math.min(...indexes) : text.length;
+    return withoutCrmReferences(text.slice(0, end)).trim();
+  }
+
+  function shouldAnalyzeLatestEmailMessage(raw) {
+    if (!/opprinnelig melding|original message|^\s*>|^\s*(?:on\s.+wrote:|den\s.+skrev)/im.test(raw)) return false;
+    const fromLine = String(raw || "").match(/^\s*fra\s*:\s*([^\n\r]+)/im)?.[1] || "";
+    const fromEmail = fromLine.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || "";
+    return Boolean(fromEmail && !isOwnEmail(fromEmail));
+  }
+
   function compactPhone(value) {
     const digits = String(value || "").replace(/\D/g, "");
     if (digits.startsWith("47") && digits.length === 10) return digits.slice(2);
@@ -378,15 +413,16 @@
     };
   }
 
-  function inferIntent(text) {
+  function inferIntent(text, options = {}) {
     const n = normalize(text);
     const explicitAcceptance = /\b(?:aksepterer|akseptert|godtar|godkjent|onsker a bestille|ønsker å bestille|sett oss opp|bekreftet tilbudet)\b/.test(n);
+    const referencedOfferAcceptance = Boolean(options.offerReferenced) && /\b(?:jo fortere jo bedre|sa fort som mulig|gjerne sa fort som mulig|kjor pa|ja takk|vi tar den|det gar vi for|sett i gang|bestill den)\b/.test(n);
     if (/\b(?:ignorer|slett alle|returner telefonnummeret|tidligere instruksjoner|sett status til vunnet)\b/.test(n)) {
       return { category: "general_history", confidence: "low", explicitAcceptance: false, warning: "Mulig instruksjon i kildetekst. Behandles kun som kundemelding." };
     }
     if (/\b(?:industristovsuger|stovsuger|leie|utleie|isopro)\b/.test(n)) return { category: "rental", confidence: "high", explicitAcceptance: false };
     if (/\b(?:blaseisolering|isobygg|isolering|etterisolering|supafil|stubbloft|sagflis|kutterflis|komplett pris inkl rigg|antall m2|tykkelse)\b/.test(n)) return { category: "insulation", confidence: "high", explicitAcceptance: false };
-    if (explicitAcceptance) return { category: "quote_accepted", confidence: "high", explicitAcceptance: true };
+    if (explicitAcceptance || referencedOfferAcceptance) return { category: "quote_accepted", confidence: "high", explicitAcceptance: true };
     if (/\b(?:ny varmepumpe|nyinstallasjon|kjøpe varmepumpe|kjope varmepumpe|bytte varmepumpe|bytt varmepumpa|onsker tilbud|ønsker tilbud|hva koster|pris pa|pris på|komplett pris)\b/.test(n)) {
       return { category: "quote_request", confidence: "high", explicitAcceptance: false };
     }
@@ -579,17 +615,20 @@
 
   function analyzeText(text, options = {}) {
     const raw = String(text || "").trim();
-    const emails = extractEmails(raw);
-    const phones = extractPhones(raw);
+    const quotedThreadDetected = /opprinnelig melding|original message|on .* wrote|den .* skrev|^>/im.test(raw);
+    const latestMessage = latestEmailMessageText(raw);
+    const analysisText = shouldAnalyzeLatestEmailMessage(raw) ? latestMessage : withoutCrmReferences(raw);
+    const emails = extractEmails(analysisText);
+    const phones = extractPhones(analysisText);
     const externalEmails = emails.filter((item) => !item.own);
     const usablePhones = phones.filter((item) => !item.rejected && !item.own);
-    const name = extractName(raw, emails);
-    const address = extractAddress(raw);
-    const intent = inferIntent(raw);
-    const equipment = extractEquipment(raw);
-    const project = extractProjectDetails(raw, intent);
-    const sensitive = sensitiveFlags(raw);
-    const warnings = warningObjects(raw, phones, emails, intent, address, sensitive);
+    const name = extractName(analysisText, emails);
+    const address = extractAddress(analysisText);
+    const intent = inferIntent(analysisText, { offerReferenced: /\bNVS-TILBUD-/i.test(raw) });
+    const equipment = extractEquipment(analysisText);
+    const project = extractProjectDetails(analysisText, intent);
+    const sensitive = sensitiveFlags(analysisText);
+    const warnings = warningObjects(analysisText, phones, emails, intent, address, sensitive);
     const phone = usablePhones[0] || null;
     const email = externalEmails.find((item) => item.role === "from") || externalEmails[0] || null;
     const categoryText = {
@@ -617,8 +656,8 @@
       source: {
         kind: /fra\s*:|til\s*:|opprinnelig melding/i.test(raw) ? "email" : /\b(sender tekstmeldinger|chat med|\d{1,2}:\d{2})\b/i.test(raw) ? "message_thread" : "pasted_text",
         direction: "unknown",
-        latestExternalMessage: field(raw.slice(0, 500), raw ? "low" : "low", raw.slice(0, 120)),
-        quotedThreadDetected: /opprinnelig melding|on .* wrote|^>/im.test(raw),
+        latestExternalMessage: field(latestMessage.slice(0, 500), latestMessage ? "medium" : "low", latestMessage.slice(0, 120)),
+        quotedThreadDetected,
       },
       contacts: [{
         role: "customer",
@@ -634,7 +673,7 @@
         street: address.street,
         postalCode: address.postalCode,
         city: address.city,
-        locationType: field(/\bhytte|hytta|blefjell|vegglifjell|fagerfjell/i.test(raw) ? "cabin" : "", "low", null),
+        locationType: field(/\bhytte|hytta|blefjell|vegglifjell|fagerfjell/i.test(analysisText) ? "cabin" : "", "low", null),
         propertyReference: address.propertyReference,
       }],
       intent: {
@@ -648,9 +687,9 @@
       scheduling: {
         preferredDates: [],
         preferredTime: field("", "low", null),
-        urgency: field(/\bhaster|snarest|fort/i.test(normalize(raw)) ? "soon" : "normal", "low", null),
+        urgency: field(/\bhaster|snarest|fort/i.test(normalize(analysisText)) ? "soon" : "normal", "low", null),
         constraints: [],
-        followUpRequested: /\bring|kontakt|svar/i.test(raw),
+        followUpRequested: /\bring|kontakt|svar/i.test(analysisText),
       },
       summary: summaryBits.join(" "),
       recommendedAction: actionForIntent(intent),
@@ -711,8 +750,10 @@
     extractPhones,
     extractEmails,
     inferIntent,
+    latestEmailMessageText,
     matchCustomers,
     normalize,
+    withoutCrmReferences,
   };
 
   if (typeof module !== "undefined" && module.exports) module.exports = api;
