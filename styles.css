@@ -2400,12 +2400,11 @@ textarea {
 
 .website-submission-message {
   display: grid;
-  gap: 6px;
+  gap: 3px;
   margin-top: 2px;
-  border: 1px solid #bfdbfe;
-  border-radius: 8px;
-  padding: 12px 14px;
-  background: #f8fbff;
+  border-left: 3px solid #38bdf8;
+  padding: 7px 10px;
+  background: #f8fafc;
 }
 
 .website-submission-message strong {
@@ -2416,10 +2415,10 @@ textarea {
 .website-submission-message p {
   margin: 0;
   color: #334155;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 650;
-  line-height: 1.6;
-  max-height: 260px;
+  line-height: 1.45;
+  max-height: 190px;
   overflow: auto;
   overscroll-behavior: contain;
   white-space: pre-wrap;
@@ -2428,7 +2427,7 @@ textarea {
 
 @media (max-width: 620px) {
   .website-submission-message p {
-    max-height: 220px;
+    max-height: 170px;
   }
 
   .website-hidden-cleanup {
@@ -2443,15 +2442,20 @@ textarea {
 
 .website-submission-fields {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 5px;
   margin: 4px 0 0;
 }
 
 .website-submission-fields div {
   display: grid;
-  grid-template-columns: 84px minmax(0, 1fr);
+  grid-template-columns: 76px minmax(0, 1fr);
   gap: 6px;
   align-items: start;
+  padding: 5px 7px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #fff;
 }
 
 .website-submission-fields dt,
@@ -2562,6 +2566,36 @@ textarea {
 
 .website-attachment-alert span {
   font-weight: 800;
+}
+
+.website-stored-attachments {
+  display: grid;
+  gap: 5px;
+  padding: 7px 9px;
+  border: 1px solid #99f6e4;
+  border-radius: 8px;
+  background: #f0fdfa;
+}
+
+.website-stored-attachments > strong {
+  color: #115e59;
+  font-size: 12px;
+}
+
+.website-submission-extra {
+  margin-top: 2px;
+}
+
+.website-submission-extra > summary {
+  width: fit-content;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.website-submission-extra[open] > summary {
+  margin-bottom: 6px;
 }
 
 .website-raw-details {

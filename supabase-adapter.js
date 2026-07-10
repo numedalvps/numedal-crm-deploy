@@ -1656,8 +1656,9 @@
       const installationId = isUuid(links.installation_id || links.installationId) ? (links.installation_id || links.installationId) : null;
       const jobId = isUuid(links.job_id || links.jobId) ? (links.job_id || links.jobId) : null;
       const intakeId = isUuid(links.intake_id || links.intakeId) ? (links.intake_id || links.intakeId) : null;
-      if (!customerId && !leadId && !installationId && !jobId && !intakeId) {
-        throw new Error("Vedlegget må kobles til innboks, kunde, lead, jobb eller anlegg.");
+      const websiteSubmissionId = isUuid(links.website_submission_id || links.websiteSubmissionId) ? (links.website_submission_id || links.websiteSubmissionId) : null;
+      if (!customerId && !leadId && !installationId && !jobId && !intakeId && !websiteSubmissionId) {
+        throw new Error("Vedlegget må kobles til innboks, nettskjema, kunde, lead, jobb eller anlegg.");
       }
       const path = attachmentPath(file, {
         customer_id: customerId,
@@ -1678,6 +1679,7 @@
         installation_id: installationId,
         job_id: jobId,
         intake_id: intakeId,
+        website_submission_id: websiteSubmissionId,
         source_kind: links.source_kind || links.sourceKind || "manual",
         title: links.title || file.name || "Vedlegg",
         note: links.note || null,
@@ -1702,7 +1704,14 @@
     async linkCrmAttachments(patch = {}) {
       const supabase = await requireClient();
       const intakeId = patch.intake_id || patch.intakeId;
-      if (!isUuid(intakeId)) return [];
+      const websiteSubmissionId = patch.website_submission_id || patch.websiteSubmissionId;
+      const linkColumn = isUuid(intakeId)
+        ? "intake_id"
+        : isUuid(websiteSubmissionId)
+          ? "website_submission_id"
+          : "";
+      const linkId = linkColumn === "intake_id" ? intakeId : websiteSubmissionId;
+      if (!linkColumn) return [];
       const dbPatch = {};
       if ("customer_id" in patch || "customerId" in patch) dbPatch.customer_id = isUuid(patch.customer_id || patch.customerId) ? (patch.customer_id || patch.customerId) : null;
       if ("lead_id" in patch || "leadId" in patch) dbPatch.lead_id = isUuid(patch.lead_id || patch.leadId) ? (patch.lead_id || patch.leadId) : null;
@@ -1712,7 +1721,7 @@
       const { data, error } = await supabase
         .from("crm_attachments")
         .update(dbPatch)
-        .eq("intake_id", intakeId)
+        .eq(linkColumn, linkId)
         .is("deleted_at", null)
         .select("*");
       if (error) throw error;
