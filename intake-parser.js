@@ -425,7 +425,7 @@
 
   function inferBrandFromModel(model) {
     const normalized = normalize(model);
-    if (/\b(signature|seiya|polar|daisekai)\b/.test(normalized)) return "Toshiba";
+    if (/\b(signatur|signature|seiya|polar|daisekai)\b/.test(normalized)) return "Toshiba";
     if (/\b(norgespumpa|extreme)\b/.test(normalized)) return "Fujitsu";
     if (/\b(hz25|hz 25|nz25|nz 25|nz35|nz 35|cz25|cz 25|z25|z 25|z35|z 35|flagship|etherea)\b/.test(normalized)) return "Panasonic";
     if (/\b(kaiteki|iguru|kirigamine|hara|gussuri)\b/.test(normalized)) return "Mitsubishi";
@@ -457,12 +457,12 @@
       /\bNorgespumpa\s*5[,.][79]\s*Dempet\s*Sort\b/gi,
       /\bNorgespumpa\s*6[,.]4\b/gi,
       /\bExtreme\s*Gulv\s*5[,.]5\b/gi,
-      /\bSignature\s*(?:25|35)\b/gi,
+      /\bSignatur(?:e)?\s*(?:25|35)\b/gi,
       /\bSeiya\s*Nordic\s*(?:25|35)\b/gi,
       /\b(?:Polar|Daisekai)\b/gi,
       /\b(?:Narvik|Trysil)\s*(?:25|35)?\b/gi,
       /\bArctic\s*12\b/gi,
-      /\b(?:Kaiteki|Iguru|Kirigamine|Hara|Gussuri)\b/gi,
+      /\b(?:Kaiteki(?:\s*(?:6300|6600|8700))?|Iguru|Kirigamine|Hara|Gussuri)\b/gi,
     ];
     const found = [];
     for (const pattern of patterns) {
@@ -508,7 +508,7 @@
       }));
     }
     const brandMatch = raw.match(/\b(Panasonic|Fujitsu|Mitsubishi|Toshiba|Daikin|LG|Samsung|Wilfa|Cooper\s*Hunter|Cooper&Hunter|Norgespumpa)\b/i);
-    const modelMatch = raw.match(/\b(HZ\d{2}[A-Z0-9-]*|NZ\d{2}[A-Z0-9-]*|CZ\d{2}[A-Z0-9-]*|Z\d{2}[A-Z0-9-]*|Kaiteki|Iguru|Kirigamine|Hara|Gussuri|Norgespumpa\s*\d(?:[.,]\d)?|Extreme\s*(?:Gulv\s*)?\d(?:[.,]\d)?|Signature\s*(?:25|35)|Seiya\s*Nordic\s*(?:25|35)|Polar|Daisekai|Narvik\s*(?:25|35)?|Trysil|Arctic\s*12)\b/i);
+    const modelMatch = raw.match(/\b(HZ\d{2}[A-Z0-9-]*|NZ\d{2}[A-Z0-9-]*|CZ\d{2}[A-Z0-9-]*|Z\d{2}[A-Z0-9-]*|Kaiteki(?:\s*(?:6300|6600|8700))?|Iguru|Kirigamine|Hara|Gussuri|Norgespumpa\s*\d(?:[.,]\d)?|Extreme\s*(?:Gulv\s*)?\d(?:[.,]\d)?|Signatur(?:e)?\s*(?:25|35)|Seiya\s*Nordic\s*(?:25|35)|Polar|Daisekai|Narvik\s*(?:25|35)?|Trysil|Arctic\s*12)\b/i);
     const model = cleanLine(modelMatch?.[0] || "");
     const inferredBrand = inferBrandFromModel(model) || brandMatch?.[0] || "";
     return [{

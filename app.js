@@ -202,6 +202,29 @@
       productIds: ["toshiba_seiya_nordic_25", "toshiba_seiya_nordic_35"],
       aliases: ["toshiba seiya", "seiya nordic", "seiya nordic 25", "seiya nordic 35"],
     },
+    {
+      id: "mitsubishi_kaiteki",
+      title: "Produktbrosjyre Mitsubishi Electric Kaiteki 6300/6600",
+      href: "./documents/products/mitsubishi-kaiteki-6300-6600.pdf",
+      productIds: [
+        "mitsubishi_kaiteki_6300_white",
+        "mitsubishi_kaiteki_6300_pearl",
+        "mitsubishi_kaiteki_6300_black",
+        "mitsubishi_kaiteki_6300_red",
+        "mitsubishi_kaiteki_6600_white",
+        "mitsubishi_kaiteki_6600_pearl",
+        "mitsubishi_kaiteki_6600_black",
+        "mitsubishi_kaiteki_6600_red",
+      ],
+      aliases: ["mitsubishi kaiteki", "kaiteki 6300", "kaiteki 6600", "msz-ln25", "msz-ln35"],
+    },
+    {
+      id: "panasonic_multi_powerheat",
+      title: "Datablad Panasonic Power Heat Nordic Multi",
+      href: "./documents/products/panasonic-nordic-multi-powerheat.pdf",
+      productIds: ["panasonic_powerheat_multi_2_room", "panasonic_powerheat_multi_3_room"],
+      aliases: ["panasonic multisplitt", "power heat nordic multi", "cu-2z50abec", "cu-3z75abec"],
+    },
   ];
   const offerDocuments = [priceListDocument, ...productDocuments];
   const defaultHeatPumpOfferItems = [
@@ -213,10 +236,20 @@
     { id: "fujitsu_norgespumpa_59_black_25990", articleNo: "9106", brand: "Fujitsu", label: "Norgespumpa 5.9 Dempet Sort", articleName: "Fujitsu Norgespumpa 5.9 Dempet Sort 25 990", unit: "stk", price: 25990, defaultQty: 1, kind: "heatpump", eaccountingType: "goods", eaccountingUnit: "stk", eaccountingGroup: "CRM" },
     { id: "fujitsu_norgespumpa_64_black_29990", articleNo: "9107", brand: "Fujitsu", label: "Norgespumpa 6.4 Dempet Sort", articleName: "Fujitsu Norgespumpa 6.4 Dempet Sort 29 990", unit: "stk", price: 29990, defaultQty: 1, kind: "heatpump", eaccountingType: "goods", eaccountingUnit: "stk", eaccountingGroup: "CRM" },
     { id: "fujitsu_extreme_floor_55", articleNo: "9108", brand: "Fujitsu", label: "Extreme Gulv 5.5", unit: "stk", price: 24990, defaultQty: 1, kind: "heatpump", eaccountingType: "goods", eaccountingUnit: "stk", eaccountingGroup: "CRM" },
-    { id: "toshiba_signature_25", articleNo: "9109", brand: "Toshiba", label: "Signature 25", unit: "stk", price: 26990, defaultQty: 1, kind: "heatpump", eaccountingType: "goods", eaccountingUnit: "stk", eaccountingGroup: "CRM" },
-    { id: "toshiba_signature_35", articleNo: "9110", brand: "Toshiba", label: "Signature 35", unit: "stk", price: 29490, defaultQty: 1, kind: "heatpump", eaccountingType: "goods", eaccountingUnit: "stk", eaccountingGroup: "CRM" },
+    { id: "toshiba_signature_25", articleNo: "9109", brand: "Toshiba", label: "Signatur 25", aliases: "Toshiba Signature 25", unit: "stk", price: 26990, defaultQty: 1, kind: "heatpump", eaccountingType: "goods", eaccountingUnit: "stk", eaccountingGroup: "CRM" },
+    { id: "toshiba_signature_35", articleNo: "9110", brand: "Toshiba", label: "Signatur 35", aliases: "Toshiba Signature 35", unit: "stk", price: 29490, defaultQty: 1, kind: "heatpump", eaccountingType: "goods", eaccountingUnit: "stk", eaccountingGroup: "CRM" },
     { id: "toshiba_seiya_nordic_25", articleNo: "9111", brand: "Toshiba", label: "Seiya Nordic 25", unit: "stk", price: 16990, defaultQty: 1, kind: "heatpump", eaccountingType: "goods", eaccountingUnit: "stk", eaccountingGroup: "CRM" },
     { id: "toshiba_seiya_nordic_35", articleNo: "9112", brand: "Toshiba", label: "Seiya Nordic 35", unit: "stk", price: 17990, defaultQty: 1, kind: "heatpump", eaccountingType: "goods", eaccountingUnit: "stk", eaccountingGroup: "CRM" },
+    { id: "mitsubishi_kaiteki_6300_white", articleNo: "9113", brand: "Mitsubishi Electric", label: "Kaiteki 6300 Hvit", aliases: "Mitsubishi Kaiteki 6300 standard hvit MSZ-LN25VGHZ", unit: "stk", price: 22900, defaultQty: 1, kind: "heatpump", eaccountingType: "goods", eaccountingUnit: "stk", eaccountingGroup: "CRM" },
+    { id: "mitsubishi_kaiteki_6300_pearl", articleNo: "9114", brand: "Mitsubishi Electric", label: "Kaiteki 6300 Perlehvit", aliases: "Mitsubishi Kaiteki 6300 pearl white hairline MSZ-LN25VGHZ", unit: "stk", price: 23900, defaultQty: 1, kind: "heatpump", eaccountingType: "goods", eaccountingUnit: "stk", eaccountingGroup: "CRM" },
+    { id: "mitsubishi_kaiteki_6300_black", articleNo: "9115", brand: "Mitsubishi Electric", label: "Kaiteki 6300 Safirsort", aliases: "Mitsubishi Kaiteki 6300 sort svart black hairline MSZ-LN25VGHZ", unit: "stk", price: 23900, defaultQty: 1, kind: "heatpump", eaccountingType: "goods", eaccountingUnit: "stk", eaccountingGroup: "CRM" },
+    { id: "mitsubishi_kaiteki_6300_red", articleNo: "9116", brand: "Mitsubishi Electric", label: "Kaiteki 6300 Rubinrød", aliases: "Mitsubishi Kaiteki 6300 rød red hairline MSZ-LN25VGHZ", unit: "stk", price: 23900, defaultQty: 1, kind: "heatpump", eaccountingType: "goods", eaccountingUnit: "stk", eaccountingGroup: "CRM" },
+    { id: "mitsubishi_kaiteki_6600_white", articleNo: "9117", brand: "Mitsubishi Electric", label: "Kaiteki 6600 Hvit", aliases: "Mitsubishi Kaiteki 6600 standard hvit MSZ-LN35VGHZ", unit: "stk", price: 23900, defaultQty: 1, kind: "heatpump", eaccountingType: "goods", eaccountingUnit: "stk", eaccountingGroup: "CRM" },
+    { id: "mitsubishi_kaiteki_6600_pearl", articleNo: "9118", brand: "Mitsubishi Electric", label: "Kaiteki 6600 Perlehvit", aliases: "Mitsubishi Kaiteki 6600 pearl white hairline MSZ-LN35VGHZ", unit: "stk", price: 24900, defaultQty: 1, kind: "heatpump", eaccountingType: "goods", eaccountingUnit: "stk", eaccountingGroup: "CRM" },
+    { id: "mitsubishi_kaiteki_6600_black", articleNo: "9119", brand: "Mitsubishi Electric", label: "Kaiteki 6600 Safirsort", aliases: "Mitsubishi Kaiteki 6600 sort svart black hairline MSZ-LN35VGHZ", unit: "stk", price: 24900, defaultQty: 1, kind: "heatpump", eaccountingType: "goods", eaccountingUnit: "stk", eaccountingGroup: "CRM" },
+    { id: "mitsubishi_kaiteki_6600_red", articleNo: "9120", brand: "Mitsubishi Electric", label: "Kaiteki 6600 Rubinrød", aliases: "Mitsubishi Kaiteki 6600 rød red hairline MSZ-LN35VGHZ", unit: "stk", price: 24900, defaultQty: 1, kind: "heatpump", eaccountingType: "goods", eaccountingUnit: "stk", eaccountingGroup: "CRM" },
+    { id: "panasonic_powerheat_multi_2_room", articleNo: "9121", brand: "Panasonic", label: "Power Heat Nordic Multi 2 rom (CU-2Z50ABEC)", aliases: "Panasonic multisplitt multi split to rom 2 rom CU-2Z50ABEC", unit: "stk", price: 0, defaultQty: 1, kind: "heatpump", autoStandardInstallation: false, eaccountingType: "goods", eaccountingUnit: "stk", eaccountingGroup: "CRM" },
+    { id: "panasonic_powerheat_multi_3_room", articleNo: "9122", brand: "Panasonic", label: "Power Heat Nordic Multi 3 rom (CU-3Z75ABEC)", aliases: "Panasonic multisplitt multi split tre rom 3 rom CU-3Z75ABEC", unit: "stk", price: 0, defaultQty: 1, kind: "heatpump", autoStandardInstallation: false, eaccountingType: "goods", eaccountingUnit: "stk", eaccountingGroup: "CRM" },
   ];
   const defaultJobPriceItems = [
     { id: "standard_installation", articleNo: "9201", label: "Standard montering", unit: "stk", price: 7490, defaultQty: 1, eaccountingType: "services", eaccountingUnit: "stk", eaccountingGroup: "CRM" },
@@ -1020,7 +1053,7 @@
       if (/\b(hz\d{0,2}|nz\d{0,2}|cz\d{0,2}|z25|z35|flagship|etherea|gulvmodell|floor)\b/.test(text)) customer.brand = "Panasonic";
       else if (/(kaiteki|kirigamine|gussuri|hara|iguru)/.test(text)) customer.brand = "Mitsubishi";
       else if (/(narvik|trysil|wilfa)/.test(text)) customer.brand = "Wilfa";
-      else if (/(polar|daisekai|signature|seiya|toshiba)/.test(text)) customer.brand = "Toshiba";
+      else if (/(polar|daisekai|signatur|signature|seiya|toshiba)/.test(text)) customer.brand = "Toshiba";
       else if (/(cooper\s*hunter|cooper&hunter|arctic\s*12)/.test(text)) customer.brand = "Cooper Hunter";
       else if (/(vindfree|samsung)/.test(text)) customer.brand = "Samsung";
       else if (/(norgespumpa|fujitsu)/.test(text)) customer.brand = "Fujitsu";
@@ -1036,6 +1069,9 @@
       else if (/\bcz25tke\b/.test(text)) customer.model_or_note = "CZ25TKE";
       else if (/\bz25\b/.test(text)) customer.model_or_note = "Z25 gulvmodell";
       else if (/\bz35\b/.test(text)) customer.model_or_note = "Z35 gulvmodell";
+      else if (/\bkaiteki\s*6300\b/.test(text)) customer.model_or_note = "Kaiteki 6300";
+      else if (/\bkaiteki\s*6600\b/.test(text)) customer.model_or_note = "Kaiteki 6600";
+      else if (/\bkaiteki\s*8700\b/.test(text)) customer.model_or_note = "Kaiteki 8700";
       else if (/\bkaiteki\b/.test(text)) customer.model_or_note = "Kaiteki";
       else if (/\biguru\b/.test(text)) customer.model_or_note = "Iguru";
       else if (/\bkirigamine\b/.test(text)) customer.model_or_note = "Kirigamine";
@@ -3563,7 +3599,7 @@
     if (/^(panasonic|samsung|mitsubishi|fujitsu|toshiba|wilfa|cooper hunter|cooper&hunter|norgespumpa)$/.test(normalized)) return true;
     if (/^(hz|nz|cz|z)\s*\d{0,2}\s*(xke|wke|tke|zke|yke)?$/.test(normalized)) return true;
     if (/^(samsung )?smart\s*9$/.test(normalized)) return true;
-    if (/^(kaiteki|kirigamine|gussuri|hara|iguru|vindfree|gulvmodell|polar|daisekai|narvik|narvik 25|narvik 35|trysil|arctic 12)$/.test(normalized)) return true;
+    if (/^(kaiteki(?: (?:6300|6600|8700))?|kirigamine|gussuri|hara|iguru|vindfree|gulvmodell|polar|daisekai|narvik|narvik 25|narvik 35|trysil|arctic 12)$/.test(normalized)) return true;
     if (/^norgespumpa\s*(5[,.]7|5[,.]9|6[,.]4)?$/.test(normalized)) return true;
     if (/^(19|20)\d{2}$/.test(normalized)) return true;
     return false;
@@ -3578,7 +3614,7 @@
     const normalized = normalizeMatch(tag);
     if (isLegacyLeadTag(tag)) return "Gammel saksstatus";
     if (/^(panasonic|samsung|mitsubishi|fujitsu|toshiba|wilfa|cooper hunter|cooper&hunter|norgespumpa)$/.test(normalized)) return "Merke fra import";
-    if (/^(hz|nz|cz|z)\s*\d{0,2}\s*(xke|wke|tke|zke|yke)?$/.test(normalized) || /^(samsung )?smart\s*9$/.test(normalized) || /^(kaiteki|kirigamine|gussuri|hara|iguru|vindfree|gulvmodell|polar|daisekai|narvik|narvik 25|narvik 35|trysil|arctic 12)$/.test(normalized) || /^norgespumpa\s*(5[,.]7|5[,.]9|6[,.]4)?$/.test(normalized)) return "Modell fra import";
+    if (/^(hz|nz|cz|z)\s*\d{0,2}\s*(xke|wke|tke|zke|yke)?$/.test(normalized) || /^(samsung )?smart\s*9$/.test(normalized) || /^(kaiteki(?: (?:6300|6600|8700))?|kirigamine|gussuri|hara|iguru|vindfree|gulvmodell|polar|daisekai|narvik|narvik 25|narvik 35|trysil|arctic 12)$/.test(normalized) || /^norgespumpa\s*(5[,.]7|5[,.]9|6[,.]4)?$/.test(normalized)) return "Modell fra import";
     if (/^(19|20)\d{2}$/.test(normalized)) return "Årstall fra import";
     if (/^(inselo|coop|coop obs|tjenestetorget|rentefri delbetaling)$/.test(normalized)) return "Kilde/avtale fra Lime";
     return "Importtagg";
@@ -7165,7 +7201,7 @@
 
   function leadOrderLooksLikeInstallationSale(productInterest = "", priceBasis = "", accessories = "") {
     const text = normalizeMatch([productInterest, priceBasis, accessories].filter(Boolean).join(" "));
-    return /\b(standard montering|installasjon|panasonic|fujitsu|toshiba|mitsubishi|daikin|norgespumpa|signature|flagship|etherea|seiya|gulvmodell|hz25|nz25|z25|z35|varmepumpehus|vps90)\b/.test(text);
+    return /\b(standard montering|installasjon|panasonic|fujitsu|toshiba|mitsubishi|daikin|norgespumpa|signatur|signature|flagship|etherea|seiya|gulvmodell|hz25|nz25|z25|z35|varmepumpehus|vps90)\b/.test(text);
   }
 
   async function createOrderFromLead(customerId, options = {}) {
@@ -7343,7 +7379,7 @@
     if (!el.orderPricePreset || !el.orderPriceQuantity) return;
     const item = offerLinePresets.find((entry) => entry.id === el.orderPricePreset.value);
     if (item) el.orderPriceQuantity.value = String(item.defaultQty || 1);
-    const heatPump = offerLineItemIsHeatPump(item);
+    const heatPump = offerLineAutoIncludesStandardInstallation(item);
     el.orderStandardInstallationWrap?.classList.toggle("hidden", !heatPump);
     if (el.orderIncludeStandardInstallation) el.orderIncludeStandardInstallation.checked = heatPump;
   }
@@ -7371,7 +7407,7 @@
       return customPriceLineFromText(label, quantity, "stk");
     }
     const line = jobPriceLineForItem(selected, quantity);
-    if (offerLineItemIsHeatPump(selected) && el.orderIncludeStandardInstallation?.checked) {
+    if (offerLineAutoIncludesStandardInstallation(selected) && el.orderIncludeStandardInstallation?.checked) {
       return [line, standardInstallationOfferLine(quantity)].filter(Boolean).join("\n");
     }
     return line;
@@ -7416,7 +7452,7 @@
         continue;
       }
       lines = appendUniquePriceBasisLine(lines, priceBasisLineForItem(item, item.defaultQty || 1));
-      if (options.includeStandardInstallation && offerLineItemIsHeatPump(item)) {
+      if (options.includeStandardInstallation && offerLineAutoIncludesStandardInstallation(item)) {
         lines = appendUniquePriceBasisLine(lines, standardInstallationOfferLine(item.defaultQty || 1));
       }
     }
@@ -9138,7 +9174,9 @@
   function normalizeProductCatalogItem(value = {}, fallback = {}) {
     const item = { ...fallback, ...(value && typeof value === "object" ? value : {}) };
     const id = String(item.id || "").trim().slice(0, 80);
-    const label = String(item.label || "").trim().slice(0, 160);
+    let label = String(item.label || "").trim().slice(0, 160);
+    if (id === "toshiba_signature_25" && /^(?:toshiba\s+)?signature\s+25$/i.test(label)) label = "Signatur 25";
+    if (id === "toshiba_signature_35" && /^(?:toshiba\s+)?signature\s+35$/i.test(label)) label = "Signatur 35";
     if (!id || !label || !/^[a-z0-9][a-z0-9_-]*$/i.test(id)) return null;
     const rawPrice = typeof item.price === "number" ? item.price : parseJobPriceAmount(item.price);
     const price = Number.isFinite(rawPrice) && rawPrice >= 0 ? Math.round(rawPrice * 100) / 100 : 0;
@@ -13343,7 +13381,7 @@
     if (/^(varmepumpe|pumpe|produkt|modell|montering|installasjon)(\s*\/\s*|\s+)(produkt|modell|anlegg)?$/.test(normalized)) return false;
     const matched = firstOfferLineMatch(text);
     if (matched && matched.id !== "heatpump_custom") return true;
-    return /\b(panasonic|fujitsu|toshiba|mitsubishi|daikin|samsung|lg|hz|nz|z25|z35|seiya|signature|etherea|flagship|norgespumpa|gulvmodell|varmepumpe|pumpe|montering|varmepumpehus|varmepumpetak|trevegg|stativ|brakett|dryppanne|trollflex|rør|kabel)\b/.test(normalized);
+    return /\b(panasonic|fujitsu|toshiba|mitsubishi|daikin|samsung|lg|hz|nz|z25|z35|seiya|signatur|signature|etherea|flagship|norgespumpa|gulvmodell|varmepumpe|pumpe|montering|varmepumpehus|varmepumpetak|trevegg|stativ|brakett|dryppanne|trollflex|rør|kabel)\b/.test(normalized);
   }
 
   function cleanLeadStatusProductPrefill(value) {
@@ -13516,7 +13554,7 @@
     if (!el.leadStatusProductPreset || !el.leadStatusProductQuantity) return;
     const item = offerLinePresets.find((entry) => entry.id === el.leadStatusProductPreset.value);
     if (item) el.leadStatusProductQuantity.value = String(item.defaultQty || 1);
-    const heatPump = offerLineItemIsHeatPump(item);
+    const heatPump = offerLineAutoIncludesStandardInstallation(item);
     el.leadStatusStandardInstallationWrap?.classList.toggle("hidden", !heatPump);
     if (el.leadStatusIncludeStandardInstallation) el.leadStatusIncludeStandardInstallation.checked = heatPump;
   }
@@ -13544,7 +13582,7 @@
       return customPriceLineFromText(label, quantity, "stk");
     }
     const line = jobPriceLineForItem(selected, quantity);
-    if (offerLineItemIsHeatPump(selected) && el.leadStatusIncludeStandardInstallation?.checked) {
+    if (offerLineAutoIncludesStandardInstallation(selected) && el.leadStatusIncludeStandardInstallation?.checked) {
       return [line, standardInstallationOfferLine(quantity)].filter(Boolean).join("\n");
     }
     return line;
@@ -15461,7 +15499,7 @@
     if (/\b(isobygg|blaseisolering|isolering|supafil)\b/.test(text)) return "insulation_offer";
     if (/\b(gulvmodell|floor|fujitsu)\b/.test(text)) return "fujitsu_floor";
     if (/\b(norgespumpa|sort)\b/.test(text)) return "norgespumpa_black";
-    if (/\b(panasonic|fujitsu|toshiba|hz25|nz25|z25|signature|seiya|flagship|etherea|varmepumpe\/produkt)\b/.test(text)) return "heatpump_standard_offer";
+    if (/\b(panasonic|fujitsu|toshiba|hz25|nz25|z25|signatur|signature|seiya|flagship|etherea|varmepumpe\/produkt)\b/.test(text)) return "heatpump_standard_offer";
     return status === "followup" ? "heatpump_info_request" : "heatpump_standard_offer";
   }
 
@@ -15941,9 +15979,7 @@
       const label = normalizeMatch(priceBasisLineLabel(line));
       return label && !/^(standard montering|timepris arbeid|service varmepumpe|kjoretillegg|kjøretillegg)$/.test(label);
     }) || lines[0] || "";
-    return priceBasisLineLabel(productLine)
-      .replace(/\s+\d[\d\s.,]*\s*(?:,-|kr)?\s*$/i, "")
-      .trim();
+    return priceBasisLineLabel(productLine).trim();
   }
 
   function ensureOfferLineFromSelection(target) {
@@ -16005,21 +16041,29 @@
     ].filter((line, index, arr) => line !== "" || arr[index - 1] !== "").join("\n").trim();
   }
 
+  function refreshGeneratedLeadOfferText(target, options = {}) {
+    const fields = leadOfferFields(target);
+    if (!fields.text) return "";
+    const text = generatedHeatPumpOfferText(target);
+    const product = offerMainProductSummary(fields.lines?.value || "");
+    if (fields.subject) {
+      fields.subject.value = product
+        ? `Tilbud på ${product} ferdig montert`
+        : "Tilbud på varmepumpe ferdig montert";
+    }
+    fields.text.value = offerTextWithoutDocumentLinks(text);
+    fields.text.dataset.offerBuilderGenerated = "true";
+    renderOfferLinesTotal(target);
+    if (options.focus) focusLeadOfferFields(target);
+    return fields.text.value;
+  }
+
   function generateLeadOfferText(target) {
     const fields = leadOfferFields(target);
     if (!fields.text) return;
     try {
       ensureOfferLineFromSelection(target);
-      const text = generatedHeatPumpOfferText(target);
-      const product = offerMainProductSummary(fields.lines?.value || "");
-      if (fields.subject) {
-        fields.subject.value = product
-          ? `Tilbud på ${product} ferdig montert`
-          : "Tilbud på varmepumpe ferdig montert";
-      }
-      fields.text.value = offerTextWithoutDocumentLinks(text);
-      renderOfferLinesTotal(target);
-      focusLeadOfferFields(target);
+      refreshGeneratedLeadOfferText(target, { focus: true });
       setSyncStatus("Tilbudstekst laget. Kontroller teksten, velg PDF og send/kopier når den er klar.", "ok");
     } catch (error) {
       setSyncStatus(error.message || "Klarte ikke lage tilbudstekst.", "error");
@@ -16070,13 +16114,14 @@
 
   function offerAttachmentSourceText(target, text = "") {
     const fields = leadOfferFields(target);
+    const priceLines = String(fields.lines?.value || "").trim();
+    if (priceLines) return priceLines;
     return [
-      text,
-      fields.lines?.value,
       fields.lineLabel?.value,
       fields.linePreset?.selectedOptions?.[0]?.textContent,
-      fields.contextSubject?.value,
       fields.linePreset?.value,
+      text,
+      fields.contextSubject?.value,
     ].filter(Boolean).join("\n");
   }
 
@@ -16106,6 +16151,10 @@
 
   function offerLineItemIsHeatPump(item) {
     return item?.kind === "heatpump";
+  }
+
+  function offerLineAutoIncludesStandardInstallation(item) {
+    return offerLineItemIsHeatPump(item) && item?.autoStandardInstallation !== false;
   }
 
   function standardInstallationOfferLine(quantity = 1) {
@@ -16160,7 +16209,7 @@
     const fields = leadOfferFields(target);
     const item = offerLinePresets.find((entry) => entry.id === fields.linePreset?.value);
     if (!item) return;
-    const heatPump = offerLineItemIsHeatPump(item);
+    const heatPump = offerLineAutoIncludesStandardInstallation(item);
     fields.standardInstallationWrap?.classList.toggle("hidden", !heatPump);
     if (fields.standardInstallation) fields.standardInstallation.checked = heatPump;
     if (item.id === "heatpump_custom") {
@@ -16189,7 +16238,7 @@
     const line = price <= 0
       ? customPriceLineFromText(label, qty, unit)
       : priceLineForValues(label, qty, unit, price);
-    if (offerLineItemIsHeatPump(selected) && fields.standardInstallation?.checked) {
+    if (offerLineAutoIncludesStandardInstallation(selected) && fields.standardInstallation?.checked) {
       if (fields.linesAsOptions?.checked) {
         return combinedHeatPumpInstallationOfferLine(selected, qty, label, price);
       }
@@ -16210,7 +16259,12 @@
     }
     fields.lines.value = [existing, missing].filter(Boolean).join("\n");
     renderOfferLinesTotal(target);
-    setSyncStatus("Prislinje lagt til. Trykk Oppdater e-posttekst når tilbudet er klart.", "ok");
+    const refreshed = fields.text?.dataset.offerBuilderGenerated === "true";
+    if (refreshed) refreshGeneratedLeadOfferText(target);
+    setSyncStatus(
+      refreshed ? "Prislinje lagt til og tilbudsteksten er oppdatert." : "Prislinje lagt til. Trykk Lag tilbudstekst når tilbudet er klart.",
+      "ok",
+    );
   }
 
   function insertOfferLinesIntoText(target) {
@@ -16219,6 +16273,7 @@
     const withLines = applyOfferBuilderLinesToText(target, fields.text.value);
     const block = [offerContextBlock(target), offerLinesBlock(fields.lines.value)].filter(Boolean).join("\n").trim();
     fields.text.value = offerTextWithoutDocumentLinks(withLines);
+    delete fields.text.dataset.offerBuilderGenerated;
     renderOfferLinesTotal(target);
     focusLeadOfferFields(target);
     setSyncStatus(block ? "Tilbudsgrunnlag og prislinjer er lagt inn i teksten." : "Prislinjer fjernet fra teksten.", "ok");
@@ -16242,7 +16297,10 @@
     if (fields.template) fields.template.value = id;
     if (fields.subject) fields.subject.value = offerTemplateSubject(id);
     if (fields.priceList) fields.priceList.checked = offerTemplateUsesPriceList(id);
-    if (fields.text) fields.text.value = offerTextWithoutDocumentLinks(offerTemplateBody(id, customer));
+    if (fields.text) {
+      fields.text.value = offerTextWithoutDocumentLinks(offerTemplateBody(id, customer));
+      delete fields.text.dataset.offerBuilderGenerated;
+    }
     renderOfferLinesTotal(target);
   }
 
@@ -16271,7 +16329,9 @@
     const customer = entry.customer || {};
     const to = String(fields.to?.value || "").trim();
     const subject = String(fields.subject?.value || "").trim();
-    const textDraft = applyOfferBuilderLinesToText(target, String(fields.text?.value || "").trim());
+    const textDraft = fields.text?.dataset.offerBuilderGenerated === "true" && String(fields.lines?.value || "").trim()
+      ? refreshGeneratedLeadOfferText(target)
+      : applyOfferBuilderLinesToText(target, String(fields.text?.value || "").trim());
     const includePriceList = Boolean(fields.priceList?.checked);
     const offerAttachments = selectedOfferAttachments(includePriceList, offerAttachmentSourceText(target, textDraft));
     const text = options.includeDocumentLinks
@@ -16768,7 +16828,7 @@
   function installationLooksLikeLeadMetadata(installation) {
     const productText = normalizeMatch([installation?.brand, installation?.model].filter(Boolean).join(" "));
     if (!productText) return false;
-    if (/\b(panasonic|fujitsu|toshiba|samsung|mitsubishi|daikin|lg|nibe|hz25|nz25|z25|signature|seiya|etherea|flagship|norgespumpa|extreme)\b/.test(productText)) {
+    if (/\b(panasonic|fujitsu|toshiba|samsung|mitsubishi|daikin|lg|nibe|hz25|nz25|z25|signatur|signature|seiya|etherea|flagship|norgespumpa|extreme)\b/.test(productText)) {
       return false;
     }
     const tokens = productText.split(/\s+/).filter(Boolean);
@@ -19595,7 +19655,7 @@
     if (!el.billingPricePreset || !el.billingPriceQuantity) return;
     const item = offerLinePresets.find((entry) => entry.id === el.billingPricePreset.value);
     if (item) el.billingPriceQuantity.value = String(item.defaultQty || 1);
-    const heatPump = offerLineItemIsHeatPump(item);
+    const heatPump = offerLineAutoIncludesStandardInstallation(item);
     el.billingStandardInstallationWrap?.classList.toggle("hidden", !heatPump);
     if (el.billingIncludeStandardInstallation) el.billingIncludeStandardInstallation.checked = heatPump;
   }
@@ -19635,7 +19695,7 @@
       return customPriceLineFromText(label, quantity, "stk");
     }
     const line = jobPriceLineForItem(selected, quantity);
-    if (offerLineItemIsHeatPump(selected) && el.billingIncludeStandardInstallation?.checked) {
+    if (offerLineAutoIncludesStandardInstallation(selected) && el.billingIncludeStandardInstallation?.checked) {
       return [line, standardInstallationOfferLine(quantity)].filter(Boolean).join("\n");
     }
     return line;
@@ -19785,7 +19845,7 @@
     } else {
       const quantity = Number(String(el.completionPriceQuantity.value || item.defaultQty || 1).replace(",", "."));
       if (!Number.isFinite(quantity) || quantity <= 0) throw new Error("Antall må være større enn 0.");
-      line = offerLineItemIsHeatPump(item)
+      line = offerLineAutoIncludesStandardInstallation(item)
         ? [jobPriceLineForItem(item, quantity), standardInstallationOfferLine(quantity)].filter(Boolean).join("\n")
         : jobPriceLineForItem(item, quantity);
     }
@@ -21754,6 +21814,11 @@
       .catch((error) => setSyncStatus(error.message || "Klarte ikke endre saksstatus.", "error"));
   });
   el.leadDetail?.addEventListener("input", (event) => {
+    const offerText = event.target.closest("[data-offer-text]");
+    if (offerText) {
+      delete offerText.dataset.offerBuilderGenerated;
+      return;
+    }
     const offerLineSearch = event.target.closest("[data-offer-line-search]");
     if (offerLineSearch) {
       syncOfferLineSearch(offerLineSearch.dataset.offerLineSearch);
