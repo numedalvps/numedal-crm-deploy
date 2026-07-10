@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260710-07" />
+    <link rel="stylesheet" href="./styles.css?v=20260710-08" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -887,6 +887,12 @@
           <span id="leadStatusLabelText"></span>
         </div>
         <div id="leadStatusOrderFields" class="lead-status-order-fields hidden">
+          <section id="leadStatusAcceptedOffer" class="accepted-offer-panel hidden">
+            <label>Tilbudet kunden takket ja til
+              <select id="leadStatusAcceptedOfferChoice"></select>
+            </label>
+            <p id="leadStatusAcceptedOfferHint"></p>
+          </section>
           <div class="completion-price-controls lead-status-price-controls">
             <label class="lead-status-search-field">Søk eller skriv vare
               <input id="leadStatusProductSearch" type="search" placeholder="Søk Panasonic, Toshiba, varmepumpehus eller skriv egen modell" />
@@ -910,10 +916,11 @@
           <label>Tilbehør / notat utenom listen
             <textarea id="leadStatusAccessories" rows="2" placeholder="F.eks. trevegg, ekstra rør, varmepumpehus som kunden vurderer, eller annet som må sjekkes."></textarea>
           </label>
-          <label>Knytt til anlegg
+          <label>Jobben gjelder
             <select id="leadStatusInstallation">
-              <option value="">Ikke valgt / nytt anlegg</option>
+              <option value="">Nytt anlegg</option>
             </select>
+            <small id="leadStatusInstallationHint" class="compact-help"></small>
           </label>
           <label class="check-row"><input id="leadStatusCreateOrder" type="checkbox" checked /> Opprett jobb</label>
           <label class="check-row"><input id="leadStatusBookAfter" type="checkbox" checked /> Book jobb i kalender etterpå</label>
@@ -1011,6 +1018,7 @@
             <select id="bookingInstallationSelect">
               <option value="">Ikke valgt / gjelder hele kunden</option>
             </select>
+            <small id="bookingInstallationHint" class="compact-help"></small>
           </label>
           <label>Dato<input id="bookingDate" type="date" required /></label>
           <label>Tid<input id="bookingTime" type="time" value="09:00" step="900" required /></label>
@@ -1297,10 +1305,10 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260710-07"></script>
-    <script src="./supabase-adapter.js?v=20260710-07"></script>
-    <script src="./intake-parser.js?v=20260710-07"></script>
-    <script src="./app-20260710-07.js"></script>
+    <script src="./supabase-config.js?v=20260710-08"></script>
+    <script src="./supabase-adapter.js?v=20260710-08"></script>
+    <script src="./intake-parser.js?v=20260710-08"></script>
+    <script src="./app-20260710-08.js"></script>
   </body>
 </html>
 
