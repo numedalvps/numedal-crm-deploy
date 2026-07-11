@@ -7164,6 +7164,35 @@ textarea {
   margin-top: -4px;
 }
 
+.lead-status-product-editor {
+  min-width: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.lead-status-product-editor > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 10px 12px;
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.lead-status-product-editor[open] > summary {
+  border-bottom: 1px solid var(--line);
+  background: #f8fafc;
+}
+
+.lead-status-product-editor-body {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+  padding: 0 10px 10px;
+}
+
 .manual-copy-fallback {
   position: fixed;
   right: 14px;
@@ -7383,6 +7412,17 @@ textarea {
   .modal-actions button {
     flex: 1 1 0;
     min-width: 0;
+  }
+
+  #leadStatusDialog .modal-actions {
+    position: sticky;
+    z-index: 3;
+    bottom: -12px;
+    margin-right: -12px;
+    margin-left: -12px;
+    border-top: 1px solid var(--line);
+    padding: 10px 12px 12px;
+    background: #fff;
   }
 }
 

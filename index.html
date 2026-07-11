@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260711-01" />
+    <link rel="stylesheet" href="./styles.css?v=20260711-02" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -894,26 +894,31 @@
             </label>
             <p id="leadStatusAcceptedOfferHint"></p>
           </section>
-          <div class="completion-price-controls lead-status-price-controls">
-            <label class="lead-status-search-field">Søk eller skriv vare
-              <input id="leadStatusProductSearch" type="search" aria-label="Søk eller skriv vare" placeholder="Søk Panasonic, Toshiba, varmepumpehus eller skriv egen modell" />
-            </label>
-            <label class="lead-status-preset-field">Velg fra liste
-              <select id="leadStatusProductPreset" aria-label="Velg vare fra liste"></select>
-            </label>
-            <label class="lead-status-qty-field">Antall
-              <input id="leadStatusProductQuantity" type="number" min="0" step="0.5" value="1" aria-label="Antall varer" />
-            </label>
-            <button id="leadStatusAddProduct" class="secondary" type="button" title="Legg valgt vare, tillegg eller egen vare inn som avtalt grunnlag.">Legg til varelinje</button>
-          </div>
-          <label id="leadStatusStandardInstallationWrap" class="check-row compact hidden">
-            <input id="leadStatusIncludeStandardInstallation" type="checkbox" checked />
-            <span>Ta med standard montering automatisk</span>
-          </label>
-          <label>Avtalt varegrunnlag
-            <textarea id="leadStatusProduct" rows="4" placeholder="Legg inn faktisk modell, standard montering og tillegg. Egen vare kan skrives med pris, f.eks. Mitsubishi Kaiteki 29 900. Kan rettes når jobben fullføres."></textarea>
-          </label>
-          <div id="leadStatusProductTotal" class="completion-price-total"></div>
+          <details id="leadStatusProductEditor" class="lead-status-product-editor" open>
+            <summary>Endre varer eller pris</summary>
+            <div class="lead-status-product-editor-body">
+              <div class="completion-price-controls lead-status-price-controls">
+                <label class="lead-status-search-field">Søk eller skriv vare
+                  <input id="leadStatusProductSearch" type="search" aria-label="Søk eller skriv vare" placeholder="Søk Panasonic, Toshiba, varmepumpehus eller skriv egen modell" />
+                </label>
+                <label class="lead-status-preset-field">Velg fra liste
+                  <select id="leadStatusProductPreset" aria-label="Velg vare fra liste"></select>
+                </label>
+                <label class="lead-status-qty-field">Antall
+                  <input id="leadStatusProductQuantity" type="number" min="0" step="0.5" value="1" aria-label="Antall varer" />
+                </label>
+                <button id="leadStatusAddProduct" class="secondary" type="button" title="Legg valgt vare, tillegg eller egen vare inn som avtalt grunnlag.">Legg til varelinje</button>
+              </div>
+              <label id="leadStatusStandardInstallationWrap" class="check-row compact hidden">
+                <input id="leadStatusIncludeStandardInstallation" type="checkbox" checked />
+                <span>Ta med standard montering automatisk</span>
+              </label>
+              <label>Avtalt varegrunnlag
+                <textarea id="leadStatusProduct" rows="4" placeholder="Legg inn faktisk modell, standard montering og tillegg. Egen vare kan skrives med pris, f.eks. Mitsubishi Kaiteki 29 900. Kan rettes når jobben fullføres."></textarea>
+              </label>
+              <div id="leadStatusProductTotal" class="completion-price-total"></div>
+            </div>
+          </details>
           <label>Tilbehør / notat utenom listen
             <textarea id="leadStatusAccessories" rows="2" placeholder="F.eks. trevegg, ekstra rør, varmepumpehus som kunden vurderer, eller annet som må sjekkes."></textarea>
           </label>
@@ -1306,10 +1311,10 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260711-01"></script>
-    <script src="./supabase-adapter.js?v=20260711-01"></script>
-    <script src="./intake-parser.js?v=20260711-01"></script>
-    <script src="./app-20260711-01.js"></script>
+    <script src="./supabase-config.js?v=20260711-02"></script>
+    <script src="./supabase-adapter.js?v=20260711-02"></script>
+    <script src="./intake-parser.js?v=20260711-02"></script>
+    <script src="./app-20260711-02.js"></script>
   </body>
 </html>
 
