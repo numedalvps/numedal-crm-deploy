@@ -431,7 +431,7 @@
     if (/\b(?:industristovsuger|stovsuger|leie|utleie|isopro)\b/.test(n)) return { category: "rental", confidence: "high", explicitAcceptance: false };
     if (/\b(?:blaseisolering|isobygg|isolering|etterisolering|supafil|stubbloft|sagflis|kutterflis|komplett pris inkl rigg|antall m2|tykkelse)\b/.test(n)) return { category: "insulation", confidence: "high", explicitAcceptance: false };
     if (explicitAcceptance || referencedOfferAcceptance) return { category: "quote_accepted", confidence: "high", explicitAcceptance: true };
-    if (/\b(?:ny varmepumpe|nyinstallasjon|kjøpe varmepumpe|kjope varmepumpe|bytte varmepumpe|bytt varmepumpa|onsker tilbud|ønsker tilbud|hva koster|pris pa|pris på|komplett pris)\b/.test(n)) {
+    if (/\b(?:ny varmepumpe|nyinstallasjon|kjøpe varmepumpe|kjope varmepumpe|bytte varmepumpe|bytt varmepumpa|onsker tilbud|ønsker tilbud|hva koster|pris pa|pris på|komplett pris|bedriftsanlegg|næringsanlegg|naeringsanlegg|kanalmodell|takkassett|flersonekanal)\b/.test(n)) {
       return { category: "quote_request", confidence: "high", explicitAcceptance: false };
     }
     if (/\b(?:befaring|komme pa en befaring|på befaring)\b/.test(n)) return { category: "site_visit_request", confidence: "high", explicitAcceptance: false };
@@ -471,7 +471,7 @@
     const normalized = normalize(model);
     if (/\b(signatur|signature|seiya|polar|daisekai|daiseikai|kontur|ask)\b/.test(normalized)) return "Toshiba";
     if (/\b(norgespumpa|extreme)\b/.test(normalized)) return "Fujitsu";
-    if (/\b(hz25|hz 25|nz25|nz 25|nz35|nz 35|cz25|cz 25|lz25|lz 25|lz35|lz 35|tz25|tz 25|z25|z 25|z35|z 35|flagship|etherea)\b/.test(normalized)) return "Panasonic";
+    if (/\b(hz25|hz 25|nz25|nz 25|nz35|nz 35|cz25|cz 25|lz25|lz 25|lz35|lz 35|tz25|tz 25|z25|z 25|z35|z 35|flagship|etherea|paci|big paci|pf3|pq4|pq5|pu3|py3|pt3|kit (?:71|100|125|140)pq[0-9a-z]*|kit (?:200|250)pe4[0-9a-z]*)\b/.test(normalized)) return "Panasonic";
     if (/\b(kaiteki|iguru|kirigamine|hara|gussuri)\b/.test(normalized)) return "Mitsubishi";
     if (/\b(narvik|trysil|vega|duo\s*split)\b/.test(normalized)) return "Wilfa";
     if (/\barctic\s*12\b/.test(normalized)) return "Cooper Hunter";
@@ -502,6 +502,14 @@
     if (/trysil\s*floor\s*comfort/.test(normalized)) return "Trysil Floor Comfort";
     if (/\bduo\s*split\b/.test(normalized)) return "Duo Split";
     if (/\bvega\b/.test(normalized)) return "Vega";
+    if (/kit (?:71pq41z5|100pq(?:41|51)z[58]|125pq51z[58]|140pq51z[58])/.test(normalized)) return text.toUpperCase();
+    if (/\b(?:flersonekanal|multi[ -]*zone\s*duct|pq4|pq5)\b/.test(normalized)) return "PACi NX flersonekanal PQ4/PQ5";
+    if (/\bpf3\b|adaptiv\s*kanal/.test(normalized)) return "PACi NX PF3 kanalmodell";
+    if (/\bpy3\b|60\s*[x×]\s*60/.test(normalized)) return "PACi NX 60x60-kassett PY3";
+    if (/\bpu3\b|90\s*[x×]\s*90/.test(normalized)) return "PACi NX 90x90-kassett PU3";
+    if (/\bpt3\b|takmodell\s*paci/.test(normalized)) return "PACi NX takmodell PT3";
+    if (/kit 200pe4zh8|big\s*paci(?:\s*nx)?\s*20/.test(normalized)) return "BIG PACi NX 20,0 kW";
+    if (/kit 250pe4zh8|big\s*paci(?:\s*nx)?\s*25/.test(normalized)) return "BIG PACi NX 25,0 kW";
     return text;
   }
 
@@ -527,6 +535,13 @@
       /\b(?:Narvik|Trysil)\s*(?:25|35)?\b/gi,
       /\b(?:Wilfa\s*)?Vega(?:\s*gulvmodell)?\b/gi,
       /\b(?:Wilfa\s*)?Duo\s*Split\b/gi,
+      /\bKIT-(?:71PQ41Z5|100PQ(?:41|51)Z[58]|125PQ51Z[58]|140PQ51Z[58])\b/gi,
+      /\b(?:PACi\s*NX\s*)?(?:flersonekanal|multi[\s-]*zone\s*duct|PQ[45])\b/gi,
+      /\b(?:PACi\s*NX\s*)?(?:PF3|adaptiv\s*kanal(?:modell)?|kanalmodell\s*PF3)\b/gi,
+      /\b(?:PACi\s*NX\s*)?(?:60\s*[x×]\s*60(?:-kassett)?|PY3)\b/gi,
+      /\b(?:PACi\s*NX\s*)?(?:90\s*[x×]\s*90(?:-kassett)?|PU3)\b/gi,
+      /\b(?:PACi\s*NX\s*)?(?:takmodell\s*PT3|PT3)\b/gi,
+      /\b(?:BIG\s*PACi(?:\s*NX)?\s*(?:20|25)(?:[,.]0)?\s*kW|KIT-(?:200|250)PE4ZH8)\b/gi,
       /\bArctic\s*12\b/gi,
       /\b(?:Kaiteki(?:\s*(?:6300|6600|8700))?|Iguru|Kirigamine|Hara|Gussuri)\b/gi,
     ];
@@ -574,7 +589,7 @@
       }));
     }
     const brandMatch = raw.match(/\b(Panasonic|Fujitsu|Mitsubishi|Toshiba|Daikin|LG|Samsung|Wilfa|Cooper\s*Hunter|Cooper&Hunter|Norgespumpa)\b/i);
-    const modelMatch = raw.match(/\b(HZ\d{2}[A-Z0-9-]*|NZ\d{2}[A-Z0-9-]*|CZ\d{2}[A-Z0-9-]*|LZ\d{2}[A-Z0-9-]*|TZ\d{2}[A-Z0-9-]*|Z\d{2}[A-Z0-9-]*|Kaiteki(?:\s*(?:6300|6600|8700))?|Iguru|Kirigamine|Hara|Gussuri|Norgespumpa\s*\d(?:[.,]\d)?|Extreme\s*(?:Gulv\s*)?\d(?:[.,]\d)?|Signatur(?:e)?\s*(?:25|35)|Seiya\s*Nordic\s*(?:25|35)|(?:Daiseikai\s*10\s*)?(?:Kontur|Ask)\s*(?:25|35)|Polar\s*(?:25|35|50)?(?:\s*(?:hvit|sort|svart|white|black))?|Daisekai|Daiseikai|Narvik\s*(?:25|35)?|Trysil(?:\s*Floor\s*Comfort)?|Vega(?:\s*gulvmodell)?|Duo\s*Split|Arctic\s*12)\b/i);
+    const modelMatch = raw.match(/\b(HZ\d{2}[A-Z0-9-]*|NZ\d{2}[A-Z0-9-]*|CZ\d{2}[A-Z0-9-]*|LZ\d{2}[A-Z0-9-]*|TZ\d{2}[A-Z0-9-]*|Z\d{2}[A-Z0-9-]*|Kaiteki(?:\s*(?:6300|6600|8700))?|Iguru|Kirigamine|Hara|Gussuri|Norgespumpa\s*\d(?:[.,]\d)?|Extreme\s*(?:Gulv\s*)?\d(?:[.,]\d)?|Signatur(?:e)?\s*(?:25|35)|Seiya\s*Nordic\s*(?:25|35)|(?:Daiseikai\s*10\s*)?(?:Kontur|Ask)\s*(?:25|35)|Polar\s*(?:25|35|50)?(?:\s*(?:hvit|sort|svart|white|black))?|Daisekai|Daiseikai|Narvik\s*(?:25|35)?|Trysil(?:\s*Floor\s*Comfort)?|Vega(?:\s*gulvmodell)?|Duo\s*Split|PACi\s*NX\s*(?:PF3|PQ4|PQ5|PU3|PY3|PT3)|BIG\s*PACi(?:\s*NX)?\s*(?:20|25)(?:[,.]0)?\s*kW|KIT-(?:71PQ41Z5|100PQ(?:41|51)Z[58]|125PQ51Z[58]|140PQ51Z[58]|200PE4ZH8|250PE4ZH8)|Arctic\s*12)\b/i);
     const model = cleanLine(modelMatch?.[0] || "");
     const inferredBrand = inferBrandFromModel(model) || brandMatch?.[0] || "";
     return [{
