@@ -767,6 +767,16 @@ small {
   color: #1d4ed8;
 }
 
+.start-worklist button.assistant {
+  border-color: #67e8f9;
+  background: #ecfeff;
+}
+
+.start-worklist button.assistant span,
+.start-worklist button.assistant strong {
+  color: #0e7490;
+}
+
 .start-worklist button.reminder,
 .start-worklist button.move {
   border-color: #c4b5fd;
@@ -1694,6 +1704,130 @@ textarea {
 .ai-selected-customer-notice span {
   font-size: 13px;
   font-weight: 750;
+}
+
+.ai-assistant-proposal {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0;
+  border-top: 1px solid #bfdbfe;
+  border-bottom: 1px solid #bfdbfe;
+  padding: 12px 0;
+  background: #f8fbff;
+}
+
+.ai-assistant-proposal .section-head {
+  padding: 0 10px;
+}
+
+.ai-assistant-proposal label {
+  display: grid;
+  gap: 5px;
+  padding: 0 10px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.assistant-draft-badge,
+.assistant-action-kind,
+.intake-source-badge {
+  width: fit-content;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  padding: 3px 7px;
+  background: #eff6ff;
+  color: #1d4ed8 !important;
+  font-size: 11px !important;
+  font-weight: 900;
+}
+
+.intake-source-badge.sms {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #166534 !important;
+}
+
+.intake-source-badge.website {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #92400e !important;
+}
+
+.intake-assistant-hint {
+  width: fit-content;
+  border-left: 3px solid #2563eb;
+  padding: 3px 7px;
+  background: #eff6ff;
+  color: #1e3a8a !important;
+}
+
+.assistant-recipient-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  color: #334155;
+  font-size: 12px;
+}
+
+.assistant-ready {
+  width: fit-content;
+  color: #166534;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.assistant-blockers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.assistant-blockers li {
+  border: 1px solid #fbbf24;
+  border-radius: 999px;
+  padding: 3px 7px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.assistant-planning-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  margin: 0 10px;
+  border-left: 4px solid #f59e0b;
+  padding: 9px 10px;
+  background: #fffbeb;
+}
+
+.assistant-planning-card.ready {
+  border-left-color: #16a34a;
+  background: #f0fdf4;
+}
+
+.assistant-planning-card > div {
+  display: grid;
+  gap: 3px;
+}
+
+.assistant-planning-card span,
+.assistant-planning-card small {
+  color: #475569;
+  line-height: 1.35;
+}
+
+.assistant-proposal-actions {
+  justify-content: flex-start;
+  padding: 0 10px;
 }
 
 .intake-link-hints span {
@@ -2716,6 +2850,76 @@ textarea {
   align-items: center;
   justify-content: flex-end;
   flex-wrap: wrap;
+}
+
+.assistant-action-queue {
+  margin: 12px 0;
+  border: 1px solid #bfdbfe;
+  padding: 12px;
+  background: #f8fbff;
+}
+
+.assistant-action-queue h3,
+.assistant-action-queue p {
+  margin: 0;
+}
+
+.assistant-action-list {
+  display: grid;
+  gap: 8px;
+}
+
+.assistant-action-list article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 10px;
+  background: #fff;
+}
+
+.assistant-action-main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.assistant-action-main > span:not(.assistant-action-kind) {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.button-link {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 13px;
+  background: #fff;
+  color: var(--teal);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.billing-queue-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.compact-list .billing-queue-main {
+  width: 100%;
+}
+
+.billing-queue-card > .secondary {
+  min-height: 58px;
 }
 
 .mini-action-row .order-primary {
@@ -7973,6 +8177,9 @@ label {
   .order-bulk-actions,
   .order-list-row,
   .intake-inbox-list article,
+  .assistant-action-list article,
+  .assistant-planning-card,
+  .billing-queue-card,
   .customer-order-list article,
   .order-booking-list article,
   .ai-attachment-list article,
@@ -8003,9 +8210,21 @@ label {
   }
 
   .intake-inbox-list .mini-action-row,
+  .assistant-action-list .mini-action-row,
   .customer-order-list article > button,
   .order-booking-list article > button {
     justify-self: start;
+  }
+
+  .assistant-action-list .mini-action-row,
+  .assistant-proposal-actions,
+  .billing-queue-card > button {
+    width: 100%;
+  }
+
+  .assistant-action-list .mini-action-row > *,
+  .assistant-proposal-actions > * {
+    flex: 1 1 140px;
   }
 
   .job-flow-head strong {

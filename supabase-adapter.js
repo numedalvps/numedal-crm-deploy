@@ -798,6 +798,17 @@
     );
   }
 
+  function isOptionalAssistantActionsError(error) {
+    return error && (
+      error.code === "42P01"
+      || error.code === "42501"
+      || /relation .* does not exist/i.test(error.message || "")
+      || /Could not find the table/i.test(error.message || "")
+      || /permission denied for table assistant_actions/i.test(error.message || "")
+      || /assistant_actions/i.test(error.message || "") && /schema cache/i.test(error.message || "")
+    );
+  }
+
   function isOptionalCrmAttachmentsError(error) {
     return error && (
       error.code === "42P01"
@@ -975,6 +986,7 @@
         { data: websiteSubmissionRows, error: websiteSubmissionError },
         { data: profileRows, error: profileError },
         intakeResult,
+        assistantActionResult,
         attachmentResult,
         settingsResult,
       ] = await withDbTimeout(Promise.all([
@@ -993,6 +1005,7 @@
         supabase.from("website_submissions").select("*").order("received_at", { ascending: false }).limit(200),
         supabase.from("profiles").select("*").order("display_name"),
         supabase.from("intake_items").select("*").in("status", ["draft", "needs_review", "ready", "failed"]).order("created_at", { ascending: false }).limit(100),
+        supabase.from("assistant_actions").select("*").in("status", ["needs_review", "approved", "failed"]).order("created_at", { ascending: false }).limit(200),
         supabase.from("crm_attachments").select("*").is("deleted_at", null).order("created_at", { ascending: false }).limit(2000),
         supabase.from("crm_settings").select("*"),
       ]), "laste CRM-data", 45000);
@@ -1011,6 +1024,7 @@
       if (websiteSubmissionError) throw websiteSubmissionError;
       if (profileError) throw profileError;
       if (intakeResult.error && !isOptionalIntakeError(intakeResult.error)) throw intakeResult.error;
+      if (assistantActionResult.error && !isOptionalAssistantActionsError(assistantActionResult.error)) throw assistantActionResult.error;
       if (attachmentResult.error && !isOptionalCrmAttachmentsError(attachmentResult.error)) throw attachmentResult.error;
       if (settingsResult.error && !isOptionalSettingsError(settingsResult.error)) throw settingsResult.error;
       return {
@@ -1033,6 +1047,7 @@
         websiteSubmissions: websiteSubmissionRows || [],
         profiles: profileRows || [],
         intakeItems: intakeResult.error ? [] : intakeResult.data || [],
+        assistantActions: assistantActionResult.error ? [] : assistantActionResult.data || [],
         crmAttachments: attachmentResult.error ? [] : attachmentResult.data || [],
         crmSettings: settingsResult.error
           ? {}
@@ -1636,6 +1651,74 @@
         .eq("id", id)
         .select("*")
         .single();
+      if (error) throw error;
+      return data;
+    },
+    async saveAssistantAction(action = {}) {
+      const supabase = await requireClient();
+      const allowedTypes = new Set(["email_reply", "sms_reply", "offer_draft", "booking_proposal", "invoice_draft", "customer_enrichment"]);
+      const allowedStatuses = new Set(["needs_review", "approved", "executing", "completed", "rejected", "failed", "expired"]);
+      const allowedChannels = new Set(["email", "sms", "internal"]);
+      const actionType = String(action.action_type || action.actionType || "").trim();
+      const idempotencyKey = String(action.idempotency_key || action.idempotencyKey || "").trim();
+      if (!allowedTypes.has(actionType)) throw new Error("Ugyldig type assistentforslag.");
+      if (!idempotencyKey || idempotencyKey.length > 240) throw new Error("Assistentforslaget mangler en gyldig nøkkel.");
+      const status = allowedStatuses.has(action.status) ? action.status : "needs_review";
+      const channel = allowedChannels.has(action.channel) ? action.channel : "internal";
+      const confidence = Number(action.confidence);
+      const payload = {
+        idempotency_key: idempotencyKey,
+        action_type: actionType,
+        status,
+        channel,
+        title: String(action.title || "").trim() || null,
+        recipient: String(action.recipient || "").trim() || null,
+        subject: String(action.subject || "").trim() || null,
+        body: String(action.body || "").trim() || null,
+        payload_json: action.payload_json || action.payload || {},
+        evidence_json: action.evidence_json || action.evidence || {},
+        blockers_json: Array.isArray(action.blockers_json || action.blockers) ? (action.blockers_json || action.blockers) : [],
+        confidence: Number.isFinite(confidence) ? Math.max(0, Math.min(1, confidence)) : null,
+        source_intake_id: isUuid(action.source_intake_id || action.sourceIntakeId) ? (action.source_intake_id || action.sourceIntakeId) : null,
+        source_kind: String(action.source_kind || action.sourceKind || "").trim() || null,
+        source_ref: String(action.source_ref || action.sourceRef || "").trim() || null,
+        linked_customer_id: isUuid(action.linked_customer_id || action.customerId) ? (action.linked_customer_id || action.customerId) : null,
+        linked_lead_id: isUuid(action.linked_lead_id || action.leadId) ? (action.linked_lead_id || action.leadId) : null,
+        linked_job_id: isUuid(action.linked_job_id || action.jobId) ? (action.linked_job_id || action.jobId) : null,
+        linked_order_id: isUuid(action.linked_order_id || action.orderId) ? (action.linked_order_id || action.orderId) : null,
+        approval_required: action.approval_required !== false,
+        not_before: action.not_before || null,
+        expires_at: action.expires_at || null,
+        error_message: String(action.error_message || "").trim() || null,
+      };
+      const { data, error } = await withDbTimeout(
+        supabase.from("assistant_actions").upsert(payload, { onConflict: "idempotency_key" }).select("*").single(),
+        "lagre assistentforslag",
+      );
+      if (error) throw error;
+      return data;
+    },
+    async updateAssistantAction(id, patch = {}) {
+      const supabase = await requireClient();
+      if (!isUuid(id)) throw new Error("Ugyldig assistentforslag.");
+      const allowedStatuses = new Set(["needs_review", "approved", "executing", "completed", "rejected", "failed", "expired"]);
+      const dbPatch = {};
+      if ("status" in patch) {
+        if (!allowedStatuses.has(patch.status)) throw new Error("Ugyldig status for assistentforslag.");
+        dbPatch.status = patch.status;
+        if (patch.status === "approved") dbPatch.approved_at = new Date().toISOString();
+        if (patch.status === "completed") dbPatch.executed_at = new Date().toISOString();
+      }
+      if ("subject" in patch) dbPatch.subject = String(patch.subject || "").trim() || null;
+      if ("body" in patch) dbPatch.body = String(patch.body || "").trim() || null;
+      if ("payload_json" in patch) dbPatch.payload_json = patch.payload_json || {};
+      if ("blockers_json" in patch) dbPatch.blockers_json = Array.isArray(patch.blockers_json) ? patch.blockers_json : [];
+      if ("error_message" in patch) dbPatch.error_message = String(patch.error_message || "").trim() || null;
+      if (!Object.keys(dbPatch).length) return null;
+      const { data, error } = await withDbTimeout(
+        supabase.from("assistant_actions").update(dbPatch).eq("id", id).select("*").single(),
+        "oppdatere assistentforslag",
+      );
       if (error) throw error;
       return data;
     },
