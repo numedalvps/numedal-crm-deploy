@@ -1814,6 +1814,11 @@ textarea {
   background: #f0fdf4;
 }
 
+.assistant-planning-card.historical-data {
+  border-left-color: #2563eb;
+  background: #eff6ff;
+}
+
 .assistant-planning-card > div {
   display: grid;
   gap: 3px;

@@ -145,6 +145,157 @@
     return { type: "oppfolging", label: "Oppfølging", durationMinutes: 30, maxPerDay: 8 };
   }
 
+  function relevantMessageText(context = {}) {
+    const text = sourceText(context);
+    const match = text.match(/(?:relevant\s+meldingstekst|meldingstekst)\s*:\s*([\s\S]*?)(?=\n\s*(?:handlingsforslag|koblingsforslag|statusforslag|crm-ref|kilde-id)\s*:|$)/i);
+    return repairTextEncoding(match?.[1] || text).trim();
+  }
+
+  function sourceDate(context = {}) {
+    const candidates = [
+      context.row?.source_received_at,
+      context.row?.received_at,
+      sourceText(context),
+      context.row?.created_at,
+    ];
+    for (const candidate of candidates) {
+      const text = String(candidate || "");
+      const iso = text.match(/\b(20\d{2})-(\d{2})-(\d{2})\b/);
+      if (iso) {
+        const value = `${iso[1]}-${iso[2]}-${iso[3]}`;
+        const date = new Date(`${value}T00:00:00Z`);
+        if (!Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value) return value;
+      }
+      const norwegian = text.match(/\b(\d{1,2})[./](\d{1,2})[./](20\d{2})\b/);
+      if (norwegian) {
+        const value = `${norwegian[3]}-${String(norwegian[2]).padStart(2, "0")}-${String(norwegian[1]).padStart(2, "0")}`;
+        const date = new Date(`${value}T00:00:00Z`);
+        if (!Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value) return value;
+      }
+    }
+    return "";
+  }
+
+  function coordinatesFromText(value) {
+    const text = repairTextEncoding(value);
+    const pattern = /(?<!\d)([5-7]\d(?:[.,]\d{4,}))\s*[,;\t ]+\s*([0-3]?\d(?:[.,]\d{4,}))(?!\d)/g;
+    for (const match of text.matchAll(pattern)) {
+      const latitude = Number(match[1].replace(",", "."));
+      const longitude = Number(match[2].replace(",", "."));
+      if (latitude >= 57 && latitude <= 72 && longitude >= 4 && longitude <= 32) {
+        return `${latitude.toFixed(7).replace(/0+$/, "").replace(/\.$/, "")},${longitude.toFixed(7).replace(/0+$/, "").replace(/\.$/, "")}`;
+      }
+    }
+    return "";
+  }
+
+  function accessEvidence(value) {
+    const text = repairTextEncoding(value);
+    const hasAccessInfo = /\b(adkomst|tilkomst|n(?:ø|o)kkel|n(?:ø|o)kkelboks(?:en)?|kode|kodeboks(?:en)?|d(?:ø|o)rkode|portkode|bomkode|under\s+matta|under\s+matten|legger\s+ut\s+n(?:ø|o)kkel)\b/i.test(text);
+    const containsSecret = hasAccessInfo
+      && /\b(?:kode|code|pin|n(?:ø|o)kkelboks(?:en)?|kodeboks(?:en)?|d(?:ø|o)rkode|portkode|bomkode)\b[^\n]{0,40}\b(?:\d[\s-]?){3,8}\b/i.test(text);
+    return { hasAccessInfo, containsSecret };
+  }
+
+  function serviceEvidence(context = {}) {
+    const message = normalize(relevantMessageText(context));
+    const type = normalize(context.draft?.type || context.analysis?.intent?.category || "");
+    const serviceContext = /\bservice|rens|vedlikehold\b/.test(message) || /service/.test(type);
+    if (!serviceContext) return { kind: "none", messageDate: sourceDate(context) };
+    const completed = /\bservice(?:n)?\s+(?:er\s+|ble\s+)?(?:utfort|gjennomfort|ferdig)|\btakk\s+for\s+(?:god\s+)?service|\bhar\s+vaert\s+og\s+tatt\s+service|\bservice\s+ble\s+tatt\b/.test(message);
+    const timingDeclined = /\bpasser\s+ikke|\bkan\s+ikke\s+den|\bikke\s+den\s+dagen|\bikke\s+hjemme|\bma\s+flytte|\bannen\s+dag|\bsenere\s+tidspunkt/.test(message);
+    const declined = /\bnei\s+takk|\bonsker\s+ikke|\bikke\s+interessert|\bikke\s+behov|\bstar\s+over/.test(message);
+    const accepted = /\bja\s+takk|\bdet\s+passer|\bgjerne|\bonsker\s+service|\bkan\s+komme|\bdet\s+er\s+greit|^ja\b/.test(message);
+    const kind = completed
+      ? "service_completed_candidate"
+      : timingDeclined
+        ? "service_timing_declined"
+        : declined
+          ? "service_declined"
+          : accepted
+            ? "service_accepted"
+            : "none";
+    return { kind, messageDate: sourceDate(context) };
+  }
+
+  function buildHistoricalSmsEnrichment(context = {}) {
+    if (sourceChannel(context) !== "sms") return { relevant: false, actionType: "customer_enrichment" };
+    const message = relevantMessageText(context);
+    const service = serviceEvidence(context);
+    const access = accessEvidence(message);
+    const coordinates = coordinatesFromText(message);
+    const relevant = service.kind !== "none" || access.hasAccessInfo || Boolean(coordinates);
+    if (!relevant) return { relevant: false, actionType: "customer_enrichment" };
+
+    const customer = context.customer || {};
+    const installationCount = Number(context.installationCount || 0);
+    const blockers = [];
+    const summaries = [];
+    const proposedChanges = {};
+
+    if (!customer.id) blockers.push("Mangler entydig kundekobling");
+    if (service.kind === "service_completed_candidate") {
+      summaries.push(service.messageDate
+        ? `SMS tyder på at service ble utført ${service.messageDate}.`
+        : "SMS tyder på at service ble utført, men datoen mangler.");
+      proposedChanges.lastServiceDate = service.messageDate || null;
+      proposedChanges.serviceEvidence = "completed_candidate";
+      blockers.push("Kontroller mot ferdig jobb eller faktura før siste service oppdateres");
+      if (!service.messageDate) blockers.push("Mangler sikker servicedato");
+      if (installationCount > 1) blockers.push("Velg hvilket anlegg servicen gjelder");
+    } else if (service.kind === "service_accepted") {
+      summaries.push("Kunden takket ja til service. Dette er ikke bevis på at service ble utført.");
+      proposedChanges.serviceResponse = "accepted";
+      proposedChanges.followUpNeeded = true;
+    } else if (service.kind === "service_timing_declined") {
+      summaries.push("Foreslått tidspunkt passet ikke. Kunden bør fortsatt kunne få et nytt forslag.");
+      proposedChanges.serviceResponse = "timing_declined";
+      proposedChanges.followUpNeeded = true;
+    } else if (service.kind === "service_declined") {
+      summaries.push("Kunden avslo service. Ikke bruk dette som permanent kontaktreservasjon uten tydelig beskjed.");
+      proposedChanges.serviceResponse = "declined";
+      proposedChanges.followUpNeeded = false;
+    }
+
+    if (coordinates) {
+      summaries.push("Koordinater ble funnet i SMS og må kartkontrolleres før lagring.");
+      proposedChanges.gpsCoordinates = coordinates;
+      blockers.push("Kontroller koordinatene mot riktig anleggsadresse");
+    }
+    if (access.hasAccessInfo) {
+      proposedChanges.accessInfoPresent = true;
+      proposedChanges.accessSecretNotStored = access.containsSecret;
+      summaries.push(access.containsSecret
+        ? "Sikker tilkomstinformasjon finnes i original SMS. Selve koden er ikke kopiert til forslaget."
+        : "Tilkomstinformasjon finnes i SMS og må kontrolleres før lagring.");
+      blockers.push(access.containsSecret
+        ? "Åpne original SMS ved behov; adgangskoden er med vilje ikke lagret"
+        : "Kontroller at tilkomstinformasjonen fortsatt gjelder");
+    }
+
+    return {
+      relevant: true,
+      actionType: "customer_enrichment",
+      title: `Historisk SMS - ${cleanContactName(customer.name || context.draft?.name || "kunde")}`,
+      body: summaries.join(" "),
+      confidence: service.kind === "service_completed_candidate" ? 0.72 : coordinates ? 0.82 : 0.78,
+      blockers,
+      payload: {
+        sourceDate: service.messageDate || sourceDate(context) || null,
+        findingTypes: [service.kind, coordinates ? "coordinates" : "", access.hasAccessInfo ? "access_information" : ""].filter((item) => item && item !== "none"),
+        proposedChanges,
+        containsSensitiveAccess: access.containsSecret,
+        doNotApplyAutomatically: true,
+      },
+      evidence: {
+        source: "historical_sms",
+        sourceDate: service.messageDate || sourceDate(context) || null,
+        containsSensitiveAccess: access.containsSecret,
+      },
+      needsReview: true,
+    };
+  }
+
   function replySubject(intent) {
     if (intent.category === "quote_request") return "Oppfølging av forespørsel og tilbud";
     if (intent.category === "service_request") return "Service på varmepumpe";
@@ -222,13 +373,15 @@
       blockers,
       needsReview: true,
     };
+    const enrichment = buildHistoricalSmsEnrichment(expanded);
     return {
-      version: "2026-07-12-1",
+      version: "2026-07-12-2",
       generatedAt: new Date().toISOString(),
       sourceChannel: channel,
       intent,
       reply,
       planning,
+      enrichment,
     };
   }
 
@@ -264,10 +417,13 @@
   const api = {
     areaFromContext,
     bookingKind,
+    buildHistoricalSmsEnrichment,
     buildIntakeSuggestion,
     buildInvoiceDraft,
     contactValues,
+    coordinatesFromText,
     intentValues,
+    serviceEvidence,
     sourceChannel,
   };
 
