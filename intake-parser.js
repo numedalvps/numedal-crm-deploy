@@ -473,7 +473,7 @@
     if (/\b(norgespumpa|extreme)\b/.test(normalized)) return "Fujitsu";
     if (/\b(hz25|hz 25|nz25|nz 25|nz35|nz 35|cz25|cz 25|lz25|lz 25|lz35|lz 35|tz25|tz 25|z25|z 25|z35|z 35|flagship|etherea)\b/.test(normalized)) return "Panasonic";
     if (/\b(kaiteki|iguru|kirigamine|hara|gussuri)\b/.test(normalized)) return "Mitsubishi";
-    if (/\b(narvik|trysil)\b/.test(normalized)) return "Wilfa";
+    if (/\b(narvik|trysil|vega|duo\s*split)\b/.test(normalized)) return "Wilfa";
     if (/\barctic\s*12\b/.test(normalized)) return "Cooper Hunter";
     return "";
   }
@@ -500,6 +500,8 @@
       return ["Polar", size, color].filter(Boolean).join(" ");
     }
     if (/trysil\s*floor\s*comfort/.test(normalized)) return "Trysil Floor Comfort";
+    if (/\bduo\s*split\b/.test(normalized)) return "Duo Split";
+    if (/\bvega\b/.test(normalized)) return "Vega";
     return text;
   }
 
@@ -523,6 +525,8 @@
       /\b(?:Daisekai|Daiseikai)\b/gi,
       /\bTrysil\s*Floor\s*Comfort\b/gi,
       /\b(?:Narvik|Trysil)\s*(?:25|35)?\b/gi,
+      /\b(?:Wilfa\s*)?Vega(?:\s*gulvmodell)?\b/gi,
+      /\b(?:Wilfa\s*)?Duo\s*Split\b/gi,
       /\bArctic\s*12\b/gi,
       /\b(?:Kaiteki(?:\s*(?:6300|6600|8700))?|Iguru|Kirigamine|Hara|Gussuri)\b/gi,
     ];
@@ -570,7 +574,7 @@
       }));
     }
     const brandMatch = raw.match(/\b(Panasonic|Fujitsu|Mitsubishi|Toshiba|Daikin|LG|Samsung|Wilfa|Cooper\s*Hunter|Cooper&Hunter|Norgespumpa)\b/i);
-    const modelMatch = raw.match(/\b(HZ\d{2}[A-Z0-9-]*|NZ\d{2}[A-Z0-9-]*|CZ\d{2}[A-Z0-9-]*|LZ\d{2}[A-Z0-9-]*|TZ\d{2}[A-Z0-9-]*|Z\d{2}[A-Z0-9-]*|Kaiteki(?:\s*(?:6300|6600|8700))?|Iguru|Kirigamine|Hara|Gussuri|Norgespumpa\s*\d(?:[.,]\d)?|Extreme\s*(?:Gulv\s*)?\d(?:[.,]\d)?|Signatur(?:e)?\s*(?:25|35)|Seiya\s*Nordic\s*(?:25|35)|(?:Daiseikai\s*10\s*)?(?:Kontur|Ask)\s*(?:25|35)|Polar\s*(?:25|35|50)?(?:\s*(?:hvit|sort|svart|white|black))?|Daisekai|Daiseikai|Narvik\s*(?:25|35)?|Trysil(?:\s*Floor\s*Comfort)?|Arctic\s*12)\b/i);
+    const modelMatch = raw.match(/\b(HZ\d{2}[A-Z0-9-]*|NZ\d{2}[A-Z0-9-]*|CZ\d{2}[A-Z0-9-]*|LZ\d{2}[A-Z0-9-]*|TZ\d{2}[A-Z0-9-]*|Z\d{2}[A-Z0-9-]*|Kaiteki(?:\s*(?:6300|6600|8700))?|Iguru|Kirigamine|Hara|Gussuri|Norgespumpa\s*\d(?:[.,]\d)?|Extreme\s*(?:Gulv\s*)?\d(?:[.,]\d)?|Signatur(?:e)?\s*(?:25|35)|Seiya\s*Nordic\s*(?:25|35)|(?:Daiseikai\s*10\s*)?(?:Kontur|Ask)\s*(?:25|35)|Polar\s*(?:25|35|50)?(?:\s*(?:hvit|sort|svart|white|black))?|Daisekai|Daiseikai|Narvik\s*(?:25|35)?|Trysil(?:\s*Floor\s*Comfort)?|Vega(?:\s*gulvmodell)?|Duo\s*Split|Arctic\s*12)\b/i);
     const model = cleanLine(modelMatch?.[0] || "");
     const inferredBrand = inferBrandFromModel(model) || brandMatch?.[0] || "";
     return [{
