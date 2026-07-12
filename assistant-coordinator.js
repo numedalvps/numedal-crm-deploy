@@ -296,6 +296,72 @@
     };
   }
 
+  function buildEnrichmentApproval(action = {}) {
+    const payload = action.payload_json || action.payload || {};
+    const proposed = payload.proposedChanges && typeof payload.proposedChanges === "object"
+      ? payload.proposedChanges
+      : {};
+    const blockers = Array.isArray(action.blockers_json || action.blockers)
+      ? [...(action.blockers_json || action.blockers)]
+      : [];
+    const serviceResponse = String(proposed.serviceResponse || "").trim();
+    const sourceDateValue = String(payload.sourceDate || action.evidence_json?.sourceDate || action.evidence?.sourceDate || "").trim();
+    const sourceRef = String(action.source_ref || action.sourceRef || "").trim();
+    const sourceDate = /^20\d{2}-\d{2}-\d{2}$/.test(sourceDateValue)
+      ? new Date(`${sourceDateValue}T00:00:00Z`)
+      : null;
+    const hasValidSourceDate = sourceDate
+      && !Number.isNaN(sourceDate.getTime())
+      && sourceDate.toISOString().slice(0, 10) === sourceDateValue;
+    const specificallyBlockedFields = new Set([
+      "lastServiceDate",
+      "serviceEvidence",
+      "gpsCoordinates",
+      "accessInfoPresent",
+      "accessSecretNotStored",
+    ]);
+    const safeFields = new Set(["serviceResponse", "followUpNeeded"]);
+    const hasUnknownFields = Object.keys(proposed).some((key) => !safeFields.has(key) && !specificallyBlockedFields.has(key));
+    const safeResponses = {
+      accepted: {
+        eventType: "Historisk SMS - service ja",
+        note: "Kunden takket ja til service. Service er ikke registrert som utført.",
+      },
+      timing_declined: {
+        eventType: "Historisk SMS - nytt tidspunkt",
+        note: "Foreslått servicetid passet ikke. Kunden kan fortsatt få et nytt forslag.",
+      },
+      declined: {
+        eventType: "Historisk SMS - service avslått",
+        note: "Kunden avslo service. Dette er ikke registrert som permanent kontaktreservasjon.",
+      },
+    };
+
+    if (String(action.action_type || action.actionType || "") !== "customer_enrichment") blockers.push("Forslaget er ikke et kundedataforslag");
+    if (!action.linked_customer_id && !action.customerId) blockers.push("Mangler entydig kundekobling");
+    if (!sourceRef) blockers.push("Mangler stabil kilde-ID");
+    if (!safeResponses[serviceResponse]) blockers.push("Forslaget kan ikke lagres automatisk som historikk");
+    if (!hasValidSourceDate) blockers.push("Mangler sikker kildedato");
+    if (proposed.lastServiceDate) blockers.push("Siste servicedato krever manuell kontroll");
+    if (proposed.gpsCoordinates) blockers.push("Koordinater krever kartkontroll");
+    if (proposed.accessInfoPresent || payload.containsSensitiveAccess) blockers.push("Tilkomstinformasjon krever manuell kontroll");
+    if (hasUnknownFields) blockers.push("Forslaget inneholder flere kundedata og krever manuell kontroll");
+
+    const uniqueBlockers = [...new Set(blockers.filter(Boolean))];
+    const response = safeResponses[serviceResponse] || null;
+    return {
+      allowed: uniqueBlockers.length === 0,
+      blockers: uniqueBlockers,
+      customerId: action.linked_customer_id || action.customerId || null,
+      sourceRef,
+      event: response ? {
+        event_date: sourceDateValue,
+        event_type: response.eventType,
+        note: `${response.note}${sourceRef ? ` Kilde-ID: ${sourceRef}.` : ""}`,
+      } : null,
+    };
+  }
+
   function replySubject(intent) {
     if (intent.category === "quote_request") return "Oppfølging av forespørsel og tilbud";
     if (intent.category === "service_request") return "Service på varmepumpe";
@@ -417,6 +483,7 @@
   const api = {
     areaFromContext,
     bookingKind,
+    buildEnrichmentApproval,
     buildHistoricalSmsEnrichment,
     buildIntakeSuggestion,
     buildInvoiceDraft,
