@@ -1932,6 +1932,35 @@ textarea {
   font-weight: 750;
 }
 
+.ai-registration-outcome {
+  display: grid;
+  gap: 3px;
+  margin: 0 0 10px;
+  border-left: 4px solid var(--teal);
+  padding: 8px 10px;
+  background: #f7fbfa;
+  color: var(--ink);
+}
+
+.ai-registration-outcome strong {
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.ai-registration-outcome span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.lead-address-note {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
 .ai-assistant-proposal {
   display: grid;
   gap: 10px;
