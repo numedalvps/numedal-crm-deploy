@@ -5,6 +5,10 @@
   const databaseUnavailableMessage = "CRM-et fikk ikke kontakt med databasen. Ingen endringer er lagret. Prøv igjen eller kontakt administrator.";
   const isConfigured = Boolean(config.url && config.anonKey && window.supabase);
   const rememberLoginKey = "numedalRememberLogin";
+  const dataCacheDbName = "numedal-crm-data-cache";
+  const dataCacheStoreName = "snapshots";
+  const dataCacheSchema = "20260714-02";
+  const dataCacheMaxAgeMs = 7 * 24 * 60 * 60 * 1000;
 
   function safeStorage(kind) {
     try {
@@ -20,6 +24,85 @@
 
   const localAuthStorage = safeStorage("local");
   const sessionAuthStorage = safeStorage("session");
+
+  function openDataCache() {
+    if (!window.indexedDB) return Promise.resolve(null);
+    return new Promise((resolve) => {
+      let request;
+      try {
+        request = window.indexedDB.open(dataCacheDbName, 1);
+      } catch (_) {
+        resolve(null);
+        return;
+      }
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(dataCacheStoreName)) db.createObjectStore(dataCacheStoreName, { keyPath: "key" });
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => resolve(null);
+      request.onblocked = () => resolve(null);
+    });
+  }
+
+  async function readDataCache(userId) {
+    if (!userId || !shouldRememberLogin()) return null;
+    const db = await openDataCache();
+    if (!db) return null;
+    return new Promise((resolve) => {
+      const transaction = db.transaction(dataCacheStoreName, "readonly");
+      const request = transaction.objectStore(dataCacheStoreName).get(`${dataCacheSchema}:${userId}`);
+      request.onsuccess = () => {
+        const entry = request.result;
+        const age = Date.now() - Number(entry?.savedAt || 0);
+        resolve(entry?.data && age >= 0 && age <= dataCacheMaxAgeMs ? entry : null);
+      };
+      request.onerror = () => resolve(null);
+      transaction.oncomplete = () => db.close();
+      transaction.onabort = () => db.close();
+    });
+  }
+
+  async function writeDataCache(userId, data) {
+    if (!userId || !data || !shouldRememberLogin()) return false;
+    const db = await openDataCache();
+    if (!db) return false;
+    return new Promise((resolve) => {
+      const transaction = db.transaction(dataCacheStoreName, "readwrite");
+      transaction.objectStore(dataCacheStoreName).put({
+        key: `${dataCacheSchema}:${userId}`,
+        savedAt: Date.now(),
+        data,
+      });
+      transaction.oncomplete = () => {
+        db.close();
+        resolve(true);
+      };
+      transaction.onerror = () => {
+        db.close();
+        resolve(false);
+      };
+      transaction.onabort = () => {
+        db.close();
+        resolve(false);
+      };
+    });
+  }
+
+  async function clearDataCache(userId = "") {
+    const db = await openDataCache();
+    if (!db) return;
+    await new Promise((resolve) => {
+      const transaction = db.transaction(dataCacheStoreName, "readwrite");
+      const store = transaction.objectStore(dataCacheStoreName);
+      if (userId) store.delete(`${dataCacheSchema}:${userId}`);
+      else store.clear();
+      transaction.oncomplete = resolve;
+      transaction.onerror = resolve;
+      transaction.onabort = resolve;
+    });
+    db.close();
+  }
 
   function authTokenKeys(storage) {
     if (!storage) return [];
@@ -871,13 +954,24 @@
     return withTimeout(promise, slowNetworkMessage(action), ms);
   }
 
-  async function fetchAllRows(queryFactory, pageSize = 1000, maxRows = 20000) {
+  async function fetchAllRows(queryFactory, pageSize = 1000, maxRows = 20000, parallelPages = 4) {
     const rows = [];
-    for (let from = 0; from < maxRows; from += pageSize) {
-      const { data, error } = await withDbTimeout(queryFactory().range(from, from + pageSize - 1), "laste CRM-data");
-      if (error) return { data: rows, error };
-      rows.push(...(data || []));
-      if (!data || data.length < pageSize) break;
+    const loadPage = (from) => withDbTimeout(queryFactory().range(from, from + pageSize - 1), "laste CRM-data");
+    const first = await loadPage(0);
+    if (first.error) return { data: rows, error: first.error };
+    rows.push(...(first.data || []));
+    if (!first.data || first.data.length < pageSize) return { data: rows, error: null };
+
+    const batchSize = Math.max(1, Number(parallelPages) || 1);
+    for (let batchStart = pageSize; batchStart < maxRows; batchStart += pageSize * batchSize) {
+      const offsets = Array.from({ length: batchSize }, (_, index) => batchStart + index * pageSize)
+        .filter((from) => from < maxRows);
+      const pages = await Promise.all(offsets.map(loadPage));
+      for (const page of pages) {
+        if (page.error) return { data: rows, error: page.error };
+        rows.push(...(page.data || []));
+        if (!page.data || page.data.length < pageSize) return { data: rows, error: null };
+      }
     }
     return { data: rows, error: null };
   }
@@ -894,8 +988,18 @@
         localAuthStorage?.setItem(rememberLoginKey, "true");
       } else {
         localAuthStorage?.setItem(rememberLoginKey, "false");
+        clearDataCache().catch(() => {});
       }
       syncAuthTokensToRememberChoice();
+    },
+    async loadCachedData(userId) {
+      return readDataCache(userId);
+    },
+    async cacheLoadedData(userId, data) {
+      return writeDataCache(userId, data);
+    },
+    async clearCachedData(userId) {
+      return clearDataCache(userId);
     },
     async session() {
       if (!client) return null;
@@ -990,12 +1094,12 @@
         attachmentResult,
         settingsResult,
       ] = await withDbTimeout(Promise.all([
-        fetchAllRows(() => supabase.from("customers").select("*").order("name")),
-        fetchAllRows(() => supabase.from("bookings").select("*").neq("status", "cancelled").order("starts_at")),
+        fetchAllRows(() => supabase.from("customers").select("*").order("name").order("id")),
+        fetchAllRows(() => supabase.from("bookings").select("*").neq("status", "cancelled").order("starts_at").order("id")),
         supabase.from("invoice_metadata").select("*").order("invoice_date", { ascending: false }).limit(1000),
         supabase.from("service_events").select("*").order("event_date", { ascending: false }).limit(1000),
-        fetchAllRows(() => supabase.from("installations").select("*").order("created_at")),
-        fetchAllRows(() => supabase.from("customer_locations").select("*").order("created_at")),
+        fetchAllRows(() => supabase.from("installations").select("*").order("created_at").order("id")),
+        fetchAllRows(() => supabase.from("customer_locations").select("*").order("created_at").order("id")),
         orderRequest,
         supabase.from("leads").select("*").order("updated_at", { ascending: false }).limit(2000),
         supabase.from("activities").select("*").order("occurred_at", { ascending: false }).limit(1000),

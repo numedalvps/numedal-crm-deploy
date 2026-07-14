@@ -2789,6 +2789,66 @@ textarea {
   gap: 6px;
 }
 
+.website-submission-card-summary {
+  display: grid;
+  gap: 4px;
+}
+
+.website-submission-card-summary small {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  line-height: 1.4;
+}
+
+.website-submission-attachment-badge {
+  width: fit-content;
+  max-width: 100%;
+  border: 1px solid #7dd3fc;
+  border-radius: 999px;
+  padding: 3px 7px;
+  background: #e0f2fe;
+  color: #075985 !important;
+}
+
+.website-submission-card-more {
+  min-width: 0;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 6px;
+}
+
+.website-submission-card-more > summary,
+.website-submission-more-list > summary {
+  min-height: 34px;
+  color: var(--teal);
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.website-submission-card-expanded {
+  display: grid;
+  gap: 8px;
+  padding-top: 7px;
+}
+
+.website-submission-more-list {
+  margin-top: 8px;
+  border-top: 1px dashed #7dd3fc;
+  padding-top: 7px;
+}
+
+.website-submission-more-list > .website-submission-list {
+  margin-top: 7px;
+}
+
+.website-submission-search-hint {
+  display: block;
+  margin-top: 8px;
+}
+
 .website-submission-list span,
 .website-submission-list small {
   min-width: 0;
@@ -2844,6 +2904,14 @@ textarea {
 }
 
 @media (max-width: 620px) {
+  .website-submission-inbox {
+    padding: 8px;
+  }
+
+  .website-submission-list article {
+    padding: 9px 10px;
+  }
+
   .website-submission-message p {
     max-height: 170px;
   }
