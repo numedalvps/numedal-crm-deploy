@@ -8,7 +8,7 @@
   const dataCacheDbName = "numedal-crm-data-cache";
   const dataCacheStoreName = "snapshots";
   const dataCacheSchema = "20260714-02";
-  const dataCacheMaxAgeMs = 7 * 24 * 60 * 60 * 1000;
+  const dataCacheMaxAgeMs = 2 * 24 * 60 * 60 * 1000;
 
   function safeStorage(kind) {
     try {
@@ -46,7 +46,7 @@
   }
 
   async function readDataCache(userId) {
-    if (!userId || !shouldRememberLogin()) return null;
+    if (!userId) return null;
     const db = await openDataCache();
     if (!db) return null;
     return new Promise((resolve) => {
@@ -64,7 +64,7 @@
   }
 
   async function writeDataCache(userId, data) {
-    if (!userId || !data || !shouldRememberLogin()) return false;
+    if (!userId || !data) return false;
     const db = await openDataCache();
     if (!db) return false;
     return new Promise((resolve) => {
@@ -988,7 +988,6 @@
         localAuthStorage?.setItem(rememberLoginKey, "true");
       } else {
         localAuthStorage?.setItem(rememberLoginKey, "false");
-        clearDataCache().catch(() => {});
       }
       syncAuthTokensToRememberChoice();
     },
