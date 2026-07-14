@@ -63,7 +63,7 @@
     });
   }
 
-  async function writeDataCache(userId, data) {
+  async function writeDataCache(userId, data, profile = null) {
     if (!userId || !data) return false;
     const db = await openDataCache();
     if (!db) return false;
@@ -73,6 +73,7 @@
         key: `${dataCacheSchema}:${userId}`,
         savedAt: Date.now(),
         data,
+        profile,
       });
       transaction.oncomplete = () => {
         db.close();
@@ -994,8 +995,8 @@
     async loadCachedData(userId) {
       return readDataCache(userId);
     },
-    async cacheLoadedData(userId, data) {
-      return writeDataCache(userId, data);
+    async cacheLoadedData(userId, data, profile) {
+      return writeDataCache(userId, data, profile);
     },
     async clearCachedData(userId) {
       return clearDataCache(userId);
@@ -1051,17 +1052,20 @@
       if (error) throw error;
       return data;
     },
-    async profile() {
+    async profile(userId = "") {
       const supabase = await requireClient();
-      const { data: userData, error: userError } = await withTimeout(
-        supabase.auth.getUser(),
-        "Supabase svarer ikke på brukeroppslag.",
-      );
-      if (userError) throw userError;
-      const user = userData.user;
-      if (!user) return null;
+      let profileUserId = userId;
+      if (!profileUserId) {
+        const { data: userData, error: userError } = await withTimeout(
+          supabase.auth.getUser(),
+          "Supabase svarer ikke på brukeroppslag.",
+        );
+        if (userError) throw userError;
+        profileUserId = userData.user?.id || "";
+      }
+      if (!profileUserId) return null;
       const { data, error } = await withTimeout(
-        supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+        supabase.from("profiles").select("*").eq("id", profileUserId).maybeSingle(),
         "Supabase svarer ikke på profiloppslag.",
       );
       if (error) throw error;
