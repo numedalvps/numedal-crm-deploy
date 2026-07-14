@@ -992,13 +992,13 @@
       ] = await withDbTimeout(Promise.all([
         fetchAllRows(() => supabase.from("customers").select("*").order("name")),
         fetchAllRows(() => supabase.from("bookings").select("*").neq("status", "cancelled").order("starts_at")),
-        fetchAllRows(() => supabase.from("invoice_metadata").select("*").order("invoice_date", { ascending: false }), 1000, 10000),
-        fetchAllRows(() => supabase.from("service_events").select("*").order("event_date", { ascending: false }), 1000, 20000),
+        supabase.from("invoice_metadata").select("*").order("invoice_date", { ascending: false }).limit(1000),
+        supabase.from("service_events").select("*").order("event_date", { ascending: false }).limit(1000),
         fetchAllRows(() => supabase.from("installations").select("*").order("created_at")),
         fetchAllRows(() => supabase.from("customer_locations").select("*").order("created_at")),
         orderRequest,
         supabase.from("leads").select("*").order("updated_at", { ascending: false }).limit(2000),
-        fetchAllRows(() => supabase.from("activities").select("*").order("occurred_at", { ascending: false }), 1000, 20000),
+        supabase.from("activities").select("*").order("occurred_at", { ascending: false }).limit(1000),
         supabase.from("jobs").select("*").neq("work_status", "cancelled").order("updated_at", { ascending: false }).limit(2000),
         supabase.from("appointments").select("*").neq("status", "cancelled").order("start_at", { ascending: true }).limit(2000),
         supabase.from("access_notes").select("*").eq("active", true).order("updated_at", { ascending: false }).limit(2000),
@@ -1052,6 +1052,27 @@
         crmSettings: settingsResult.error
           ? {}
           : Object.fromEntries((settingsResult.data || []).map((row) => [row.key, row.value])),
+      };
+    },
+    async loadCustomerHistory(customerId) {
+      const supabase = await requireClient();
+      if (!isUuid(customerId)) return { invoices: [], serviceEvents: [], activities: [] };
+      const [invoiceResult, serviceResult, activityResult] = await withDbTimeout(Promise.all([
+        supabase.from("invoice_metadata").select("*").eq("customer_id", customerId).order("invoice_date", { ascending: false }).limit(2000),
+        supabase.from("service_events").select("*").eq("customer_id", customerId).order("event_date", { ascending: false }).limit(2000),
+        supabase.from("activities").select("*").eq("customer_id", customerId).order("occurred_at", { ascending: false }).limit(2000),
+      ]), "laste kundehistorikk", 30000);
+      if (invoiceResult.error) throw invoiceResult.error;
+      if (serviceResult.error) throw serviceResult.error;
+      if (activityResult.error) throw activityResult.error;
+      return {
+        invoices: (invoiceResult.data || []).map((row) => ({
+          ...row,
+          lime_id: row.legacy_lime_id,
+          date: row.invoice_date,
+        })),
+        serviceEvents: serviceResult.data || [],
+        activities: activityResult.data || [],
       };
     },
     async saveCrmSetting(key, value) {

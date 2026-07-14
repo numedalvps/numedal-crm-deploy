@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260713-04" />
+    <link rel="stylesheet" href="./styles.css?v=20260714-01" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -241,8 +241,6 @@
             <div id="aiRegistrationDraft" class="ai-registration-draft hidden"></div>
             </div>
           </details>
-          <section id="intakeInbox" class="panel intake-inbox-panel hidden"></section>
-          <section id="assistantActionQueue" class="panel assistant-action-queue hidden"></section>
           <div class="leads-layout">
             <section class="panel lead-list-panel">
               <div class="section-head">
@@ -282,6 +280,8 @@
               <div class="empty-state">Velg en sak til venstre, eller bruk + Ny for å lime inn en melding.</div>
             </section>
           </div>
+          <section id="assistantActionQueue" class="panel assistant-action-queue hidden"></section>
+          <section id="intakeInbox" class="panel intake-inbox-panel hidden"></section>
         </section>
 
         <section id="ordersView" class="view hidden">
@@ -1316,6 +1316,21 @@
       </form>
     </dialog>
 
+    <dialog id="attachmentPreviewDialog" class="modal attachment-preview-dialog">
+      <div class="attachment-preview-shell">
+        <div class="modal-head">
+          <h2 id="attachmentPreviewTitle">Bilde / vedlegg</h2>
+          <button id="closeAttachmentPreviewDialog" type="button" aria-label="Lukk">×</button>
+        </div>
+        <p id="attachmentPreviewStatus" class="attachment-preview-status" role="status">Laster vedlegg...</p>
+        <div id="attachmentPreviewBody" class="attachment-preview-body" aria-live="polite"></div>
+        <div class="modal-actions attachment-preview-actions">
+          <a id="attachmentPreviewExternal" class="hidden" target="_blank" rel="noopener noreferrer">Åpne i ny fane</a>
+          <button id="attachmentPreviewCloseButton" class="secondary" type="button">Lukk</button>
+        </div>
+      </div>
+    </dialog>
+
     <dialog id="customerQuickDialog" class="side-modal">
       <div class="side-panel">
         <div class="modal-head">
@@ -1327,11 +1342,11 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260713-04"></script>
-    <script src="./supabase-adapter.js?v=20260713-04"></script>
-    <script src="./intake-parser.js?v=20260713-04"></script>
-    <script src="./assistant-coordinator.js?v=20260713-04"></script>
-    <script src="./app-20260713-04.js"></script>
+    <script src="./supabase-config.js?v=20260714-01"></script>
+    <script src="./supabase-adapter.js?v=20260714-01"></script>
+    <script src="./intake-parser.js?v=20260714-01"></script>
+    <script src="./assistant-coordinator.js?v=20260714-01"></script>
+    <script src="./app-20260714-01.js"></script>
   </body>
 </html>
 

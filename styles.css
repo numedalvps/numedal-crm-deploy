@@ -2825,6 +2825,24 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.website-message-full {
+  margin-top: 2px;
+}
+
+.website-message-full > summary {
+  width: fit-content;
+  min-height: 34px;
+  color: var(--teal);
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.website-message-full p {
+  max-height: min(50vh, 520px);
+  margin-top: 6px;
+}
+
 @media (max-width: 620px) {
   .website-submission-message p {
     max-height: 170px;
@@ -3064,16 +3082,56 @@ textarea {
 }
 
 .intake-inbox-panel {
-  border: 1px solid #fed7aa;
+  border: 1px solid #cbd5e1;
   border-radius: 8px;
   padding: 12px;
   margin: 12px 0;
-  background: #fff7ed;
+  background: #f8fafc;
 }
 
 .intake-inbox-panel h3,
 .intake-inbox-panel p {
   margin: 0;
+}
+
+.intake-inbox-details > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.intake-inbox-details > summary span {
+  display: grid;
+  gap: 2px;
+}
+
+.intake-inbox-details > summary small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.intake-inbox-details > summary em {
+  min-width: 30px;
+  border-radius: 999px;
+  padding: 5px 8px;
+  background: #e2e8f0;
+  color: var(--ink);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 950;
+  text-align: center;
+}
+
+.intake-inbox-details[open] > summary {
+  margin-bottom: 10px;
+}
+
+.mobile-lead-back {
+  display: none;
 }
 
 .intake-inbox-list {
@@ -7250,6 +7308,69 @@ textarea {
   background: rgba(15, 23, 42, 0.45);
 }
 
+.attachment-preview-dialog {
+  width: min(980px, calc(100vw - 24px));
+}
+
+.attachment-preview-shell {
+  padding: 18px;
+}
+
+.attachment-preview-status {
+  min-height: 20px;
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.attachment-preview-body {
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.attachment-preview-body img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: calc(100dvh - 220px);
+  object-fit: contain;
+  background: #fff;
+}
+
+.attachment-preview-body iframe {
+  width: 100%;
+  height: min(70dvh, 720px);
+  border: 0;
+  background: #fff;
+}
+
+.attachment-preview-body p {
+  max-width: 520px;
+  margin: 0;
+  padding: 24px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.attachment-preview-actions a {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  padding: 9px 13px;
+  background: var(--teal);
+  color: #fff;
+  font-weight: 800;
+  text-decoration: none;
+}
+
 .side-modal {
   width: min(460px, calc(100vw - 18px));
   max-width: none;
@@ -8542,6 +8663,33 @@ label {
     padding: 12px;
   }
 
+  .attachment-preview-dialog {
+    width: calc(100vw - 12px);
+    max-width: calc(100vw - 12px);
+    max-height: calc(100dvh - 12px);
+  }
+
+  .attachment-preview-shell {
+    padding: 12px;
+  }
+
+  .attachment-preview-body {
+    min-height: 180px;
+  }
+
+  .attachment-preview-body img {
+    max-height: calc(100dvh - 205px);
+  }
+
+  .attachment-preview-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .attachment-preview-actions > * {
+    width: 100%;
+  }
+
   .sidebar nav {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -8681,6 +8829,33 @@ label {
     order: 5;
     max-height: none;
     overflow: visible;
+  }
+
+  #leadsView:not(.mobile-detail-open) .lead-detail {
+    display: none;
+  }
+
+  #leadsView.mobile-detail-open > .ai-registration-panel,
+  #leadsView.mobile-detail-open > .assistant-action-queue,
+  #leadsView.mobile-detail-open > .intake-inbox-panel,
+  #leadsView.mobile-detail-open .lead-list-panel {
+    display: none;
+  }
+
+  #leadsView.mobile-detail-open .leads-layout {
+    display: block;
+  }
+
+  #leadsView.mobile-detail-open .lead-detail {
+    display: block;
+  }
+
+  .mobile-lead-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    width: auto;
+    margin-bottom: 10px;
   }
 
   .topbar {
