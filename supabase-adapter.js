@@ -119,6 +119,31 @@
     return authTokenKeys(storage).length > 0;
   }
 
+  function storedSessionHint() {
+    const storages = shouldRememberLogin()
+      ? [localAuthStorage, sessionAuthStorage]
+      : [sessionAuthStorage, localAuthStorage];
+    for (const storage of storages) {
+      for (const key of authTokenKeys(storage)) {
+        try {
+          const parsed = JSON.parse(storage.getItem(key) || "null");
+          const session = parsed?.currentSession || parsed?.session || parsed;
+          if (session?.user?.id && (session.refresh_token || session.access_token)) {
+            return {
+              user: {
+                id: session.user.id,
+                email: session.user.email || "",
+              },
+            };
+          }
+        } catch (_) {
+          // Ignore malformed legacy auth storage and let Supabase verify normally.
+        }
+      }
+    }
+    return null;
+  }
+
   function shouldRememberLogin() {
     const preference = localAuthStorage?.getItem(rememberLoginKey);
     if (preference === "true") return true;
@@ -991,6 +1016,9 @@
         localAuthStorage?.setItem(rememberLoginKey, "false");
       }
       syncAuthTokensToRememberChoice();
+    },
+    sessionHint() {
+      return storedSessionHint();
     },
     async loadCachedData(userId) {
       return readDataCache(userId);
