@@ -9,6 +9,7 @@
   const dataCacheStoreName = "snapshots";
   const dataCacheSchema = "20260714-02";
   const dataCacheMaxAgeMs = 2 * 24 * 60 * 60 * 1000;
+  const dataCacheUserHintKey = "numedalCrmCacheUserId";
 
   function safeStorage(kind) {
     try {
@@ -76,6 +77,7 @@
         profile,
       });
       transaction.oncomplete = () => {
+        localAuthStorage?.setItem(dataCacheUserHintKey, String(userId));
         db.close();
         resolve(true);
       };
@@ -91,6 +93,8 @@
   }
 
   async function clearDataCache(userId = "") {
+    const hintedUserId = localAuthStorage?.getItem(dataCacheUserHintKey) || "";
+    if (!userId || hintedUserId === String(userId)) localAuthStorage?.removeItem(dataCacheUserHintKey);
     const db = await openDataCache();
     if (!db) return;
     await new Promise((resolve) => {
@@ -120,6 +124,10 @@
   }
 
   function storedSessionHint() {
+    const hintedUserId = localAuthStorage?.getItem(dataCacheUserHintKey) || "";
+    if (hintedUserId && (hasAuthTokens(localAuthStorage) || hasAuthTokens(sessionAuthStorage))) {
+      return { user: { id: hintedUserId, email: "" } };
+    }
     const storages = shouldRememberLogin()
       ? [localAuthStorage, sessionAuthStorage]
       : [sessionAuthStorage, localAuthStorage];
