@@ -354,6 +354,9 @@ small {
   width: min(520px, 90vw);
   max-height: 70vh;
   overflow: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
   padding: 8px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -2313,6 +2316,19 @@ textarea {
 .customer-list {
   max-height: calc(100vh - 190px);
   overflow: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
+.customer-search-summary,
+.mobile-customer-back {
+  display: none;
+}
+
+.customer-list.search-pending {
+  pointer-events: none;
+  opacity: 0.55;
 }
 
 .lead-list,
@@ -8916,6 +8932,58 @@ label {
 
   #leadsView.mobile-detail-open .lead-detail {
     display: block;
+  }
+
+  #customersView:not(.mobile-detail-open) .customer-detail {
+    display: none;
+  }
+
+  #customersView.mobile-detail-open .customer-list-panel {
+    display: none;
+  }
+
+  #customersView.mobile-detail-open .customer-layout,
+  #customersView.mobile-detail-open .customer-detail {
+    display: block;
+  }
+
+  #customersView .customer-list {
+    max-height: none;
+    overflow: visible;
+  }
+
+  #customersView .customer-list button {
+    min-height: 68px;
+    border-radius: 8px;
+    padding: 10px;
+  }
+
+  #customersView .customer-list strong,
+  #customersView .customer-list small {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .customer-search-summary {
+    display: block;
+    min-height: 20px;
+    margin: -2px 0 8px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .customer-search-prompt {
+    min-height: 92px;
+    display: grid;
+    place-items: center;
+  }
+
+  .mobile-customer-back {
+    display: inline-flex;
+    align-items: center;
+    width: auto;
+    margin-bottom: 10px;
   }
 
   .mobile-lead-back {

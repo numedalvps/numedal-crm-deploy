@@ -9,10 +9,12 @@
     "test:google-dashboard": "node tests/google-dashboard.test.js",
     "test:data-quality": "node tests/private-data-quality-report.test.js",
     "test:ui-flow": "node tests/ui-flow.test.js",
+    "test:production-version": "node tests/production-healthcheck-version.test.js",
+    "test:website-intake": "node tests/website-intake-normalization.test.mjs",
     "eval:intake": "node tests/intake-eval.js",
     "test:production": "node tests/production-healthcheck.js",
     "test:website": "node tests/website-healthcheck.js",
     "demo": "node tools/demo-server.js",
-    "check": "node --check app.js && node --check supabase-adapter.js && node --check intake-parser.js && node --check assistant-coordinator.js && node tests/intake.test.js && node tests/assistant-coordinator.test.js && node tests/google-dashboard.test.js && node tests/ui-flow.test.js"
+    "check": "node --check app.js && node --check supabase-adapter.js && node --check intake-parser.js && node --check assistant-coordinator.js && node tests/intake.test.js && node tests/assistant-coordinator.test.js && node tests/google-dashboard.test.js && node tests/production-healthcheck-version.test.js && node tests/website-intake-normalization.test.mjs && node tests/ui-flow.test.js"
   }
 }
