@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260716-01" />
+    <link rel="stylesheet" href="./styles.css?v=20260716-02" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -69,6 +69,7 @@
               <input id="globalSearchInput" type="search" placeholder="Søk kunde, e-post, notat, anlegg, jobb eller faktura" title="Søk i hele CRM. Trykk Ctrl+K for å åpne søket." autocomplete="off" />
               <div id="globalSearchResults" class="global-search-results top-search-results"></div>
             </div>
+            <button id="crmAssistantButton" class="secondary crm-assistant-button" type="button" aria-controls="crmAssistantPanel" aria-expanded="false" title="Åpne CRM-assistenten uten å forlate siden du jobber på."><span aria-hidden="true">✦</span> Assistent</button>
             <button id="quickReminderButton" class="secondary quick-reminder-button" data-new-action="reminder" type="button" title="Lag en rask påminnelse som vises på forsiden.">Påminnelse</button>
             <div class="new-action-wrap">
               <button id="newActionButton" type="button" aria-expanded="false">+ Ny</button>
@@ -510,9 +511,9 @@
             <div class="section-head">
               <div>
                 <h2>Servicerute</h2>
-                <p>Serviceoppfølging er potensielle jobber. Book først når kunden har sagt ja eller du har avtale/adkomst.</p>
+                <p>Serviceoppfølging er potensielle jobber. Registrer hvordan kunden bekreftet service før ruten beregnes og bookes.</p>
               </div>
-              <button id="routeOpenMapsButton" type="button">Åpne rute i Google Maps</button>
+              <button id="routeOpenMapsButton" type="button">Åpne beregnet rute i Google Maps</button>
             </div>
 
             <section class="route-step">
@@ -540,6 +541,40 @@
                   <input id="routeMaxJobs" type="number" min="1" max="10" value="8" />
                 </label>
               </div>
+              <div class="route-controls primary route-day-frame">
+                <label>Startsted
+                  <input id="routeOrigin" value="Svene, 3622, Norge" />
+                </label>
+                <label>Avreise
+                  <input id="routeStartTime" type="time" value="08:00" step="900" />
+                </label>
+                <label>Ferdig senest
+                  <input id="routeEndTime" type="time" value="18:00" step="900" />
+                </label>
+                <label>Varighet pr. service
+                  <select id="routeDuration">
+                    <option value="60">60 min</option>
+                    <option value="45">45 min</option>
+                    <option value="75">75 min</option>
+                  </select>
+                </label>
+                <label>Praktisk buffer
+                  <select id="routeTravelBuffer">
+                    <option value="10">10 min mellom stopp</option>
+                    <option value="5">5 min mellom stopp</option>
+                    <option value="15">15 min mellom stopp</option>
+                    <option value="0">Ingen ekstra buffer</option>
+                  </select>
+                </label>
+                <label class="check-label">
+                  <input id="routeReturnToOrigin" type="checkbox" checked />
+                  Ta med retur til startsted
+                </label>
+              </div>
+              <div class="route-campaign-entry">
+                <button id="routeCampaignButton" class="secondary" type="button">Finn servicekunder i området og lag SMS-utkast</button>
+                <small>Bruker området over og lager separate utkast til kontroll. Valgte rutekunder brukes ikke, og ingenting sendes automatisk.</small>
+              </div>
               <details class="route-advanced">
                 <summary>Flere valg</summary>
                 <div class="route-controls">
@@ -551,28 +586,19 @@
                       <option value="green">Neste service senere</option>
                     </select>
                   </label>
-                  <label>Bookingklar
+                  <label>Notatindikasjon (må kontrolleres)
                     <select id="routeReplyFilter">
                       <option value="all">Alle aktuelle</option>
-                      <option value="positive">Har svart ja / ok</option>
-                      <option value="key">Nøkkel/adkomst mulig</option>
-                      <option value="manual">Manuelt valgte</option>
+                      <option value="positive">Mulig ja / ok i fritekst</option>
+                      <option value="key">Mulig adgangsinformasjon</option>
+                      <option value="manual">Manuelt bekreftet og valgt</option>
                     </select>
                   </label>
-                  <label>Start
-                    <input id="routeOrigin" value="Svene, 3622, Norge" />
-                  </label>
-                  <label>Starttid
-                    <input id="routeStartTime" type="time" value="08:00" step="900" />
-                  </label>
-                  <label>Slutt senest
-                    <input id="routeEndTime" type="time" value="18:00" step="900" />
-                  </label>
-                  <label>Varighet pr jobb
-                    <select id="routeDuration">
-                      <option value="60">60 min</option>
-                      <option value="45">45 min</option>
-                      <option value="75">75 min</option>
+                  <label>ETA-vindu til kunden
+                    <select id="routeEtaWindow">
+                      <option value="30">30 minutter</option>
+                      <option value="40">40 minutter</option>
+                      <option value="60">60 minutter</option>
                     </select>
                   </label>
                   <label class="check-label">
@@ -632,13 +658,13 @@
                 <span>3</span>
                 <div>
                   <h3>Rute og booking</h3>
-                  <p>Kontroller rekkefølge, åpne Google Maps, og book som utkast når ruta ser riktig ut.</p>
+                  <p>Beregn rekkefølge og kjøretider med Google. Bare manuelt valgte kunder som faktisk har bekreftet kan bookes.</p>
                 </div>
               </div>
               <div class="route-actions">
-                <button id="routeRefreshButton" type="button">Finn rute</button>
-                <button id="routeBookDraftButton" class="secondary" type="button">Book alle som utkast</button>
-                <button id="routeCampaignButton" class="secondary" type="button">Kopier SMS til alle</button>
+                <button id="routeRefreshButton" type="button">Beregn korteste rute med Google</button>
+                <button id="routeEtaDraftButton" class="secondary" type="button">Lag ETA-SMS til kontroll</button>
+                <button id="routeBookDraftButton" class="secondary" type="button">Opprett bookinger og servicejobber</button>
               </div>
               <div id="routeSummary" class="route-summary"></div>
               <div id="routeResults" class="route-results"></div>
@@ -646,7 +672,7 @@
             </section>
             <section class="route-help">
               <strong>Slik brukes denne nå:</strong>
-              <span>Legg kunder som har svart ja/ok i lista, juster rekkefølge ved behov, og book dem som utkast. Kjøretidene i appen er grove estimater; Google Maps er fasit når du åpner ruten.</span>
+              <span>Legg kunder som har svart ja/ok i lista og beregn ruten. CRM bruker Google-kjøretider, viser et realistisk ankomstvindu og krever ny beregning hvis kunder eller dagsrammen endres.</span>
             </section>
           </section>
         </section>
@@ -701,6 +727,7 @@
         </section>
       </main>
       <div id="mobileMoreMenu" class="mobile-more-menu hidden" aria-label="Flere mobilvalg">
+        <button id="mobileCrmAssistantButton" class="mobile-assistant-entry" type="button" aria-controls="crmAssistantPanel" aria-expanded="false"><span aria-hidden="true">✦</span> CRM-assistent</button>
         <button data-view="routeplanner" data-admin-mobile type="button">Servicerute</button>
         <button data-view="technician" data-admin-mobile type="button">Min dag</button>
         <button data-view="insulation" data-admin-mobile type="button">Blåseisolering</button>
@@ -716,6 +743,52 @@
         <button data-view="planning" type="button">Plan</button>
         <button id="mobileMoreButton" data-mobile-more-toggle type="button" aria-expanded="false">Mer</button>
       </nav>
+
+      <aside id="crmAssistantPanel" class="crm-assistant-panel" aria-labelledby="crmAssistantTitle" aria-hidden="true" inert>
+        <header class="crm-assistant-head">
+          <div>
+            <span class="crm-assistant-kicker">Arbeidshjelp</span>
+            <h2 id="crmAssistantTitle">CRM-assistent</h2>
+            <p>Forslag må kontrolleres før noe sendes eller endres.</p>
+          </div>
+          <div class="crm-assistant-head-actions">
+            <button id="crmAssistantThreadsButton" class="secondary" type="button" aria-label="Samtaler og historikk" aria-controls="crmAssistantThreadDrawer" aria-expanded="false">Samtaler</button>
+            <button id="crmAssistantNewThreadButton" class="secondary" type="button">Ny</button>
+            <button id="closeCrmAssistantButton" class="crm-assistant-close" type="button" aria-label="Lukk CRM-assistent">×</button>
+          </div>
+        </header>
+
+        <section id="crmAssistantContext" class="crm-assistant-context" aria-live="polite"></section>
+        <section id="crmAssistantMemories" class="crm-assistant-memories hidden" aria-label="Husket informasjon"></section>
+
+        <section id="crmAssistantThreadDrawer" class="crm-assistant-thread-drawer hidden" aria-label="Tidligere samtaler">
+          <div class="crm-assistant-thread-head">
+            <div>
+              <strong>Samtaler</strong>
+              <span>Velg en tidligere samtale eller start en ny.</span>
+            </div>
+            <button id="crmAssistantDrawerNewThreadButton" type="button">Ny samtale</button>
+          </div>
+          <div id="crmAssistantThreadList" class="crm-assistant-thread-list"></div>
+        </section>
+
+        <div id="crmAssistantError" class="crm-assistant-error hidden" role="alert">
+          <span id="crmAssistantErrorText"></span>
+          <button id="crmAssistantRetryButton" class="secondary hidden" type="button">Prøv igjen</button>
+        </div>
+
+        <div id="crmAssistantMessages" class="crm-assistant-messages" role="log" aria-live="polite" aria-relevant="additions text"></div>
+        <section id="crmAssistantSuggestions" class="crm-assistant-suggestions hidden" aria-label="Forslag til kontroll"></section>
+
+        <form id="crmAssistantForm" class="crm-assistant-form">
+          <label class="sr-only" for="crmAssistantInput">Skriv til CRM-assistenten</label>
+          <textarea id="crmAssistantInput" rows="3" maxlength="6000" placeholder="Skriv hva du vil finne, oppsummere eller forberede…" autocomplete="off"></textarea>
+          <div class="crm-assistant-form-foot">
+            <span id="crmAssistantStatus">Enter sender · Shift+Enter gir ny linje</span>
+            <button id="crmAssistantSendButton" type="submit">Send</button>
+          </div>
+        </form>
+      </aside>
     </div>
 
     <dialog id="passwordResetDialog" class="modal compact-modal">
@@ -1020,6 +1093,27 @@
         <div class="modal-actions">
           <button class="secondary" id="confirmCancelButton" type="button">Avbryt</button>
           <button id="confirmOkButton" type="submit">OK</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="assistantLearningDialog" class="modal compact-modal">
+      <form id="assistantLearningForm" method="dialog">
+        <div class="modal-head">
+          <h2 id="assistantLearningTitle">Hjelp assistenten å bli bedre</h2>
+          <button id="closeAssistantLearningDialog" type="button" aria-label="Lukk">×</button>
+        </div>
+        <p id="assistantLearningText" class="confirm-text"></p>
+        <label>Hva bør forbedres?
+          <select id="assistantLearningReason" required></select>
+        </label>
+        <label>Kort forklaring (valgfritt)
+          <textarea id="assistantLearningNote" rows="4" maxlength="2000" placeholder="For eksempel hva som var feil eller hvordan du ville skrevet det."></textarea>
+        </label>
+        <p class="form-hint">Dette lagres som kontrollert tilbakemelding. Kundeopplysninger, priser og koder blir ikke gjort til globale regler.</p>
+        <div class="modal-actions">
+          <button class="secondary" id="assistantLearningCancelButton" type="button">Avbryt</button>
+          <button id="assistantLearningSaveButton" type="submit">Lagre tilbakemelding</button>
         </div>
       </form>
     </dialog>
@@ -1343,11 +1437,11 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260716-01"></script>
-    <script src="./supabase-adapter.js?v=20260716-01"></script>
-    <script src="./intake-parser.js?v=20260716-01"></script>
-    <script src="./assistant-coordinator.js?v=20260716-01"></script>
-    <script src="./app-20260716-01.js"></script>
+    <script src="./supabase-config.js?v=20260716-02"></script>
+    <script src="./supabase-adapter.js?v=20260716-02"></script>
+    <script src="./intake-parser.js?v=20260716-02"></script>
+    <script src="./assistant-coordinator.js?v=20260716-02"></script>
+    <script src="./app-20260716-02.js"></script>
   </body>
 </html>
 

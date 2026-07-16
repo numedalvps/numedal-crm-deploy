@@ -1,4 +1,4 @@
-﻿# Numedal CRM deploy
+# Numedal CRM deploy
 
 This repository contains the static browser files used to deploy the internal Numedal CRM web app.
 

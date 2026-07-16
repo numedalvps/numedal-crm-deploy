@@ -443,7 +443,7 @@
   }
 
   function locationToDb(location, customerId) {
-    return {
+    const row = {
       customer_id: customerId,
       location_name: location.location_name || location.locationName || "Anlegg",
       address: location.address || null,
@@ -454,6 +454,14 @@
       is_primary: Boolean(location.is_primary || location.isPrimary),
       updated_at: new Date().toISOString(),
     };
+    const latitude = Number(location.latitude ?? location.lat);
+    const longitude = Number(location.longitude ?? location.lng ?? location.lon);
+    if (Number.isFinite(latitude) && Math.abs(latitude) <= 90) row.latitude = latitude;
+    if (Number.isFinite(longitude) && Math.abs(longitude) <= 180) row.longitude = longitude;
+    if ("geocode_status" in location || "geocodeStatus" in location) {
+      row.geocode_status = String(location.geocode_status || location.geocodeStatus || "unknown").trim() || "unknown";
+    }
+    return row;
   }
 
   function bookingFromDb(row) {
@@ -473,6 +481,12 @@
       note: isBefaring || isInsulation ? cleanNote : note,
       status: row.status || "booked",
       assigned_to: row.assigned_to || null,
+      assignedTo: row.assigned_to || null,
+      resourceProfileId: row.assigned_to || null,
+      installationId: row.installation_id || "",
+      installation_id: row.installation_id || "",
+      locationId: row.location_id || "",
+      location_id: row.location_id || "",
       created_at: row.created_at || null,
       updated_at: row.updated_at || null,
       done_at: row.done_at || null,
@@ -524,7 +538,7 @@
   function bookingToDb(booking) {
     const startsAt = localBookingTimestamp(booking.date, booking.time || "09:00");
     const jobType = jobTypeFor(booking.type || "service");
-    return {
+    const row = {
       customer_id: booking.customerId,
       assigned_name: booking.resource || "Hubert",
       job_type: jobType,
@@ -533,6 +547,14 @@
       note: booking.note || null,
       status: booking.status || "booked",
     };
+    const assignmentFields = ["assigned_to", "assignedTo", "resourceProfileId", "resource_profile_id"];
+    const hasExplicitAssignment = assignmentFields.some((field) => Object.prototype.hasOwnProperty.call(booking, field));
+    const assignedTo = booking.assigned_to || booking.assignedTo || booking.resourceProfileId || booking.resource_profile_id || "";
+    if (isUuid(assignedTo)) row.assigned_to = assignedTo;
+    else if (hasExplicitAssignment) row.assigned_to = null;
+    if (isUuid(booking.installationId || booking.installation_id)) row.installation_id = booking.installationId || booking.installation_id;
+    if (isUuid(booking.locationId || booking.location_id)) row.location_id = booking.locationId || booking.location_id;
+    return row;
   }
 
   function bookingIdsForOrder(order) {
@@ -543,6 +565,85 @@
 
   function isUuid(value) {
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
+  }
+
+  function compactNorwegianPhone(value) {
+    let digits = String(value || "").replace(/\D/g, "");
+    if (digits.startsWith("0047")) digits = digits.slice(4);
+    else if (digits.length === 10 && digits.startsWith("47")) digits = digits.slice(2);
+    return /^\d{8}$/.test(digits) ? digits : "";
+  }
+
+  function customerHasMatchedPhone(customer = {}, matchedPhone = "") {
+    const expected = compactNorwegianPhone(matchedPhone);
+    if (!expected) return false;
+    const contacts = Array.isArray(customer.contact_people) ? customer.contact_people : [];
+    return [customer.phone, ...contacts.map((contact) => contact?.phone)]
+      .map(compactNorwegianPhone)
+      .filter(Boolean)
+      .includes(expected);
+  }
+
+  function hasHistoricalSmsActionMarker(payload = {}, evidence = {}) {
+    const proposedChanges = payload.proposedChanges && typeof payload.proposedChanges === "object" && !Array.isArray(payload.proposedChanges)
+      ? payload.proposedChanges
+      : {};
+    return Object.prototype.hasOwnProperty.call(payload, "manualConfirmedAccess")
+      || Object.prototype.hasOwnProperty.call(payload, "manualConfirmedAccessRequested")
+      || Object.prototype.hasOwnProperty.call(payload, "accessNoteTarget")
+      || Object.prototype.hasOwnProperty.call(payload, "auditExcludesAccessSecret")
+      || Object.prototype.hasOwnProperty.call(proposedChanges, "access_note")
+      || proposedChanges.historicalConversation === "summary_only"
+      || (payload.historicalConversation && typeof payload.historicalConversation === "object")
+      || Array.isArray(payload.findingTypes)
+      || Object.prototype.hasOwnProperty.call(evidence, "accessNoteTarget")
+      || Object.prototype.hasOwnProperty.call(evidence, "exactPhoneVerified")
+      || Object.prototype.hasOwnProperty.call(evidence, "uniquePhoneMatch")
+      || Object.prototype.hasOwnProperty.call(evidence, "matchedPhone")
+      || evidence.source === "historical_sms"
+      || evidence.provider === "google_messages";
+  }
+
+  async function verifyUniqueHistoricalPhoneMatch(supabase, action = {}) {
+    const payload = action.payload_json || action.payload || {};
+    if (payload.manualConfirmedAccess !== true) return;
+    const linkedCustomerId = action.linked_customer_id || action.customerId || "";
+    const evidence = action.evidence_json || action.evidence || {};
+    const matchedPhone = compactNorwegianPhone(evidence.matchedPhone || "");
+    if (!isUuid(linkedCustomerId) || !matchedPhone || evidence.uniquePhoneMatch !== true) {
+      throw new Error("Adgangsforslaget mangler en gyldig og unik kundekobling.");
+    }
+    const pageSize = 1000;
+    const maxPages = 100;
+    const matchingCustomerIds = [];
+    let fullyScanned = false;
+    for (let page = 0; page < maxPages; page += 1) {
+      const from = page * pageSize;
+      const { data: rows, error } = await withDbTimeout(
+        supabase
+          .from("customers")
+          .select("id, phone, contact_people, is_inactive")
+          .order("id", { ascending: true })
+          .range(from, from + pageSize - 1),
+        "kontrollere unik telefonmatch for adgangsforslag",
+      );
+      if (error) throw error;
+      for (const customer of rows || []) {
+        if (customer?.is_inactive === true || !customerHasMatchedPhone(customer, matchedPhone)) continue;
+        matchingCustomerIds.push(String(customer.id || ""));
+        if (matchingCustomerIds.length > 1) {
+          throw new Error("Telefonnummeret finnes på flere kundekort. Slå sammen eller velg riktig kunde før adgangsinformasjon lagres.");
+        }
+      }
+      if ((rows || []).length < pageSize) {
+        fullyScanned = true;
+        break;
+      }
+    }
+    if (!fullyScanned) throw new Error("Kunne ikke bekrefte unik telefonmatch i hele kunderegisteret. Adgangsforslaget ble ikke lagret.");
+    if (matchingCustomerIds.length !== 1 || matchingCustomerIds[0] !== String(linkedCustomerId)) {
+      throw new Error("Telefonmatchen stemmer ikke entydig med det faktiske kundekortet. Adgangsforslaget ble ikke lagret.");
+    }
   }
 
   function safeAttachmentFilename(value, fallback = "vedlegg") {
@@ -670,7 +771,7 @@
   function orderToDb(order) {
     const type = order.type || order.job_type || "service";
     const note = order.note || "";
-    return {
+    const row = {
       customer_id: order.customerId || order.customer_id,
       title: order.title || "Ordre",
       job_type: jobTypeFor(type),
@@ -685,6 +786,9 @@
       resource: order.resource || null,
       note: note || null,
     };
+    if (isUuid(order.installationId || order.installation_id)) row.installation_id = order.installationId || order.installation_id;
+    if (isUuid(order.locationId || order.location_id)) row.location_id = order.locationId || order.location_id;
+    return row;
   }
 
   function leadStatusToDb(status) {
@@ -1010,6 +1114,74 @@
     return { data: rows, error: null };
   }
 
+  async function crmAssistantErrorMessage(error, fallback = "CRM-assistenten svarte ikke.") {
+    let message = error?.message || fallback;
+    const response = error?.context;
+    if (!response || typeof response.clone !== "function") return message;
+    try {
+      const body = await response.clone().json();
+      if (body?.error) return String(body.error);
+      if (body?.message) return String(body.message);
+    } catch (_jsonError) {
+      try {
+        const text = await response.clone().text();
+        if (text) message = text.slice(0, 1000);
+      } catch (_textError) {
+        // Keep the original Functions error message.
+      }
+    }
+    return message;
+  }
+
+  async function invokeCrmAssistant(payload = {}) {
+    const supabase = await requireClient();
+    const allowedActions = new Set([
+      "send",
+      "list_threads",
+      "get_thread",
+      "create_thread",
+      "archive_thread",
+      "feedback",
+      "save_memory",
+      "disable_memory",
+      "preview_service_outreach",
+    ]);
+    const action = String(payload.action || "").trim();
+    if (!allowedActions.has(action)) throw new Error("Ugyldig handling for CRM-assistenten.");
+    const body = { action };
+    const threadId = String(payload.threadId || payload.thread_id || "").trim();
+    if (threadId) body.threadId = threadId;
+    if (Object.prototype.hasOwnProperty.call(payload, "message")) body.message = payload.message;
+    if (payload.context && typeof payload.context === "object") body.context = payload.context;
+    if (payload.criteria && typeof payload.criteria === "object") body.criteria = payload.criteria;
+    if (payload.clientMessageId || payload.client_message_id) body.clientMessageId = payload.clientMessageId || payload.client_message_id;
+    const { data, error } = await withTimeout(
+      supabase.functions.invoke("crm-assistant", { body }),
+      "CRM-assistenten brukte for lang tid. Kontroller nettet og prøv igjen.",
+      action === "send" ? 90000 : 30000,
+    );
+    if (error) throw new Error(await crmAssistantErrorMessage(error));
+    if (data?.error) throw new Error(String(data.error));
+    return data || {};
+  }
+
+  async function invokeRoutePlanner(payload = {}) {
+    const supabase = await requireClient();
+    const stops = Array.isArray(payload.stops) ? payload.stops : [];
+    if (!stops.length || stops.length > 10) throw new Error("Velg mellom 1 og 10 bekreftede servicekunder.");
+    const { data, error } = await withTimeout(
+      supabase.functions.invoke("route-planner", { body: payload }),
+      "Google-ruten brukte for lang tid. Kontroller nettet og prøv igjen.",
+      90000,
+    );
+    if (error) throw new Error(await crmAssistantErrorMessage(error, "Google Routes svarte ikke."));
+    if (data?.error) throw new Error(String(data.error));
+    if (!data?.ok || data?.source !== "google_routes_matrix") {
+      throw new Error("CRM mottok ikke en gyldig Google-beregnet rute.");
+    }
+    return data;
+  }
+
   window.NumedalStore = {
     isConfigured,
     client,
@@ -1113,6 +1285,7 @@
     async loadAll() {
       const supabase = await requireClient();
       const orderRequest = supabase.from("orders").select("*").order("updated_at", { ascending: false });
+      const assistantReceiptCutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
       const [
         { data: customerRows, error: customerError },
         { data: bookingRows, error: bookingError },
@@ -1148,7 +1321,9 @@
         supabase.from("website_submissions").select("*").order("received_at", { ascending: false }).limit(200),
         supabase.from("profiles").select("*").order("display_name"),
         supabase.from("intake_items").select("*").in("status", ["draft", "needs_review", "ready", "failed"]).order("created_at", { ascending: false }).limit(100),
-        supabase.from("assistant_actions").select("*").in("status", ["needs_review", "approved", "failed"]).order("created_at", { ascending: false }).limit(200),
+        supabase.from("assistant_actions").select("*")
+          .or(`status.in.(needs_review,approved,executing,failed),and(status.eq.completed,executed_at.gte.${assistantReceiptCutoff})`)
+          .order("created_at", { ascending: false }).limit(200),
         supabase.from("crm_attachments").select("*").is("deleted_at", null).order("created_at", { ascending: false }).limit(2000),
         supabase.from("crm_settings").select("*"),
       ]), "laste CRM-data", 45000);
@@ -1724,6 +1899,138 @@
       if (data?.error) throw new Error(data.error);
       return data?.analysis || data;
     },
+    async computeDrivingRoute(payload = {}) {
+      return invokeRoutePlanner(payload);
+    },
+    async createVerifiedServiceRoute(payload = {}) {
+      const supabase = await requireClient();
+      const { data, error } = await withDbTimeout(
+        supabase.rpc("create_verified_service_route", { p_route: payload }),
+        "opprette Google-beregnet servicerute",
+        30000,
+      );
+      if (error) {
+        if (isBookingOverlapError(error)) throw new Error(bookingOverlapMessage(error));
+        throw error;
+      }
+      return data || {};
+    },
+    async prepareAssistantSmsExecution(actionId, payloadHash, recipient) {
+      const supabase = await requireClient();
+      if (!isUuid(actionId)) throw new Error("Ugyldig SMS-utkast.");
+      if (!/^[a-f0-9]{64}$/i.test(String(payloadHash || ""))) throw new Error("SMS-utkastet mangler kontrollsignatur.");
+      const { data, error } = await withDbTimeout(
+        supabase.rpc("prepare_assistant_sms_execution", {
+          p_action_id: actionId,
+          p_payload_hash: String(payloadHash).toLowerCase(),
+          p_recipient: String(recipient || ""),
+        }),
+        "låse SMS-utkastet for sending",
+      );
+      if (error) throw error;
+      return data || {};
+    },
+    async claimAssistantSmsExecution(executionId, payloadHash, recipient, claimToken) {
+      const supabase = await requireClient();
+      if (!isUuid(executionId)) throw new Error("Ugyldig SMS-forsøk.");
+      if (!/^[a-f0-9]{64}$/i.test(String(payloadHash || ""))) throw new Error("SMS-utkastet mangler kontrollsignatur.");
+      if (!isUuid(claimToken)) throw new Error("SMS-klargjøringen mangler engangstoken fra Google Messages-broen.");
+      const { data, error } = await withDbTimeout(
+        supabase.rpc("claim_assistant_sms_execution", {
+          p_execution_id: executionId,
+          p_payload_hash: String(payloadHash).toLowerCase(),
+          p_recipient: String(recipient || ""),
+          p_claim_token: claimToken,
+        }),
+        "reservere SMS-sendeklikket",
+      );
+      if (error) throw error;
+      return data || {};
+    },
+    async finishAssistantSmsExecution(executionId, claimToken, receipt = {}) {
+      const supabase = await requireClient();
+      if (!isUuid(executionId)) throw new Error("Ugyldig SMS-forsøk.");
+      if (!isUuid(claimToken)) throw new Error("SMS-forsøket mangler claim-token.");
+      const { data, error } = await withDbTimeout(
+        supabase.rpc("finish_assistant_sms_execution", {
+          p_execution_id: executionId,
+          p_claim_token: claimToken,
+          p_receipt: receipt && typeof receipt === "object" ? receipt : {},
+        }),
+        "avslutte SMS-forsøket",
+      );
+      if (error) throw error;
+      return data || {};
+    },
+    async cancelAssistantSmsPreparation(executionId, errorMessage = "") {
+      const supabase = await requireClient();
+      if (!isUuid(executionId)) throw new Error("Ugyldig SMS-klargjøring.");
+      const { data, error } = await withDbTimeout(
+        supabase.rpc("cancel_assistant_sms_preparation", {
+          p_execution_id: executionId,
+          p_error: String(errorMessage || "").slice(0, 1000) || null,
+        }),
+        "avbryte SMS-klargjøringen",
+      );
+      if (error) throw error;
+      return data || {};
+    },
+    async resolveAssistantSmsExecution(executionId, resolution, note) {
+      const supabase = await requireClient();
+      if (!isUuid(executionId)) throw new Error("Ugyldig SMS-forsøk.");
+      if (!["confirmed_sent", "confirmed_not_sent"].includes(resolution)) throw new Error("Ugyldig SMS-avklaring.");
+      if (!String(note || "").trim()) throw new Error("Skriv et kontrollnotat for SMS-avklaringen.");
+      const { data, error } = await withDbTimeout(
+        supabase.rpc("resolve_assistant_sms_execution", {
+          p_execution_id: executionId,
+          p_resolution: resolution,
+          p_note: String(note).trim().slice(0, 1000),
+        }),
+        "avklare SMS-forsøket",
+      );
+      if (error) throw error;
+      return data || {};
+    },
+    async crmAssistant(payload = {}) {
+      return invokeCrmAssistant(payload);
+    },
+    async listCrmAssistantThreads(context = {}) {
+      return invokeCrmAssistant({ action: "list_threads", context });
+    },
+    async getCrmAssistantThread(threadId, context = {}) {
+      if (!String(threadId || "").trim()) throw new Error("Velg en samtale først.");
+      return invokeCrmAssistant({ action: "get_thread", threadId, context });
+    },
+    async createCrmAssistantThread(context = {}) {
+      return invokeCrmAssistant({ action: "create_thread", context });
+    },
+    async archiveCrmAssistantThread(threadId) {
+      if (!String(threadId || "").trim()) throw new Error("Velg en samtale først.");
+      return invokeCrmAssistant({ action: "archive_thread", threadId });
+    },
+    async sendCrmAssistantMessage(threadId, message, context = {}, clientMessageId = "") {
+      const cleanMessage = String(message || "").trim();
+      if (!cleanMessage) throw new Error("Skriv en melding først.");
+      if (cleanMessage.length > 6000) throw new Error("Meldingen er for lang. Del den opp og prøv igjen.");
+      if (!String(clientMessageId || "").trim()) throw new Error("Meldingen mangler en klient-id.");
+      return invokeCrmAssistant({ action: "send", threadId, message: cleanMessage, context, clientMessageId });
+    },
+    async sendCrmAssistantFeedback(threadId, message, context = {}) {
+      if (!String(threadId || "").trim()) throw new Error("Velg en samtale først.");
+      return invokeCrmAssistant({ action: "feedback", threadId, message, context });
+    },
+    async saveCrmAssistantMemory(threadId, message, context = {}) {
+      if (!String(threadId || "").trim()) throw new Error("Velg en samtale først.");
+      return invokeCrmAssistant({ action: "save_memory", threadId, message, context });
+    },
+    async disableCrmAssistantMemory(threadId, memoryId, context = {}) {
+      if (!String(threadId || "").trim()) throw new Error("Velg en samtale først.");
+      if (!isUuid(memoryId)) throw new Error("Ugyldig arbeidsregel.");
+      return invokeCrmAssistant({ action: "disable_memory", threadId, message: { memoryId }, context });
+    },
+    async previewCrmServiceOutreach(criteria = {}) {
+      return invokeCrmAssistant({ action: "preview_service_outreach", criteria });
+    },
     async sendOfferEmail(payload) {
       const supabase = await requireClient();
       const { data, error } = await supabase.functions.invoke("send-offer-email", {
@@ -1825,8 +2132,19 @@
       const allowedChannels = new Set(["email", "sms", "internal"]);
       const actionType = String(action.action_type || action.actionType || "").trim();
       const idempotencyKey = String(action.idempotency_key || action.idempotencyKey || "").trim();
+      const sourceKind = String(action.source_kind || action.sourceKind || "").trim();
+      const safetyPayload = action.payload_json || action.payload || {};
+      const safetyEvidence = action.evidence_json || action.evidence || {};
+      const hasHistoricalAccessMarker = hasHistoricalSmsActionMarker(safetyPayload, safetyEvidence);
       if (!allowedTypes.has(actionType)) throw new Error("Ugyldig type assistentforslag.");
       if (!idempotencyKey || idempotencyKey.length > 240) throw new Error("Assistentforslaget mangler en gyldig nøkkel.");
+      if (sourceKind === "historical_sms" || hasHistoricalAccessMarker) {
+        const safetyCheck = window.NumedalAssistantCoordinator?.historicalSmsActionSafety;
+        if (typeof safetyCheck !== "function") throw new Error("Sikkerhetskontrollen for historisk SMS er ikke tilgjengelig.");
+        const safety = safetyCheck(action);
+        if (!safety?.allowed) throw new Error(safety?.blockers?.[0] || "Historisk SMS kunne ikke lagres trygt.");
+      }
+      await verifyUniqueHistoricalPhoneMatch(supabase, action);
       const status = allowedStatuses.has(action.status) ? action.status : "needs_review";
       const channel = allowedChannels.has(action.channel) ? action.channel : "internal";
       const confidence = Number(action.confidence);
@@ -1844,7 +2162,7 @@
         blockers_json: Array.isArray(action.blockers_json || action.blockers) ? (action.blockers_json || action.blockers) : [],
         confidence: Number.isFinite(confidence) ? Math.max(0, Math.min(1, confidence)) : null,
         source_intake_id: isUuid(action.source_intake_id || action.sourceIntakeId) ? (action.source_intake_id || action.sourceIntakeId) : null,
-        source_kind: String(action.source_kind || action.sourceKind || "").trim() || null,
+        source_kind: sourceKind || null,
         source_ref: String(action.source_ref || action.sourceRef || "").trim() || null,
         linked_customer_id: isUuid(action.linked_customer_id || action.customerId) ? (action.linked_customer_id || action.customerId) : null,
         linked_lead_id: isUuid(action.linked_lead_id || action.leadId) ? (action.linked_lead_id || action.leadId) : null,
@@ -1856,9 +2174,17 @@
         error_message: String(action.error_message || "").trim() || null,
       };
       const { data, error } = await withDbTimeout(
-        supabase.from("assistant_actions").upsert(payload, { onConflict: "idempotency_key" }).select("*").single(),
+        supabase.from("assistant_actions").insert(payload).select("*").single(),
         "lagre assistentforslag",
       );
+      if (error?.code === "23505") {
+        const { data: existing, error: existingError } = await withDbTimeout(
+          supabase.from("assistant_actions").select("*").eq("idempotency_key", idempotencyKey).single(),
+          "hente eksisterende assistentforslag",
+        );
+        if (existingError) throw existingError;
+        return existing;
+      }
       if (error) throw error;
       return data;
     },
@@ -1866,22 +2192,137 @@
       const supabase = await requireClient();
       if (!isUuid(id)) throw new Error("Ugyldig assistentforslag.");
       const allowedStatuses = new Set(["needs_review", "approved", "executing", "completed", "rejected", "failed", "expired"]);
+      const { data: existingAction, error: existingActionError } = await withDbTimeout(
+        supabase.from("assistant_actions").select("*").eq("id", id).single(),
+        "hente assistentforslag før oppdatering",
+      );
+      if (existingActionError) throw existingActionError;
+      const existingPayload = existingAction?.payload_json || {};
+      const existingEvidence = existingAction?.evidence_json || {};
+      const isHistoricalAction = existingAction?.source_kind === "historical_sms"
+        || hasHistoricalSmsActionMarker(existingPayload, existingEvidence);
+      const mergedPayload = "payload_json" in patch
+        ? (patch.payload_json || {})
+        : "payload" in patch
+          ? (patch.payload || {})
+          : existingPayload;
+      const mergedEvidence = "evidence_json" in patch
+        ? (patch.evidence_json || {})
+        : "evidence" in patch
+          ? (patch.evidence || {})
+          : existingEvidence;
+      const mergedSourceKind = String(
+        patch.source_kind
+        || patch.sourceKind
+        || existingAction?.source_kind
+        || "",
+      );
+      const mergedIsHistoricalAction = mergedSourceKind === "historical_sms"
+        || hasHistoricalSmsActionMarker(mergedPayload, mergedEvidence);
+      if (!isHistoricalAction && mergedIsHistoricalAction) {
+        throw new Error("En vanlig assistenthandling kan ikke konverteres til historisk SMS- eller adgangsforslag ved oppdatering.");
+      }
+      const immutableHistoricalFields = [
+        "idempotency_key", "idempotencyKey", "action_type", "actionType", "channel", "title", "recipient", "subject", "body",
+        "payload_json", "payload", "evidence_json", "evidence", "blockers_json", "blockers", "confidence",
+        "source_intake_id", "sourceIntakeId", "source_kind", "sourceKind", "source_ref", "sourceRef",
+        "linked_customer_id", "customerId", "linked_lead_id", "leadId", "linked_job_id", "jobId", "linked_order_id", "orderId",
+        "approval_required", "approvalRequired", "not_before", "expires_at",
+      ];
+      if (isHistoricalAction && immutableHistoricalFields.some((key) => key in patch)) {
+        throw new Error("Historiske SMS-forslag kan ikke endres etter lagring. Avvis og lag et nytt kontrollforslag.");
+      }
+      if (isHistoricalAction
+        && "error_message" in patch
+        && String(patch.error_message || "").trim()
+        && patch.status !== "failed") {
+        throw new Error("Historiske SMS-forslag kan ikke lagre fri feiltekst.");
+      }
+      if (isHistoricalAction && "status" in patch && patch.status !== existingAction.status) {
+        const allowedTransitions = {
+          needs_review: new Set(["approved", "rejected"]),
+          approved: new Set(["executing", "rejected"]),
+          executing: new Set(["completed", "failed"]),
+          failed: new Set(["rejected"]),
+        };
+        if (!allowedTransitions[existingAction.status]?.has(patch.status)) {
+          throw new Error("Ugyldig statusendring for historisk SMS-forslag.");
+        }
+      }
+      if (isHistoricalAction && patch.status !== "rejected") {
+        const safetyCheck = window.NumedalAssistantCoordinator?.historicalSmsActionSafety;
+        if (typeof safetyCheck !== "function") throw new Error("Sikkerhetskontrollen for historisk SMS er ikke tilgjengelig.");
+        const safety = safetyCheck({ ...existingAction, status: "needs_review" });
+        if (!safety?.allowed) throw new Error(safety?.blockers?.[0] || "Historisk SMS kunne ikke oppdateres trygt.");
+        await verifyUniqueHistoricalPhoneMatch(supabase, existingAction);
+      }
       const dbPatch = {};
       if ("status" in patch) {
         if (!allowedStatuses.has(patch.status)) throw new Error("Ugyldig status for assistentforslag.");
         dbPatch.status = patch.status;
-        if (patch.status === "approved") dbPatch.approved_at = new Date().toISOString();
+        if (patch.status === "approved") {
+          dbPatch.approved_at = new Date().toISOString();
+          const { data: authData } = await supabase.auth.getUser();
+          if (!isUuid(authData?.user?.id)) throw new Error("Kunne ikke bekrefte hvem som godkjenner utkastet.");
+          dbPatch.approved_by = authData.user.id;
+        }
+        if (patch.status === "needs_review") {
+          dbPatch.approved_at = null;
+          dbPatch.approved_by = null;
+          dbPatch.executed_at = null;
+        }
         if (patch.status === "completed") dbPatch.executed_at = new Date().toISOString();
       }
       if ("subject" in patch) dbPatch.subject = String(patch.subject || "").trim() || null;
       if ("body" in patch) dbPatch.body = String(patch.body || "").trim() || null;
       if ("payload_json" in patch) dbPatch.payload_json = patch.payload_json || {};
       if ("blockers_json" in patch) dbPatch.blockers_json = Array.isArray(patch.blockers_json) ? patch.blockers_json : [];
-      if ("error_message" in patch) dbPatch.error_message = String(patch.error_message || "").trim() || null;
+      if ("error_message" in patch) {
+        dbPatch.error_message = isHistoricalAction && patch.status === "failed"
+          ? "Historisk SMS-forslag feilet under behandling."
+          : String(patch.error_message || "").trim() || null;
+      }
       if (!Object.keys(dbPatch).length) return null;
+      const expectedStatus = "expectedStatus" in patch ? String(patch.expectedStatus || "") : "";
+      if (expectedStatus && !allowedStatuses.has(expectedStatus)) throw new Error("Ugyldig forventet status for assistentforslag.");
+      let updateQuery = supabase.from("assistant_actions").update(dbPatch).eq("id", id);
+      if (expectedStatus) updateQuery = updateQuery.eq("status", expectedStatus);
       const { data, error } = await withDbTimeout(
-        supabase.from("assistant_actions").update(dbPatch).eq("id", id).select("*").single(),
+        updateQuery.select("*").single(),
         "oppdatere assistentforslag",
+      );
+      if (expectedStatus && error?.code === "PGRST116") {
+        throw new Error("Forslaget er allerede endret i en annen fane. Last inn på nytt før du fortsetter.");
+      }
+      if (error) throw error;
+      return data;
+    },
+    async reviewAssistantAction(id, review = {}) {
+      const supabase = await requireClient();
+      if (!isUuid(id)) throw new Error("Ugyldig assistentforslag.");
+      const clientEventId = String(review.clientEventId || review.client_event_id || "").trim();
+      if (!isUuid(clientEventId)) throw new Error("Revisjonen mangler en gyldig klient-id.");
+      const allowedStatuses = new Set(["needs_review", "approved", "failed"]);
+      const expectedStatus = String(review.expectedStatus || review.expected_status || "").trim();
+      if (!allowedStatuses.has(expectedStatus)) throw new Error("Ugyldig forventet status for assistentutkastet.");
+      const eventType = String(review.eventType || review.event_type || "").trim();
+      if (!["edited", "approved", "rejected", "reopened", "completed", "failed"].includes(eventType)) {
+        throw new Error("Ugyldig revisjonstype.");
+      }
+      const body = String(review.body || "").trim();
+      if (!body) throw new Error("Meldingsteksten kan ikke være tom.");
+      const { data, error } = await withDbTimeout(
+        supabase.rpc("review_assistant_action", {
+          p_action_id: id,
+          p_client_event_id: clientEventId,
+          p_expected_status: expectedStatus,
+          p_event_type: eventType,
+          p_subject: String(review.subject || "").trim(),
+          p_body: body,
+          p_reason_code: String(review.reasonCode || review.reason_code || "").trim() || null,
+          p_reviewer_note: String(review.note || review.reviewer_note || "").trim().slice(0, 2000) || null,
+        }).single(),
+        "lagre kontrollert assistentrevisjon",
       );
       if (error) throw error;
       return data;
