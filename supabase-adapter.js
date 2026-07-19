@@ -1076,6 +1076,56 @@
     return client;
   }
 
+  function canonicalAssistantValue(value) {
+    if (Array.isArray(value)) return value.map(canonicalAssistantValue);
+    if (value && typeof value === "object") {
+      return Object.keys(value).sort().reduce((result, key) => {
+        if (value[key] !== undefined) result[key] = canonicalAssistantValue(value[key]);
+        return result;
+      }, {});
+    }
+    if (typeof value === "number" && !Number.isFinite(value)) return null;
+    return value ?? null;
+  }
+
+  function comparableAssistantAction(action = {}) {
+    return canonicalAssistantValue({
+      action_type: String(action.action_type || ""),
+      status: String(action.status || ""),
+      payload_json: action.payload_json || {},
+      blockers_json: Array.isArray(action.blockers_json) ? action.blockers_json : [],
+      linked_customer_id: action.linked_customer_id || null,
+      linked_lead_id: action.linked_lead_id || null,
+      linked_job_id: action.linked_job_id || null,
+      linked_order_id: action.linked_order_id || null,
+    });
+  }
+
+  async function freshAssistantActionForExecution(supabase, id, expectedAction, expectedType) {
+    if (!expectedAction || typeof expectedAction !== "object" || Array.isArray(expectedAction)) {
+      throw new Error("Assistentforslaget mangler kontrollkopien som ble vist før godkjenning.");
+    }
+    const { data: freshAction, error } = await withDbTimeout(
+      supabase
+        .from("assistant_actions")
+        .select("id,action_type,status,updated_at,payload_json,blockers_json,linked_customer_id,linked_lead_id,linked_job_id,linked_order_id")
+        .eq("id", id)
+        .single(),
+      "kontrollere assistentforslaget før utføring",
+    );
+    if (error) throw error;
+    if (freshAction?.action_type !== expectedType) {
+      throw new Error("Assistentforslaget har feil handlingstype og må lastes inn på nytt.");
+    }
+    if (JSON.stringify(comparableAssistantAction(freshAction)) !== JSON.stringify(comparableAssistantAction(expectedAction))) {
+      throw new Error("Assistentforslaget er endret siden det ble vist. Last inn kontrollkøen på nytt og kontroller innholdet igjen.");
+    }
+    if (!freshAction.updated_at) {
+      throw new Error("Assistentforslaget mangler en serverversjon og kan ikke utføres trygt.");
+    }
+    return freshAction;
+  }
+
   function withTimeout(promise, message, ms = 15000) {
     let timer;
     const timeout = new Promise((_, reject) => {
@@ -2306,10 +2356,14 @@
       if (!booking || typeof booking !== "object" || Array.isArray(booking)) {
         throw new Error("Planforslaget mangler et gyldig kontrollgrunnlag.");
       }
+      const expectedAction = booking.__expectedActionSnapshot;
+      const freshAction = await freshAssistantActionForExecution(supabase, id, expectedAction, "booking_proposal");
+      const serverBooking = { ...booking, expectedActionUpdatedAt: freshAction.updated_at };
+      delete serverBooking.__expectedActionSnapshot;
       const { data, error } = await withDbTimeout(
         supabase.rpc("execute_crm_assistant_booking_proposal", {
           p_action_id: id,
-          p_booking: booking,
+          p_booking: serverBooking,
         }),
         "opprette jobb fra CRM-assistenten",
         30000,
@@ -2326,10 +2380,14 @@
       if (!approval || typeof approval !== "object" || Array.isArray(approval)) {
         throw new Error("Kundeforslaget mangler et gyldig kontrollgrunnlag.");
       }
+      const expectedAction = approval.__expectedActionSnapshot;
+      const freshAction = await freshAssistantActionForExecution(supabase, id, expectedAction, "customer_create_proposal");
+      const serverApproval = { ...approval, expectedActionUpdatedAt: freshAction.updated_at };
+      delete serverApproval.__expectedActionSnapshot;
       const { data, error } = await withDbTimeout(
         supabase.rpc("execute_crm_assistant_customer_proposal", {
           p_action_id: id,
-          p_approval: approval,
+          p_approval: serverApproval,
         }),
         "opprette kundekort fra CRM-assistenten",
         30000,
