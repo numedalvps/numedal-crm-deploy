@@ -2332,15 +2332,18 @@
       if (existing?.status !== "approved" || existing?.channel !== "email") {
         throw new Error("E-postutkastet er endret. Last inn kontrollkøen på nytt.");
       }
-      const { data, error } = await withDbTimeout(
-        supabase
+      let revalidationQuery = supabase
           .from("assistant_actions")
           .update({ recipient: existing.recipient })
           .eq("id", id)
           .eq("status", "approved")
           .eq("channel", "email")
-          .eq("recipient", existing.recipient)
-          .eq("source_kind", existing.source_kind)
+          .eq("recipient", existing.recipient);
+      revalidationQuery = existing.source_kind == null
+        ? revalidationQuery.is("source_kind", null)
+        : revalidationQuery.eq("source_kind", existing.source_kind);
+      const { data, error } = await withDbTimeout(
+        revalidationQuery
           .select("*")
           .single(),
         "kontrollere e-postmottaker før åpning",
