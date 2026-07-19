@@ -194,7 +194,7 @@
       : "";
   }
 
-  function validClockTime(value) {
+  function validClockTime(value, minimumMinutes = 6 * 60, maximumMinutes = 23 * 60) {
     const text = repairTextEncoding(value)
       .trim()
       .toLowerCase()
@@ -211,7 +211,7 @@
     }
     if (!normalizedTime) return "";
     const minuteOfDay = Number(normalizedTime.slice(0, 2)) * 60 + Number(normalizedTime.slice(3, 5));
-    return minuteOfDay >= 6 * 60 && minuteOfDay < 23 * 60 ? normalizedTime : "";
+    return minuteOfDay >= minimumMinutes && minuteOfDay < maximumMinutes ? normalizedTime : "";
   }
 
   function ownBooleanField(record, names) {
@@ -346,6 +346,17 @@
     const acceptanceField = ownBooleanField(raw, ["customerAccepted", "customer_accepted"]);
     const rawMode = normalize(firstScalarField(raw, ["mode", "bookingMode", "booking_mode"])).replaceAll(" ", "_");
     const routeModes = ["route", "route_plan", "route_planning", "rute", "rute_plan", "ruteplan", "ruteplanlegging", "multiple", "flere"];
+    const reminderValue = raw.reminder;
+    const reminderRaw = reminderValue && typeof reminderValue === "object" && !Array.isArray(reminderValue)
+      ? reminderValue
+      : null;
+    const reminderDateValue = reminderRaw ? firstScalarField(reminderRaw, ["dueDate", "due_date", "date"]) : "";
+    const reminderTimeValue = reminderRaw ? firstScalarField(reminderRaw, ["dueTime", "due_time", "time"]) : "";
+    const reminder = reminderRaw ? {
+      text: repairTextEncoding(firstScalarField(reminderRaw, ["text", "body", "note"]).toString()).trim().slice(0, 1000),
+      dueDate: normalizedBookingDate(reminderDateValue),
+      dueTime: reminderTimeValue ? validClockTime(reminderTimeValue, 0, 24 * 60) : "",
+    } : null;
     return {
       jobType,
       title,
@@ -357,6 +368,7 @@
       customerAccepted: acceptanceField.present ? acceptanceField.value : false,
       scheduleRequested,
       mode: routeModes.includes(rawMode) ? "route" : "single",
+      reminder,
       hasExactSchedule: Boolean(scheduleRequested && scheduledDate && scheduledTime),
     };
   }

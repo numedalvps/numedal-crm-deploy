@@ -2008,12 +2008,22 @@
       if (!String(threadId || "").trim()) throw new Error("Velg en samtale først.");
       return invokeCrmAssistant({ action: "archive_thread", threadId });
     },
-    async sendCrmAssistantMessage(threadId, message, context = {}, clientMessageId = "") {
+    async sendCrmAssistantMessage(threadId, message, context = {}, clientMessageId = "", replacesAssistantActionId = "") {
       const cleanMessage = String(message || "").trim();
       if (!cleanMessage) throw new Error("Skriv en melding først.");
       if (cleanMessage.length > 6000) throw new Error("Meldingen er for lang. Del den opp og prøv igjen.");
       if (!String(clientMessageId || "").trim()) throw new Error("Meldingen mangler en klient-id.");
-      return invokeCrmAssistant({ action: "send", threadId, message: cleanMessage, context, clientMessageId });
+      if (replacesAssistantActionId && !isUuid(replacesAssistantActionId)) {
+        throw new Error("Forslaget som skal erstattes har en ugyldig id.");
+      }
+      return invokeCrmAssistant({
+        action: "send",
+        threadId,
+        message: cleanMessage,
+        context,
+        clientMessageId,
+        replacesAssistantActionId: replacesAssistantActionId || null,
+      });
     },
     async sendCrmAssistantFeedback(threadId, message, context = {}) {
       if (!String(threadId || "").trim()) throw new Error("Velg en samtale først.");
@@ -2055,6 +2065,108 @@
         throw new Error(message);
       }
       if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    async preflightAssistantEmailAction(id) {
+      const supabase = await requireClient();
+      if (!isUuid(id)) throw new Error("Ugyldig e-postutkast.");
+      const { data, error } = await supabase.functions.invoke("send-offer-email", {
+        body: {
+          assistant_action_id: id,
+          dry_run: true,
+        },
+      });
+      if (error) {
+        let message = error.message || "Klarte ikke kontrollere e-postoppsettet.";
+        const response = error.context;
+        if (response && typeof response.clone === "function") {
+          try {
+            const body = await response.clone().json();
+            if (body?.error) message = body.error;
+          } catch (_jsonError) {
+            try {
+              const responseText = await response.clone().text();
+              if (responseText) message = responseText.slice(0, 1000);
+            } catch (_textError) {
+              // Keep the original Functions error message.
+            }
+          }
+        }
+        throw new Error(message);
+      }
+      if (data?.error || data?.transport_verified !== true || data?.sent === true) {
+        throw new Error(data?.error || "SMTP-oppsettet kunne ikke bekreftes uten utsending.");
+      }
+      return data;
+    },
+    async sendAssistantEmailAction(id, options = {}) {
+      const supabase = await requireClient();
+      if (!isUuid(id)) throw new Error("Ugyldig e-postutkast.");
+      const clientEventId = String(options.clientEventId || options.client_event_id || "").trim();
+      if (!isUuid(clientEventId)) throw new Error("Sendeforsøket mangler en gyldig klient-id.");
+      if (options.approvedByUser !== true && options.approved_by_user !== true) {
+        throw new Error("E-posten krever en ny, eksplisitt bekreftelse før sending.");
+      }
+      const { data, error } = await supabase.functions.invoke("send-offer-email", {
+        body: {
+          assistant_action_id: id,
+          client_event_id: clientEventId,
+          approved_by_user: true,
+          dry_run: options.dryRun === true,
+        },
+      });
+      if (error) {
+        let message = error.message || "Klarte ikke sende e-posten fra CRM.";
+        const response = error.context;
+        if (response && typeof response.clone === "function") {
+          try {
+            const body = await response.clone().json();
+            if (body?.error) message = body.error;
+          } catch (_jsonError) {
+            try {
+              const responseText = await response.clone().text();
+              if (responseText) message = responseText.slice(0, 1000);
+            } catch (_textError) {
+              // Keep the original Supabase Functions error message.
+            }
+          }
+        }
+        throw new Error(message);
+      }
+      if (data?.error || data?.sent !== true) {
+        throw new Error(data?.error || "SMTP-kvitteringen bekreftet ikke at e-posten ble sendt.");
+      }
+      return data;
+    },
+    async resolveAssistantEmailExecution(actionId, executionId, resolution, note) {
+      const supabase = await requireClient();
+      if (!isUuid(actionId) || !isUuid(executionId)) throw new Error("Ugyldig e-postforsøk.");
+      if (!["confirmed_sent", "confirmed_not_sent"].includes(resolution)) throw new Error("Ugyldig e-postavklaring.");
+      const resolutionNote = String(note || "").trim().slice(0, 1000);
+      if (!resolutionNote) throw new Error("E-postavklaringen mangler et kontrollnotat.");
+      const { data, error } = await supabase.functions.invoke("send-offer-email", {
+        body: {
+          assistant_action_id: actionId,
+          assistant_email_execution_id: executionId,
+          resolution,
+          resolution_note: resolutionNote,
+          approved_by_user: true,
+        },
+      });
+      if (error) {
+        let message = error.message || "Klarte ikke avklare e-postforsøket.";
+        const response = error.context;
+        if (response && typeof response.clone === "function") {
+          try {
+            const body = await response.clone().json();
+            if (body?.error) message = body.error;
+          } catch (_jsonError) {
+            // Keep the original Functions error message.
+          }
+        }
+        throw new Error(message);
+      }
+      if (data?.error || data?.ok !== true) throw new Error(data?.error || "E-postavklaringen ble ikke lagret.");
       return data;
     },
     async saveIntakeDraft(values) {
@@ -2127,7 +2239,7 @@
     },
     async saveAssistantAction(action = {}) {
       const supabase = await requireClient();
-      const allowedTypes = new Set(["email_reply", "sms_reply", "offer_draft", "booking_proposal", "invoice_draft", "customer_enrichment"]);
+      const allowedTypes = new Set(["email_reply", "sms_reply", "offer_draft", "booking_proposal", "invoice_draft", "customer_enrichment", "customer_create_proposal"]);
       const allowedStatuses = new Set(["needs_review", "approved", "executing", "completed", "rejected", "failed", "expired"]);
       const allowedChannels = new Set(["email", "sms", "internal"]);
       const actionType = String(action.action_type || action.actionType || "").trim();
@@ -2206,6 +2318,23 @@
         if (isBookingOverlapError(error)) throw new Error(bookingOverlapMessage(error));
         throw error;
       }
+      return data || {};
+    },
+    async executeAssistantCustomerProposal(id, approval = {}) {
+      const supabase = await requireClient();
+      if (!isUuid(id)) throw new Error("Ugyldig kundeforslag fra CRM-assistenten.");
+      if (!approval || typeof approval !== "object" || Array.isArray(approval)) {
+        throw new Error("Kundeforslaget mangler et gyldig kontrollgrunnlag.");
+      }
+      const { data, error } = await withDbTimeout(
+        supabase.rpc("execute_crm_assistant_customer_proposal", {
+          p_action_id: id,
+          p_approval: approval,
+        }),
+        "opprette kundekort fra CRM-assistenten",
+        30000,
+      );
+      if (error) throw error;
       return data || {};
     },
     async updateAssistantAction(id, patch = {}) {
