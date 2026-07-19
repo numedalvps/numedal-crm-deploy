@@ -2317,6 +2317,40 @@
       if (error) throw error;
       return data;
     },
+    async revalidateAssistantActionRecipient(id) {
+      const supabase = await requireClient();
+      if (!isUuid(id)) throw new Error("Ugyldig assistentforslag.");
+      const { data: existing, error: existingError } = await withDbTimeout(
+        supabase
+          .from("assistant_actions")
+          .select("id,status,channel,recipient,source_kind")
+          .eq("id", id)
+          .single(),
+        "hente mottaker før åpning",
+      );
+      if (existingError) throw existingError;
+      if (existing?.status !== "approved" || existing?.channel !== "email") {
+        throw new Error("E-postutkastet er endret. Last inn kontrollkøen på nytt.");
+      }
+      const { data, error } = await withDbTimeout(
+        supabase
+          .from("assistant_actions")
+          .update({ recipient: existing.recipient })
+          .eq("id", id)
+          .eq("status", "approved")
+          .eq("channel", "email")
+          .eq("recipient", existing.recipient)
+          .eq("source_kind", existing.source_kind)
+          .select("*")
+          .single(),
+        "kontrollere e-postmottaker før åpning",
+      );
+      if (error?.code === "PGRST116") {
+        throw new Error("E-postutkastet er endret i en annen fane. Last inn kontrollkøen på nytt.");
+      }
+      if (error) throw error;
+      return data;
+    },
     async reviewAssistantAction(id, review = {}) {
       const supabase = await requireClient();
       if (!isUuid(id)) throw new Error("Ugyldig assistentforslag.");
