@@ -634,9 +634,10 @@
     const n = normalize(text);
     const raw = String(text || "");
     const flags = [];
-    if (/\b\d{11}\b/.test(raw)) flags.push("national_identity_number");
+    if (/\b\d{6}(?:[\s.-]?\d{5})\b/.test(raw)) flags.push("national_identity_number");
     if (/\b\d{4}[.\s-]\d{2}[.\s-]\d{5}\b/.test(raw) || /\b(?:kontonr|konto nr|kontonummer)\b/.test(n)) flags.push("bank_information");
-    if (/\b(?:kode|nøkkelboks|nokkelboks|dorkode|dørkode)\b/.test(n)) flags.push("access_code");
+    const accessPattern = /\b(?:kode|nokkelboks|nokkelskap|dorkode|portkode|alarmkode|adgangskode)\b|\bnokkel\b.{0,40}\b(?:ligger|under|matta|dora|bod|garasje)\b|\b(?:ligger|under|ved|bak|i)\b.{0,40}\bnokkel\b/;
+    if (accessPattern.test(n)) flags.push("access_code");
     return flags;
   }
 

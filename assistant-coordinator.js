@@ -145,6 +145,76 @@
     return { type: "oppfolging", label: "Oppfølging", durationMinutes: 30, maxPerDay: 8 };
   }
 
+  function validIsoDate(value) {
+    const text = String(value || "").trim();
+    if (!/^20\d{2}-\d{2}-\d{2}$/.test(text)) return "";
+    const date = new Date(`${text}T00:00:00Z`);
+    return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === text ? text : "";
+  }
+
+  function validClockTime(value) {
+    const text = String(value || "").trim();
+    const match = text.match(/^([01]?\d|2[0-3])[:.]([0-5]\d)$/);
+    return match ? `${String(match[1]).padStart(2, "0")}:${match[2]}` : "";
+  }
+
+  function normalizeBookingProposal(value = {}) {
+    const container = value && typeof value === "object" ? value : {};
+    const raw = container.booking && typeof container.booking === "object"
+      ? container.booking
+      : container.planning && typeof container.planning === "object"
+        ? container.planning
+        : container;
+    const rawType = normalize(raw.jobType || raw.job_type || raw.type || "service").replaceAll(" ", "_");
+    const typeAliases = {
+      servicearbeid: "reparasjon",
+      timejobb: "reparasjon",
+      repair: "reparasjon",
+      inspection: "befaring",
+      installation: "installasjon",
+      blaseisolering: "blaseisolering",
+      blaaseisolering: "blaseisolering",
+      oppfolging: "annet",
+    };
+    const aliasedType = typeAliases[rawType] || rawType;
+    const jobType = ["service", "reparasjon", "befaring", "installasjon", "blaseisolering", "annet"].includes(aliasedType)
+      ? aliasedType
+      : "annet";
+    const defaultDurations = {
+      service: 60,
+      reparasjon: 120,
+      befaring: 60,
+      installasjon: 240,
+      blaseisolering: 480,
+      annet: 60,
+    };
+    const rawDuration = Number(raw.durationMinutes || raw.duration_minutes || raw.duration || 0);
+    const durationMinutes = Number.isFinite(rawDuration) && rawDuration > 0
+      ? Math.max(15, Math.min(720, Math.round(rawDuration / 15) * 15))
+      : defaultDurations[jobType];
+    const scheduledDate = validIsoDate(raw.scheduledDate || raw.scheduled_date || raw.date);
+    const scheduledTime = validClockTime(raw.scheduledTime || raw.scheduled_time || raw.time);
+    const scheduleRequested = raw.scheduleRequested === true
+      || raw.schedule_requested === true
+      || Boolean(scheduledDate || scheduledTime);
+    const title = repairTextEncoding(raw.title || raw.jobTitle || raw.job_title || "").trim().slice(0, 300);
+    const note = repairTextEncoding(raw.note || raw.description || "").trim().slice(0, 8000);
+    const resource = repairTextEncoding(raw.resource || raw.resourceSuggestion || raw.resource_suggestion || "").trim().slice(0, 160);
+    return {
+      jobType,
+      title,
+      note,
+      scheduledDate,
+      scheduledTime,
+      durationMinutes,
+      resource,
+      customerAccepted: raw.customerAccepted === true || raw.customer_accepted === true,
+      scheduleRequested,
+      mode: raw.mode === "route" ? "route" : "single",
+      hasExactSchedule: Boolean(scheduleRequested && scheduledDate && scheduledTime),
+    };
+  }
+
   function relevantMessageText(context = {}) {
     const text = sourceText(context);
     const match = text.match(/(?:relevant\s+meldingstekst|meldingstekst)\s*:\s*([\s\S]*?)(?=\n\s*(?:handlingsforslag|koblingsforslag|statusforslag|crm-ref|kilde-id)\s*:|$)/i);
@@ -1450,6 +1520,7 @@
     contactValues,
     coordinatesFromText,
     intentValues,
+    normalizeBookingProposal,
     serviceEvidence,
     sourceChannel,
   };

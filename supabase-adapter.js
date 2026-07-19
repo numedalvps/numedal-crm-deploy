@@ -2188,6 +2188,26 @@
       if (error) throw error;
       return data;
     },
+    async executeAssistantBookingProposal(id, booking = {}) {
+      const supabase = await requireClient();
+      if (!isUuid(id)) throw new Error("Ugyldig planforslag fra CRM-assistenten.");
+      if (!booking || typeof booking !== "object" || Array.isArray(booking)) {
+        throw new Error("Planforslaget mangler et gyldig kontrollgrunnlag.");
+      }
+      const { data, error } = await withDbTimeout(
+        supabase.rpc("execute_crm_assistant_booking_proposal", {
+          p_action_id: id,
+          p_booking: booking,
+        }),
+        "opprette jobb fra CRM-assistenten",
+        30000,
+      );
+      if (error) {
+        if (isBookingOverlapError(error)) throw new Error(bookingOverlapMessage(error));
+        throw error;
+      }
+      return data || {};
+    },
     async updateAssistantAction(id, patch = {}) {
       const supabase = await requireClient();
       if (!isUuid(id)) throw new Error("Ugyldig assistentforslag.");
