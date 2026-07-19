@@ -152,35 +152,128 @@
     return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === text ? text : "";
   }
 
-  function validClockTime(value) {
-    const text = String(value || "").trim();
-    const match = text.match(/^([01]?\d|2[0-3])[:.]([0-5]\d)$/);
-    return match ? `${String(match[1]).padStart(2, "0")}:${match[2]}` : "";
+  function normalizedBookingDate(value) {
+    const original = repairTextEncoding(value).trim();
+    const isoDate = validIsoDate(original);
+    if (isoDate) return isoDate;
+
+    const numeric = original.match(/^(\d{1,2})[./-](\d{1,2})[./-](20\d{2})$/);
+    if (numeric) {
+      return validIsoDate(`${numeric[3]}-${String(numeric[2]).padStart(2, "0")}-${String(numeric[1]).padStart(2, "0")}`);
+    }
+
+    const monthAliases = {
+      januar: 1,
+      jan: 1,
+      februar: 2,
+      feb: 2,
+      mars: 3,
+      mar: 3,
+      april: 4,
+      apr: 4,
+      mai: 5,
+      juni: 6,
+      jun: 6,
+      juli: 7,
+      jul: 7,
+      august: 8,
+      aug: 8,
+      september: 9,
+      sep: 9,
+      oktober: 10,
+      okt: 10,
+      november: 11,
+      nov: 11,
+      desember: 12,
+      des: 12,
+    };
+    const named = normalize(original).replaceAll(".", "").match(/^(\d{1,2}) ([a-z]+) (20\d{2})$/);
+    const month = named ? monthAliases[named[2]] : 0;
+    return named && month
+      ? validIsoDate(`${named[3]}-${String(month).padStart(2, "0")}-${String(named[1]).padStart(2, "0")}`)
+      : "";
   }
 
-  function normalizeBookingProposal(value = {}) {
-    const container = value && typeof value === "object" ? value : {};
-    const raw = container.booking && typeof container.booking === "object"
-      ? container.booking
-      : container.planning && typeof container.planning === "object"
-        ? container.planning
-        : container;
-    const rawType = normalize(raw.jobType || raw.job_type || raw.type || "service").replaceAll(" ", "_");
+  function validClockTime(value) {
+    const text = repairTextEncoding(value)
+      .trim()
+      .toLowerCase()
+      .replace(/^kl(?:okka|okken)?\.?\s*/, "");
+    let match = text.match(/^([01]?\d|2[0-3])$/);
+    let normalizedTime = match ? `${String(match[1]).padStart(2, "0")}:00` : "";
+    if (!normalizedTime) {
+      match = text.match(/^([01]?\d|2[0-3])[:.]([0-5]?\d)$/);
+      normalizedTime = match ? `${String(match[1]).padStart(2, "0")}:${String(match[2]).padStart(2, "0")}` : "";
+    }
+    if (!normalizedTime) {
+      match = text.match(/^([01]\d|2[0-3])([0-5]\d)$/);
+      normalizedTime = match ? `${match[1]}:${match[2]}` : "";
+    }
+    if (!normalizedTime) return "";
+    const minuteOfDay = Number(normalizedTime.slice(0, 2)) * 60 + Number(normalizedTime.slice(3, 5));
+    return minuteOfDay >= 6 * 60 && minuteOfDay < 23 * 60 ? normalizedTime : "";
+  }
+
+  function ownBooleanField(record, names) {
+    for (const name of names) {
+      if (!Object.prototype.hasOwnProperty.call(record, name)) continue;
+      if (record[name] === true || record[name] === false) return { present: true, value: record[name] };
+    }
+    return { present: false, value: false };
+  }
+
+  function firstScalarField(record, names) {
+    for (const name of names) {
+      const value = record[name];
+      if ((typeof value === "string" || typeof value === "number") && String(value).trim()) return value;
+    }
+    return "";
+  }
+
+  function normalizedBookingType(value) {
+    const rawType = normalize(value).replaceAll(" ", "_");
     const typeAliases = {
+      service: "service",
+      servicejobb: "service",
+      service_jobb: "service",
+      varmepumpeservice: "service",
+      varmepumpe_service: "service",
+      vedlikehold: "service",
+      reparasjon: "reparasjon",
+      reparasjonsjobb: "reparasjon",
+      reparasjons_jobb: "reparasjon",
       servicearbeid: "reparasjon",
+      service_arbeid: "reparasjon",
       timejobb: "reparasjon",
+      time_jobb: "reparasjon",
+      feilretting: "reparasjon",
       repair: "reparasjon",
+      befaring: "befaring",
+      befaringsjobb: "befaring",
+      befarings_jobb: "befaring",
       inspection: "befaring",
+      installasjon: "installasjon",
+      installasjonsjobb: "installasjon",
+      installasjons_jobb: "installasjon",
+      installering: "installasjon",
+      montering: "installasjon",
+      montasje: "installasjon",
       installation: "installasjon",
       blaseisolering: "blaseisolering",
+      blase_isolering: "blaseisolering",
       blaaseisolering: "blaseisolering",
+      blaase_isolering: "blaseisolering",
+      annet: "annet",
+      other: "annet",
       oppfolging: "annet",
+      follow_up: "annet",
+      followup: "annet",
     };
-    const aliasedType = typeAliases[rawType] || rawType;
-    const jobType = ["service", "reparasjon", "befaring", "installasjon", "blaseisolering", "annet"].includes(aliasedType)
-      ? aliasedType
-      : "annet";
-    const defaultDurations = {
+    return typeAliases[rawType] || "annet";
+  }
+
+  function normalizedDurationMinutes(raw, jobType) {
+    const defaults = {
       service: 60,
       reparasjon: 120,
       befaring: 60,
@@ -188,18 +281,71 @@
       blaseisolering: 480,
       annet: 60,
     };
-    const rawDuration = Number(raw.durationMinutes || raw.duration_minutes || raw.duration || 0);
-    const durationMinutes = Number.isFinite(rawDuration) && rawDuration > 0
-      ? Math.max(15, Math.min(720, Math.round(rawDuration / 15) * 15))
-      : defaultDurations[jobType];
-    const scheduledDate = validIsoDate(raw.scheduledDate || raw.scheduled_date || raw.date);
-    const scheduledTime = validClockTime(raw.scheduledTime || raw.scheduled_time || raw.time);
-    const scheduleRequested = raw.scheduleRequested === true
-      || raw.schedule_requested === true
-      || Boolean(scheduledDate || scheduledTime);
-    const title = repairTextEncoding(raw.title || raw.jobTitle || raw.job_title || "").trim().slice(0, 300);
-    const note = repairTextEncoding(raw.note || raw.description || "").trim().slice(0, 8000);
-    const resource = repairTextEncoding(raw.resource || raw.resourceSuggestion || raw.resource_suggestion || "").trim().slice(0, 160);
+    const values = [
+      ...[raw.durationMinutes, raw.duration_minutes]
+        .filter((value) => value !== undefined && value !== null)
+        .map((value) => ({ value, unit: "minutes" })),
+      ...[raw.durationHours, raw.duration_hours]
+        .filter((value) => value !== undefined && value !== null)
+        .map((value) => ({ value, unit: "hours" })),
+      ...[raw.duration]
+        .filter((value) => value !== undefined && value !== null)
+        .map((value) => ({ value, unit: "unknown" })),
+    ];
+    let minutes = 0;
+    for (const candidate of values) {
+      const text = repairTextEncoding(candidate.value).trim().toLowerCase().replace(",", ".").replace(/\.$/, "");
+      if (!text) continue;
+      if (candidate.unit === "hours") {
+        const hours = Number(text);
+        if (Number.isFinite(hours) && hours > 0) minutes = hours * 60;
+      } else {
+        const combined = text.match(/^(\d+(?:\.\d+)?)\s*(?:t|time|timer)\s*(?:(?:og\s*)?(\d+)\s*(?:m|min|minutt|minutter))?$/);
+        const minuteValue = text.match(/^(\d+(?:\.\d+)?)\s*(?:m|min|minutt|minutter)$/);
+        const number = Number(text);
+        if (combined) minutes = Number(combined[1]) * 60 + Number(combined[2] || 0);
+        else if (minuteValue) minutes = Number(minuteValue[1]);
+        else if (Number.isFinite(number) && number > 0) minutes = candidate.unit === "hours" ? number * 60 : number;
+      }
+      if (Number.isFinite(minutes) && minutes > 0) break;
+      minutes = 0;
+    }
+    return minutes > 0
+      ? Math.max(15, Math.min(720, Math.round(minutes / 15) * 15))
+      : defaults[jobType];
+  }
+
+  function normalizeBookingProposal(value = {}) {
+    const container = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+    const raw = container.booking && typeof container.booking === "object" && !Array.isArray(container.booking)
+      ? container.booking
+      : container.planning && typeof container.planning === "object" && !Array.isArray(container.planning)
+        ? container.planning
+        : container;
+    const jobType = normalizedBookingType(firstScalarField(raw, ["jobType", "job_type", "type"]));
+    const durationMinutes = normalizedDurationMinutes(raw, jobType);
+    const rawDate = firstScalarField(raw, ["scheduledDate", "scheduled_date", "date"]);
+    const rawTime = firstScalarField(raw, ["scheduledTime", "scheduled_time", "time"]);
+    const parsedDate = normalizedBookingDate(rawDate);
+    const parsedTime = validClockTime(rawTime);
+    const scheduleField = ownBooleanField(raw, ["scheduleRequested", "schedule_requested"]);
+    const scheduleRequested = scheduleField.present ? scheduleField.value : Boolean(rawDate || rawTime);
+    const scheduledDate = scheduleRequested ? parsedDate : "";
+    const scheduledTime = scheduleRequested ? parsedTime : "";
+    const title = repairTextEncoding(firstScalarField(raw, ["title", "jobTitle", "job_title"])).trim().slice(0, 300);
+    const note = repairTextEncoding(firstScalarField(raw, ["note", "description"])).trim().slice(0, 8000);
+    const resource = repairTextEncoding(firstScalarField(raw, [
+      "resource",
+      "resourceSuggestion",
+      "resource_suggestion",
+      "technician",
+      "servicemann",
+      "assignedToName",
+      "assigned_to_name",
+    ])).replace(/\s+/g, " ").trim().slice(0, 160);
+    const acceptanceField = ownBooleanField(raw, ["customerAccepted", "customer_accepted"]);
+    const rawMode = normalize(firstScalarField(raw, ["mode", "bookingMode", "booking_mode"])).replaceAll(" ", "_");
+    const routeModes = ["route", "route_plan", "route_planning", "rute", "rute_plan", "ruteplan", "ruteplanlegging", "multiple", "flere"];
     return {
       jobType,
       title,
@@ -208,9 +354,9 @@
       scheduledTime,
       durationMinutes,
       resource,
-      customerAccepted: raw.customerAccepted === true || raw.customer_accepted === true,
+      customerAccepted: acceptanceField.present ? acceptanceField.value : false,
       scheduleRequested,
-      mode: raw.mode === "route" ? "route" : "single",
+      mode: routeModes.includes(rawMode) ? "route" : "single",
       hasExactSchedule: Boolean(scheduleRequested && scheduledDate && scheduledTime),
     };
   }

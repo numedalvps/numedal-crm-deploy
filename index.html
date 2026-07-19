@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260719-01" />
+    <link rel="stylesheet" href="./styles.css?v=20260719-02" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -69,7 +69,7 @@
               <input id="globalSearchInput" type="search" placeholder="Søk kunde, e-post, notat, anlegg, jobb eller faktura" title="Søk i hele CRM. Trykk Ctrl+K for å åpne søket." autocomplete="off" />
               <div id="globalSearchResults" class="global-search-results top-search-results"></div>
             </div>
-            <button id="crmAssistantButton" class="secondary crm-assistant-button" type="button" aria-controls="crmAssistantPanel" aria-expanded="false" title="Åpne CRM-assistenten uten å forlate siden du jobber på."><span aria-hidden="true">✦</span> Assistent</button>
+            <button id="crmAssistantButton" class="secondary crm-assistant-button" type="button" aria-controls="crmAssistantPanel" aria-expanded="false" title="Åpne CRM-assistenten uten å forlate siden du jobber på."><span aria-hidden="true">✦</span> Assistent <span class="assistant-queue-badge hidden" data-assistant-queue-count data-hide-when-zero aria-label="åpne forslag til kontroll"></span></button>
             <button id="quickReminderButton" class="secondary quick-reminder-button" data-new-action="reminder" type="button" title="Lag en rask påminnelse som vises på forsiden.">Påminnelse</button>
             <div class="new-action-wrap">
               <button id="newActionButton" type="button" aria-expanded="false">+ Ny</button>
@@ -212,6 +212,7 @@
         </section>
 
         <section id="leadsView" class="view hidden">
+          <section id="assistantActionQueue" class="panel assistant-action-queue hidden"></section>
           <details class="panel ai-registration-panel">
             <summary class="ai-registration-summary">
               <span>
@@ -282,7 +283,6 @@
               <div class="empty-state">Velg en sak til venstre, eller bruk + Ny for å lime inn en melding.</div>
             </section>
           </div>
-          <section id="assistantActionQueue" class="panel assistant-action-queue hidden"></section>
           <section id="intakeInbox" class="panel intake-inbox-panel hidden"></section>
         </section>
 
@@ -727,7 +727,7 @@
         </section>
       </main>
       <div id="mobileMoreMenu" class="mobile-more-menu hidden" aria-label="Flere mobilvalg">
-        <button id="mobileCrmAssistantButton" class="mobile-assistant-entry" type="button" aria-controls="crmAssistantPanel" aria-expanded="false"><span aria-hidden="true">✦</span> CRM-assistent</button>
+        <button id="mobileCrmAssistantButton" class="mobile-assistant-entry" type="button" aria-controls="crmAssistantPanel" aria-expanded="false"><span aria-hidden="true">✦</span> CRM-assistent <span class="assistant-queue-badge hidden" data-assistant-queue-count data-hide-when-zero aria-label="åpne forslag til kontroll"></span></button>
         <button data-view="routeplanner" data-admin-mobile type="button">Servicerute</button>
         <button data-view="technician" data-admin-mobile type="button">Min dag</button>
         <button data-view="insulation" data-admin-mobile type="button">Blåseisolering</button>
@@ -752,6 +752,7 @@
             <p>Forslag må kontrolleres før noe sendes eller endres.</p>
           </div>
           <div class="crm-assistant-head-actions">
+            <button id="crmAssistantQueueButton" class="crm-assistant-queue-button" type="button" title="Åpne alle forslag som venter på kontroll">Til kontroll <span data-assistant-queue-count>0</span></button>
             <button id="crmAssistantThreadsButton" class="secondary" type="button" aria-label="Samtaler og historikk" aria-controls="crmAssistantThreadDrawer" aria-expanded="false">Samtaler</button>
             <button id="crmAssistantNewThreadButton" class="secondary" type="button">Ny</button>
             <button id="closeCrmAssistantButton" class="crm-assistant-close" type="button" aria-label="Lukk CRM-assistent">×</button>
@@ -1437,11 +1438,11 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260719-01"></script>
-    <script src="./supabase-adapter.js?v=20260719-01"></script>
-    <script src="./intake-parser.js?v=20260719-01"></script>
-    <script src="./assistant-coordinator.js?v=20260719-01"></script>
-    <script src="./app-20260719-01.js"></script>
+    <script src="./supabase-config.js?v=20260719-02"></script>
+    <script src="./supabase-adapter.js?v=20260719-02"></script>
+    <script src="./intake-parser.js?v=20260719-02"></script>
+    <script src="./assistant-coordinator.js?v=20260719-02"></script>
+    <script src="./app-20260719-02.js"></script>
   </body>
 </html>
 
