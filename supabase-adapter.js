@@ -1076,6 +1076,40 @@
     return client;
   }
 
+  async function patchCachedAssistantActions(userId, assistantActions) {
+    if (!userId || !Array.isArray(assistantActions)) return false;
+    const db = await openDataCache();
+    if (!db) return false;
+    return new Promise((resolve) => {
+      let updated = false;
+      const transaction = db.transaction(dataCacheStoreName, "readwrite");
+      const store = transaction.objectStore(dataCacheStoreName);
+      const request = store.get(`${dataCacheSchema}:${userId}`);
+      request.onsuccess = () => {
+        const entry = request.result;
+        if (!entry?.data) return;
+        store.put({
+          ...entry,
+          data: { ...entry.data, assistantActions },
+          assistantActionsSavedAt: Date.now(),
+        });
+        updated = true;
+      };
+      transaction.oncomplete = () => {
+        db.close();
+        resolve(updated);
+      };
+      transaction.onerror = () => {
+        db.close();
+        resolve(false);
+      };
+      transaction.onabort = () => {
+        db.close();
+        resolve(false);
+      };
+    });
+  }
+
   function canonicalAssistantValue(value) {
     if (Array.isArray(value)) return value.map(canonicalAssistantValue);
     if (value && typeof value === "object") {
@@ -1142,24 +1176,51 @@
     return withTimeout(promise, slowNetworkMessage(action), ms);
   }
 
-  async function fetchAllRows(queryFactory, pageSize = 1000, maxRows = 20000, parallelPages = 4) {
+  async function runWithConcurrency(taskFactories, maxConcurrency = 4) {
+    const tasks = Array.isArray(taskFactories) ? taskFactories : [];
+    if (!tasks.length) return [];
+    const results = new Array(tasks.length);
+    const workerCount = Math.min(tasks.length, Math.max(1, Number(maxConcurrency) || 1));
+    let nextIndex = 0;
+    let stopped = false;
+    let firstError;
+
+    const worker = async () => {
+      while (!stopped) {
+        const index = nextIndex;
+        nextIndex += 1;
+        if (index >= tasks.length) return;
+        try {
+          results[index] = await tasks[index]();
+        } catch (error) {
+          if (!stopped) firstError = error;
+          stopped = true;
+        }
+      }
+    };
+
+    await Promise.all(Array.from({ length: workerCount }, worker));
+    if (stopped) throw firstError;
+    return results;
+  }
+
+  function assistantActionQueueQuery(supabase) {
+    const receiptCutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    return supabase.from("assistant_actions").select("*")
+      .or(`status.in.(needs_review,approved,executing,failed),and(status.eq.completed,executed_at.gte.${receiptCutoff})`)
+      .order("created_at", { ascending: false }).limit(200);
+  }
+
+  async function fetchAllRows(queryFactory, pageSize = 1000, maxRows = 20000) {
     const rows = [];
     const loadPage = (from) => withDbTimeout(queryFactory().range(from, from + pageSize - 1), "laste CRM-data");
-    const first = await loadPage(0);
-    if (first.error) return { data: rows, error: first.error };
-    rows.push(...(first.data || []));
-    if (!first.data || first.data.length < pageSize) return { data: rows, error: null };
 
-    const batchSize = Math.max(1, Number(parallelPages) || 1);
-    for (let batchStart = pageSize; batchStart < maxRows; batchStart += pageSize * batchSize) {
-      const offsets = Array.from({ length: batchSize }, (_, index) => batchStart + index * pageSize)
-        .filter((from) => from < maxRows);
-      const pages = await Promise.all(offsets.map(loadPage));
-      for (const page of pages) {
-        if (page.error) return { data: rows, error: page.error };
-        rows.push(...(page.data || []));
-        if (!page.data || page.data.length < pageSize) return { data: rows, error: null };
-      }
+    for (let from = 0; from < maxRows; from += pageSize) {
+      const page = await loadPage(from);
+      if (page.error) return { data: rows, error: page.error };
+      const pageRows = page.data || [];
+      rows.push(...pageRows);
+      if (pageRows.length < pageSize) return { data: rows, error: null };
     }
     return { data: rows, error: null };
   }
@@ -1256,6 +1317,9 @@
     async cacheLoadedData(userId, data, profile) {
       return writeDataCache(userId, data, profile);
     },
+    async cacheAssistantActions(userId, assistantActions) {
+      return patchCachedAssistantActions(userId, assistantActions);
+    },
     async clearCachedData(userId) {
       return clearDataCache(userId);
     },
@@ -1334,8 +1398,6 @@
     },
     async loadAll() {
       const supabase = await requireClient();
-      const orderRequest = supabase.from("orders").select("*").order("updated_at", { ascending: false });
-      const assistantReceiptCutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
       const [
         { data: customerRows, error: customerError },
         { data: bookingRows, error: bookingError },
@@ -1355,28 +1417,26 @@
         assistantActionResult,
         attachmentResult,
         settingsResult,
-      ] = await withDbTimeout(Promise.all([
-        fetchAllRows(() => supabase.from("customers").select("*").order("name").order("id")),
-        fetchAllRows(() => supabase.from("bookings").select("*").neq("status", "cancelled").order("starts_at").order("id")),
-        supabase.from("invoice_metadata").select("*").order("invoice_date", { ascending: false }).limit(1000),
-        supabase.from("service_events").select("*").order("event_date", { ascending: false }).limit(1000),
-        fetchAllRows(() => supabase.from("installations").select("*").order("created_at").order("id")),
-        fetchAllRows(() => supabase.from("customer_locations").select("*").order("created_at").order("id")),
-        orderRequest,
-        supabase.from("leads").select("*").order("updated_at", { ascending: false }).limit(2000),
-        supabase.from("activities").select("*").order("occurred_at", { ascending: false }).limit(1000),
-        supabase.from("jobs").select("*").neq("work_status", "cancelled").order("updated_at", { ascending: false }).limit(2000),
-        supabase.from("appointments").select("*").neq("status", "cancelled").order("start_at", { ascending: true }).limit(2000),
-        supabase.from("access_notes").select("*").eq("active", true).order("updated_at", { ascending: false }).limit(2000),
-        supabase.from("website_submissions").select("*").order("received_at", { ascending: false }).limit(200),
-        supabase.from("profiles").select("*").order("display_name"),
-        supabase.from("intake_items").select("*").in("status", ["draft", "needs_review", "ready", "failed"]).order("created_at", { ascending: false }).limit(100),
-        supabase.from("assistant_actions").select("*")
-          .or(`status.in.(needs_review,approved,executing,failed),and(status.eq.completed,executed_at.gte.${assistantReceiptCutoff})`)
-          .order("created_at", { ascending: false }).limit(200),
-        supabase.from("crm_attachments").select("*").is("deleted_at", null).order("created_at", { ascending: false }).limit(2000),
-        supabase.from("crm_settings").select("*"),
-      ]), "laste CRM-data", 45000);
+      ] = await withDbTimeout(runWithConcurrency([
+        () => fetchAllRows(() => supabase.from("customers").select("*").order("name").order("id")),
+        () => fetchAllRows(() => supabase.from("bookings").select("*").neq("status", "cancelled").order("starts_at").order("id")),
+        () => supabase.from("invoice_metadata").select("*").order("invoice_date", { ascending: false }).limit(1000),
+        () => supabase.from("service_events").select("*").order("event_date", { ascending: false }).limit(1000),
+        () => fetchAllRows(() => supabase.from("installations").select("*").order("created_at").order("id")),
+        () => fetchAllRows(() => supabase.from("customer_locations").select("*").order("created_at").order("id")),
+        () => supabase.from("orders").select("*").order("updated_at", { ascending: false }),
+        () => supabase.from("leads").select("*").order("updated_at", { ascending: false }).limit(2000),
+        () => supabase.from("activities").select("*").order("occurred_at", { ascending: false }).limit(1000),
+        () => supabase.from("jobs").select("*").neq("work_status", "cancelled").order("updated_at", { ascending: false }).limit(2000),
+        () => supabase.from("appointments").select("*").neq("status", "cancelled").order("start_at", { ascending: true }).limit(2000),
+        () => supabase.from("access_notes").select("*").eq("active", true).order("updated_at", { ascending: false }).limit(2000),
+        () => supabase.from("website_submissions").select("*").order("received_at", { ascending: false }).limit(200),
+        () => supabase.from("profiles").select("*").order("display_name"),
+        () => supabase.from("intake_items").select("*").in("status", ["draft", "needs_review", "ready", "failed"]).order("created_at", { ascending: false }).limit(100),
+        () => assistantActionQueueQuery(supabase),
+        () => supabase.from("crm_attachments").select("*").is("deleted_at", null).order("created_at", { ascending: false }).limit(2000),
+        () => supabase.from("crm_settings").select("*"),
+      ], 4), "laste CRM-data", 45000);
       if (customerError) throw customerError;
       if (bookingError) throw bookingError;
       if (invoiceError) throw invoiceError;
@@ -1421,6 +1481,16 @@
           ? {}
           : Object.fromEntries((settingsResult.data || []).map((row) => [row.key, row.value])),
       };
+    },
+    async loadAssistantActions() {
+      const supabase = await requireClient();
+      const { data, error } = await withDbTimeout(
+        assistantActionQueueQuery(supabase),
+        "laste assistentens kontrollkø",
+        12000,
+      );
+      if (error && !isOptionalAssistantActionsError(error)) throw error;
+      return error ? [] : data || [];
     },
     async loadCustomerHistory(customerId) {
       const supabase = await requireClient();

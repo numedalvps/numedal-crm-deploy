@@ -455,7 +455,10 @@ small {
   z-index: 20;
   top: calc(100% + 6px);
   right: 0;
-  min-width: 220px;
+  width: min(280px, calc(100vw - 24px));
+  min-width: 0;
+  max-width: calc(100vw - 24px);
+  box-sizing: border-box;
   display: grid;
   gap: 6px;
   padding: 8px;
@@ -480,6 +483,13 @@ small {
 .inline-more-actions .danger:hover {
   background: #fef2f2;
   color: var(--red);
+}
+
+.map-primary-action {
+  border-color: #5eead4 !important;
+  background: #ccfbf1 !important;
+  color: #115e59 !important;
+  font-weight: 850 !important;
 }
 
 .customer-star {
@@ -8538,6 +8548,31 @@ textarea {
   background: linear-gradient(135deg, #eef2ff, #ffffff 56%);
 }
 
+.quick-field-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(96px, 0.7fr);
+  gap: 8px;
+}
+
+.quick-field-actions a {
+  min-width: 0;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 12px;
+  background: #fff;
+  color: var(--teal);
+  font-size: 14px;
+  font-weight: 850;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+  white-space: normal;
+}
+
 .quick-job-focus.service {
   border-color: rgba(22, 163, 74, 0.28);
   border-left-color: var(--service);
@@ -10236,6 +10271,7 @@ label {
   }
 
   .customer-detail .action-row,
+  #customerQuickContent .action-row,
   .order-detail .action-row,
   .order-detail .job-actions,
   .job-card .job-actions,
@@ -10247,11 +10283,12 @@ label {
     max-width: 100%;
     min-width: 0;
     overflow-x: visible;
-    overflow-y: hidden;
+    overflow-y: visible;
     padding-bottom: 4px;
   }
 
   .customer-detail .action-row > *,
+  #customerQuickContent .action-row > *,
   .order-detail .action-row > *,
   .order-detail .job-actions > *,
   .job-card .job-actions > *,
@@ -10267,6 +10304,8 @@ label {
   .lead-next-actions button,
   .customer-detail .action-row a,
   .customer-detail .action-row button,
+  #customerQuickContent .action-row a,
+  #customerQuickContent .action-row button,
   .order-detail .action-row a,
   .order-detail .action-row button,
   .order-detail .job-actions a,
@@ -10274,25 +10313,41 @@ label {
   .job-card .job-actions a,
   .job-card .job-actions button,
   .customer-detail .inline-more-actions,
+  #customerQuickContent .inline-more-actions,
   .order-detail .inline-more-actions,
+  .job-card .inline-more-actions,
   .lead-next-actions .inline-more-actions {
     justify-content: center;
   }
 
   .customer-detail .inline-more-actions,
+  #customerQuickContent .inline-more-actions,
   .order-detail .inline-more-actions,
+  .job-card .inline-more-actions,
   .lead-next-actions .inline-more-actions {
     display: block;
+    position: static;
+    grid-column: 1 / -1;
   }
 
   .customer-detail .inline-more-actions summary,
+  #customerQuickContent .inline-more-actions summary,
   .order-detail .inline-more-actions summary,
+  .job-card .inline-more-actions summary,
   .lead-next-actions .inline-more-actions summary {
     width: 100%;
   }
 
-  .inline-more-actions > div {
-    max-width: calc(100vw - 24px);
+  .customer-detail .inline-more-actions > div,
+  #customerQuickContent .inline-more-actions > div,
+  .order-detail .inline-more-actions > div,
+  .job-card .inline-more-actions > div,
+  .lead-next-actions .inline-more-actions > div {
+    position: static;
+    width: 100%;
+    max-width: 100%;
+    margin-top: 6px;
+    box-shadow: none;
     white-space: normal;
   }
 
@@ -10611,6 +10666,10 @@ label {
   }
 
   .job-card .job-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .quick-field-actions {
     grid-template-columns: minmax(0, 1fr);
   }
 }
