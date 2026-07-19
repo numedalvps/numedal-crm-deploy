@@ -2124,9 +2124,9 @@
     async createCrmAssistantThread(context = {}) {
       return invokeCrmAssistant({ action: "create_thread", context });
     },
-    async archiveCrmAssistantThread(threadId) {
+    async archiveCrmAssistantThread(threadId, context = {}) {
       if (!String(threadId || "").trim()) throw new Error("Velg en samtale først.");
-      return invokeCrmAssistant({ action: "archive_thread", threadId });
+      return invokeCrmAssistant({ action: "archive_thread", threadId, context });
     },
     async sendCrmAssistantMessage(threadId, message, context = {}, clientMessageId = "", replacesAssistantActionId = "") {
       const cleanMessage = String(message || "").trim();
@@ -2359,7 +2359,7 @@
     },
     async saveAssistantAction(action = {}) {
       const supabase = await requireClient();
-      const allowedTypes = new Set(["email_reply", "sms_reply", "offer_draft", "booking_proposal", "invoice_draft", "customer_enrichment", "customer_create_proposal"]);
+      const allowedTypes = new Set(["email_reply", "sms_reply", "offer_draft", "booking_proposal", "reminder_proposal", "invoice_draft", "customer_enrichment", "customer_create_proposal"]);
       const allowedStatuses = new Set(["needs_review", "approved", "executing", "completed", "rejected", "failed", "expired"]);
       const allowedChannels = new Set(["email", "sms", "internal"]);
       const actionType = String(action.action_type || action.actionType || "").trim();
@@ -2442,6 +2442,74 @@
         if (isBookingOverlapError(error)) throw new Error(bookingOverlapMessage(error));
         throw error;
       }
+      return data || {};
+    },
+    async executeAssistantBookingChangeProposal(id, approval = {}) {
+      const supabase = await requireClient();
+      if (!isUuid(id)) throw new Error("Ugyldig bookingendring fra CRM-assistenten.");
+      if (!approval || typeof approval !== "object" || Array.isArray(approval)) {
+        throw new Error("Bookingendringen mangler et gyldig kontrollgrunnlag.");
+      }
+      const expectedAction = approval.__expectedActionSnapshot;
+      const freshAction = await freshAssistantActionForExecution(supabase, id, expectedAction, "booking_proposal");
+      const operation = approval.operation === "reschedule" ? "reschedule" : approval.operation === "cancel" ? "cancel" : "";
+      if (!operation) throw new Error("Bookingendringen må være flytting eller avbestilling.");
+      const serverApproval = {
+        expectedActionUpdatedAt: freshAction.updated_at,
+        approvedByUser: approval.approvedByUser === true,
+        operation,
+        orderId: String(approval.orderId || ""),
+        bookingId: String(approval.bookingId || ""),
+        jobId: String(approval.jobId || ""),
+        appointmentId: String(approval.appointmentId || ""),
+        expectedOrderUpdatedAt: String(approval.expectedOrderUpdatedAt || ""),
+        expectedBookingUpdatedAt: String(approval.expectedBookingUpdatedAt || ""),
+        expectedJobUpdatedAt: String(approval.expectedJobUpdatedAt || ""),
+        expectedAppointmentUpdatedAt: String(approval.expectedAppointmentUpdatedAt || ""),
+        reason: String(approval.reason || "").trim(),
+        ...(operation === "reschedule" ? {
+          scheduledDate: String(approval.scheduledDate || ""),
+          scheduledTime: String(approval.scheduledTime || ""),
+          durationMinutes: Number(approval.durationMinutes),
+          resourceProfileId: String(approval.resourceProfileId || ""),
+        } : {}),
+      };
+      const { data, error } = await withDbTimeout(
+        supabase.rpc("execute_crm_assistant_booking_change_proposal", {
+          p_action_id: id,
+          p_approval: serverApproval,
+        }),
+        operation === "reschedule" ? "flytte booking fra CRM-assistenten" : "avbestille booking fra CRM-assistenten",
+        30000,
+      );
+      if (error) {
+        if (isBookingOverlapError(error)) throw new Error(bookingOverlapMessage(error));
+        throw error;
+      }
+      return data || {};
+    },
+    async executeAssistantReminderProposal(id, approval = {}) {
+      const supabase = await requireClient();
+      if (!isUuid(id)) throw new Error("Ugyldig påminnelsesforslag fra CRM-assistenten.");
+      if (!approval || typeof approval !== "object" || Array.isArray(approval)) {
+        throw new Error("Påminnelsesforslaget mangler et gyldig kontrollgrunnlag.");
+      }
+      const expectedAction = approval.__expectedActionSnapshot;
+      const freshAction = await freshAssistantActionForExecution(supabase, id, expectedAction, "reminder_proposal");
+      const serverApproval = {
+        reminder: approval.reminder,
+        approvedByUser: approval.approvedByUser === true,
+        expectedActionUpdatedAt: freshAction.updated_at,
+      };
+      const { data, error } = await withDbTimeout(
+        supabase.rpc("execute_crm_assistant_reminder_proposal", {
+          p_action_id: id,
+          p_approval: serverApproval,
+        }),
+        "opprette påminnelse fra CRM-assistenten",
+        30000,
+      );
+      if (error) throw error;
       return data || {};
     },
     async executeAssistantCustomerProposal(id, approval = {}) {

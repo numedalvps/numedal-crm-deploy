@@ -346,6 +346,12 @@
     const acceptanceField = ownBooleanField(raw, ["customerAccepted", "customer_accepted"]);
     const rawMode = normalize(firstScalarField(raw, ["mode", "bookingMode", "booking_mode"])).replaceAll(" ", "_");
     const routeModes = ["route", "route_plan", "route_planning", "rute", "rute_plan", "ruteplan", "ruteplanlegging", "multiple", "flere"];
+    const rawOperation = normalize(firstScalarField(raw, ["operation", "bookingOperation", "booking_operation"])).replaceAll(" ", "_");
+    const operation = ["reschedule", "move", "flytt", "flytte", "endre_tid"].includes(rawOperation)
+      ? "reschedule"
+      : ["cancel", "cancel_booking", "avlys", "avlyse", "kanseller"].includes(rawOperation)
+        ? "cancel"
+        : "create";
     const reminderValue = raw.reminder;
     const reminderRaw = reminderValue && typeof reminderValue === "object" && !Array.isArray(reminderValue)
       ? reminderValue
@@ -357,6 +363,16 @@
       dueDate: normalizedBookingDate(reminderDateValue),
       dueTime: reminderTimeValue ? validClockTime(reminderTimeValue, 0, 24 * 60) : "",
     } : null;
+    const orderId = repairTextEncoding(firstScalarField(raw, ["orderId", "order_id"])).trim();
+    const bookingId = repairTextEncoding(firstScalarField(raw, ["bookingId", "booking_id"])).trim();
+    const jobId = repairTextEncoding(firstScalarField(raw, ["jobId", "job_id"])).trim();
+    const appointmentId = repairTextEncoding(firstScalarField(raw, ["appointmentId", "appointment_id"])).trim();
+    const resourceProfileId = repairTextEncoding(firstScalarField(raw, ["resourceProfileId", "resource_profile_id"])).trim();
+    const expectedOrderUpdatedAt = repairTextEncoding(firstScalarField(raw, ["expectedOrderUpdatedAt", "expected_order_updated_at"])).trim();
+    const expectedBookingUpdatedAt = repairTextEncoding(firstScalarField(raw, ["expectedBookingUpdatedAt", "expected_booking_updated_at"])).trim();
+    const expectedJobUpdatedAt = repairTextEncoding(firstScalarField(raw, ["expectedJobUpdatedAt", "expected_job_updated_at"])).trim();
+    const expectedAppointmentUpdatedAt = repairTextEncoding(firstScalarField(raw, ["expectedAppointmentUpdatedAt", "expected_appointment_updated_at"])).trim();
+    const reason = repairTextEncoding(firstScalarField(raw, ["reason"])).trim().slice(0, 1000);
     return {
       jobType,
       title,
@@ -368,8 +384,36 @@
       customerAccepted: acceptanceField.present ? acceptanceField.value : false,
       scheduleRequested,
       mode: routeModes.includes(rawMode) ? "route" : "single",
+      operation,
+      orderId,
+      bookingId,
+      jobId,
+      appointmentId,
+      resourceProfileId,
+      expectedOrderUpdatedAt,
+      expectedBookingUpdatedAt,
+      expectedJobUpdatedAt,
+      expectedAppointmentUpdatedAt,
+      reason,
       reminder,
       hasExactSchedule: Boolean(scheduleRequested && scheduledDate && scheduledTime),
+    };
+  }
+
+  function normalizeReminderProposal(value = {}) {
+    const container = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+    const raw = container.reminder && typeof container.reminder === "object" && !Array.isArray(container.reminder)
+      ? container.reminder
+      : container;
+    const dueDateValue = firstScalarField(raw, ["dueDate", "due_date", "date"]);
+    const dueTimeValue = firstScalarField(raw, ["dueTime", "due_time", "time"]);
+    const dueDate = normalizedBookingDate(dueDateValue);
+    const dueTime = dueTimeValue ? validClockTime(dueTimeValue, 0, 24 * 60) : "";
+    return {
+      text: repairTextEncoding(firstScalarField(raw, ["text", "body", "note"])).trim().slice(0, 1000),
+      dueDate,
+      dueTime,
+      hasExactDue: Boolean(dueDate && (!dueTimeValue || dueTime)),
     };
   }
 
@@ -1679,6 +1723,7 @@
     coordinatesFromText,
     intentValues,
     normalizeBookingProposal,
+    normalizeReminderProposal,
     serviceEvidence,
     sourceChannel,
   };
