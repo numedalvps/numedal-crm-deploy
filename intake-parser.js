@@ -86,7 +86,7 @@
     ];
     const indexes = quoteMarkers
       .map((pattern) => pattern.exec(text)?.index)
-      .filter((index) => Number.isInteger(index) && index > 0);
+      .filter((index) => Number.isInteger(index) && index >= 0);
     const end = indexes.length ? Math.min(...indexes) : text.length;
     return withoutCrmReferences(text.slice(0, end)).trim();
   }
@@ -95,7 +95,7 @@
     if (!/opprinnelig melding|original message|^\s*>|^\s*on\s(?:mon|tue|wed|thu|fri|sat|sun)\b|^\s*(?:on\s.+wrote:|den\s.+skrev)/im.test(raw)) return false;
     const fromLine = String(raw || "").match(/^\s*fra\s*:\s*([^\n\r]+)/im)?.[1] || "";
     const fromEmail = fromLine.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || "";
-    return Boolean(fromEmail && !isOwnEmail(fromEmail));
+    return !fromEmail || !isOwnEmail(fromEmail);
   }
 
   function compactPhone(value) {
@@ -211,7 +211,7 @@
         ocrCorrected: true,
       });
     }
-    const regex = /(?:\+47\s*)?(?:\d[\s().-]*){8,11}/g;
+    const regex = /(?:\+47|0047)\s*(?:\d[\s().-]*){8}|(?:\d[\s().-]*){8,11}/g;
     let match;
     while ((match = regex.exec(raw))) {
       const original = match[0];
@@ -229,7 +229,8 @@
         || /\b(?:dato|sendt|mottatt|kl|klokken)\b/.test(normalizedContext) && /20\d{2}/.test(original);
       const badContext = badContextPattern.test(normalizedTightContext);
       const goodContext = /\b(?:telefon|tlf|mobil|mob|ring|ringes|kan naes|kan nåes|\+47)\b/.test(normalizedContext);
-      const insideLongNumber = digits.length > 10 || digits.length === 9;
+      const validCountryPrefix = digits.length === 12 && digits.startsWith("0047");
+      const insideLongNumber = (digits.length > 10 || digits.length === 9) && !validCountryPrefix;
       if (compact.length !== 8 || looksLikeDate || badContext || insideLongNumber) {
         candidates.push({
           value: compact,
@@ -424,23 +425,44 @@
   function inferIntent(text, options = {}) {
     const n = normalize(text);
     const explicitAcceptance = /\b(?:aksepterer|akseptert|godtar|godkjent|onsker a bestille|ønsker å bestille|sett oss opp|bekreftet tilbudet)\b/.test(n);
-    const referencedOfferAcceptance = Boolean(options.offerReferenced) && /\b(?:jo fortere jo bedre|sa fort som mulig|gjerne sa fort som mulig|kjor pa|ja takk|vi tar den|det gar vi for|sett i gang|bestill den)\b/.test(n);
+    const directPositiveReply = /\b(?:jo fortere jo bedre|sa fort som mulig|gjerne sa fort som mulig|kjor pa|ja takk|vi tar den|det gar vi for|sett i gang|bestill den)\b/.test(n);
+    const positiveConfirmation = /\b(?:det hores fornuftig ut|det hores greit ut|det hores bra ut|det ser greit ut|det ser bra ut|det ser fint ut|det passer bra|dette virker fornuftig|dette virker greit)\b/.test(n);
+    const installationTimingRequested = /\b(?:nar|hvilken dag|hvilket tidspunkt)\b.{0,80}\b(?:monter|montere|monteres|montering|installer|installere|installeres|installasjon)\b|\b(?:nar kan dette|nar kan den|nar kan dere)\b.{0,80}\b(?:monteres|installeres|gjores)\b/.test(n);
+    const conditionalQuestion = /\b(?:hvis|dersom|om jeg|om vi|eventuelt|kanskje)\b.{0,100}\b(?:bestill\w*|ga for|aksepter\w*|monter\w*|installer\w*)\b/.test(n);
+    const deferred = /\b(?:vil vente|onsker a vente|venter med|vente litt|utsett|utsette|utsettes|utsettelse|sette dette pa vent|ikke na|kommer tilbake|ma tenke|vil tenke|avventer)\b/.test(n);
+    const declined = /\b(?:takker nei|ikke aktuelt|onsker ikke|vil ikke bestille|gar ikke videre|dropper dette|godtar ikke|aksepterer ikke|ikke akseptert|ikke godkjent)\b/.test(n);
+    const priceQuestion = /\b(?:hva koster|pris pa|pris for|tillegg|ekstra kostnad|inkludert i prisen|med i prisen|prisforbehold|forbehold om pris)\b/.test(n);
+    const referencedOfferAcceptance = Boolean(options.offerReferenced)
+      && !conditionalQuestion
+      && (directPositiveReply || positiveConfirmation || installationTimingRequested);
+    const accepted = !declined
+      && (explicitAcceptance || (referencedOfferAcceptance && !(deferred && !explicitAcceptance)));
+    const acceptanceFields = {
+      explicitAcceptance: accepted,
+      directAcceptance: explicitAcceptance,
+      implicitAcceptance: accepted && !explicitAcceptance,
+      deferred,
+      declined,
+      installationTimingRequested,
+      priceReservation: accepted && priceQuestion,
+    };
     if (/\b(?:ignorer|slett alle|returner telefonnummeret|tidligere instruksjoner|sett status til vunnet)\b/.test(n)) {
-      return { category: "general_history", confidence: "low", explicitAcceptance: false, warning: "Mulig instruksjon i kildetekst. Behandles kun som kundemelding." };
+      return { category: "general_history", confidence: "low", ...acceptanceFields, explicitAcceptance: false, warning: "Mulig instruksjon i kildetekst. Behandles kun som kundemelding." };
     }
-    if (/\b(?:industristovsuger|stovsuger|leie|utleie|isopro)\b/.test(n)) return { category: "rental", confidence: "high", explicitAcceptance: false };
-    if (/\b(?:blaseisolering|isobygg|isolering|etterisolering|supafil|stubbloft|sagflis|kutterflis|komplett pris inkl rigg|antall m2|tykkelse)\b/.test(n)) return { category: "insulation", confidence: "high", explicitAcceptance: false };
-    if (explicitAcceptance || referencedOfferAcceptance) return { category: "quote_accepted", confidence: "high", explicitAcceptance: true };
+    if (/\b(?:industristovsuger|stovsuger|leie|utleie|isopro)\b/.test(n)) return { category: "rental", confidence: "high", ...acceptanceFields, explicitAcceptance: false };
+    if (/\b(?:blaseisolering|isobygg|isolering|etterisolering|supafil|stubbloft|sagflis|kutterflis|komplett pris inkl rigg|antall m2|tykkelse)\b/.test(n)) return { category: "insulation", confidence: "high", ...acceptanceFields, explicitAcceptance: false };
+    if (accepted) return { category: "quote_accepted", confidence: explicitAcceptance || directPositiveReply || positiveConfirmation ? "high" : "medium", ...acceptanceFields };
+    if (declined || deferred) return { category: options.offerReferenced ? "quote_question" : "unknown", confidence: declined ? "high" : "medium", ...acceptanceFields };
     if (/\b(?:ny varmepumpe|nyinstallasjon|kjøpe varmepumpe|kjope varmepumpe|bytte varmepumpe|bytt varmepumpa|onsker tilbud|ønsker tilbud|hva koster|pris pa|pris på|komplett pris|bedriftsanlegg|næringsanlegg|naeringsanlegg|kanalmodell|takkassett|flersonekanal)\b/.test(n)) {
-      return { category: "quote_request", confidence: "high", explicitAcceptance: false };
+      return { category: "quote_request", confidence: "high", ...acceptanceFields };
     }
-    if (/\b(?:befaring|komme pa en befaring|på befaring)\b/.test(n)) return { category: "site_visit_request", confidence: "high", explicitAcceptance: false };
+    if (/\b(?:befaring|komme pa en befaring|på befaring)\b/.test(n)) return { category: "site_visit_request", confidence: "high", ...acceptanceFields };
     if (/\b(?:flytte|flytting|dryppanne|dempet veggbrakett|vibrasjonsdempere|isklump|avgir vann|feilkode|reparasjon)\b/.test(n)) {
-      return { category: "repair_request", confidence: "high", explicitAcceptance: false };
+      return { category: "repair_request", confidence: "high", ...acceptanceFields };
     }
-    if (/\bservice\b/.test(n)) return { category: "service_request", confidence: "high", explicitAcceptance: false };
-    if (/\b(?:montering|montere|installasjon)\b/.test(n)) return { category: "quote_question", confidence: "medium", explicitAcceptance: false };
-    return { category: "unknown", confidence: "low", explicitAcceptance: false };
+    if (/\bservice\b/.test(n)) return { category: "service_request", confidence: "high", ...acceptanceFields };
+    if (/\b(?:montering|montere|installasjon|installere)\b/.test(n)) return { category: "quote_question", confidence: "medium", ...acceptanceFields };
+    return { category: "unknown", confidence: "low", ...acceptanceFields };
   }
 
   function actionForIntent(intent) {
@@ -636,7 +658,7 @@
     const flags = [];
     if (/\b\d{6}(?:[\s.-]?\d{5})\b/.test(raw)) flags.push("national_identity_number");
     if (/\b\d{4}[.\s-]\d{2}[.\s-]\d{5}\b/.test(raw) || /\b(?:kontonr|konto nr|kontonummer)\b/.test(n)) flags.push("bank_information");
-    const accessPattern = /\b(?:kode|nokkelboks|nokkelskap|dorkode|portkode|alarmkode|adgangskode)\b|\bnokkel\b.{0,40}\b(?:ligger|under|matta|dora|bod|garasje)\b|\b(?:ligger|under|ved|bak|i)\b.{0,40}\bnokkel\b/;
+    const accessPattern = /\b(?:kode|pinkode|nokkelboks|nokkelskap|nokkelsafe|nokkel safe|dorkode|dorlas|kodelas|laskode|portkode|alarmkode|adgangskode)\b|\bpin\b.{0,20}\b\d{2,8}\b|\b\d{2,8}\b.{0,20}\bpin\b|\bnokkel\b.{0,40}\b(?:ligger|under|matta|dora|bod|garasje|safe)\b|\b(?:ligger|under|ved|bak|i)\b.{0,40}\bnokkel\b/;
     if (accessPattern.test(n)) flags.push("access_code");
     return flags;
   }
@@ -654,6 +676,8 @@
     if (address.street.value && !address.postalCode.value) warnings.push({ code: "address_no_zip", message: "Adresse er funnet uten postnummer. Kontroller før rute/booking.", severity: "warning" });
     if (intent.warning) warnings.push({ code: "prompt_injection_possible", message: intent.warning, severity: "critical" });
     if (intent.category === "quote_question") warnings.push({ code: "mounting_not_acceptance", message: "Ordet montering er funnet, men dette er ikke tolket som vunnet salg uten tydelig aksept.", severity: "info" });
+    if (intent.deferred || intent.declined) warnings.push({ code: "latest_reply_defers_work", message: "Nyeste kundesvar utsetter eller avslår videre arbeid. Tidligere aksept i sitert historikk skal ikke brukes.", severity: "warning" });
+    if (intent.priceReservation) warnings.push({ code: "accepted_with_price_reservation", message: "Grunnarbeidet er akseptert, men et tillegg eller pris må avklares separat.", severity: "warning" });
     if (sensitive.includes("access_code")) warnings.push({ code: "access_code", message: "Mulig nøkkel-/adgangskode funnet. Lagre bare i riktig felt hvis det faktisk trengs.", severity: "warning" });
     if (sensitive.includes("national_identity_number") || sensitive.includes("bank_information")) warnings.push({ code: "sensitive_data", message: "Mulig sensitiv betalings- eller ID-informasjon funnet. Ikke kopier til vanlige notatfelt.", severity: "critical" });
     return warnings;
@@ -670,7 +694,8 @@
     const usablePhones = phones.filter((item) => !item.rejected && !item.own);
     const name = extractName(analysisText, emails);
     const address = extractAddress(analysisText);
-    const intent = inferIntent(analysisText, { offerReferenced: /\bNVS-TILBUD-/i.test(raw) });
+    const intentText = shouldAnalyzeLatestEmailMessage(raw) ? latestMessage : analysisText;
+    const intent = inferIntent(intentText, { offerReferenced: /\bNVS-TILBUD-/i.test(raw) });
     const equipment = extractEquipment(analysisText);
     const project = extractProjectDetails(analysisText, intent);
     const sensitive = sensitiveFlags(analysisText);
@@ -727,6 +752,12 @@
         confidence: intent.confidence,
         evidence: intent.warning || null,
         explicitAcceptance: intent.explicitAcceptance,
+        directAcceptance: intent.directAcceptance,
+        implicitAcceptance: intent.implicitAcceptance,
+        deferred: intent.deferred,
+        declined: intent.declined,
+        installationTimingRequested: intent.installationTimingRequested,
+        priceReservation: intent.priceReservation,
       },
       equipment,
       project: project.details,

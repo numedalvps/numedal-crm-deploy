@@ -1492,6 +1492,23 @@
       if (error && !isOptionalAssistantActionsError(error)) throw error;
       return error ? [] : data || [];
     },
+    async getIntakeItemById(id) {
+      const intakeId = String(id || "").trim();
+      if (!isUuid(intakeId)) throw new Error("Ugyldig innbokspost.");
+      const supabase = await requireClient();
+      const { data: activeAdmin, error: adminError } = await withDbTimeout(
+        supabase.rpc("is_active_admin"),
+        "kontrollere tilgang til innboksposten",
+      );
+      if (adminError) throw adminError;
+      if (activeAdmin !== true) throw new Error("Bare administrator kan åpne denne innboksposten.");
+      const { data, error } = await withDbTimeout(
+        supabase.from("intake_items").select("*").eq("id", intakeId).maybeSingle(),
+        "laste innboksposten",
+      );
+      if (error) throw error;
+      return data || null;
+    },
     async loadCustomerHistory(customerId) {
       const supabase = await requireClient();
       if (!isUuid(customerId)) return { invoices: [], serviceEvents: [], activities: [] };

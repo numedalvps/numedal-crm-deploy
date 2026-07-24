@@ -95,17 +95,64 @@
 
   function intentValues(context = {}) {
     const analysis = context.analysis || context.draft?.analysis || {};
-    const text = normalize(sourceText(context));
     const analyzedCategory = String(analysis.intent?.category || "").trim();
-    const explicitAcceptance = Boolean(analysis.intent?.explicitAcceptance)
-      || /\bja takk\b|\bdet passer\b|\bkj(?:ø|o)r pa\b|\bjo fortere jo bedre\b|\bvi tar den\b|\baksepterer\b|\bbestill(?:er|ing)\b/.test(text);
-    let category = analyzedCategory || "general";
-    if (/service|rens|vedlikehold/.test(text)) category = "service_request";
-    if (/monter|install|ny varmepumpe/.test(text)) category = "installation";
-    if (/tilbud|pris|hva koster/.test(text)) category = "quote_request";
-    if (/repar|feil|virker ikke|varmer ikke|kj(?:ø|o)ler ikke/.test(text)) category = "repair_request";
-    if (/befaring/.test(text)) category = "inspection_request";
-    return { category, explicitAcceptance };
+    const latestMessage = fieldValue(analysis.source?.latestExternalMessage);
+    const currentText = normalize(latestMessage || sourceText(context));
+    const source = analysis.source || {};
+    const row = context.row || {};
+    const draft = context.draft || {};
+    const offerReferenced = Boolean(
+      fieldValue(source.emailReference)
+      || fieldValue(draft.emailReference)
+      || source.matchedLeadId
+      || source.matchedCustomerId
+      || row.linked_lead_id
+      || draft.linkedLeadId
+      || /\bNVS-TILBUD-/i.test(sourceText(context)),
+    );
+    const directAcceptance = /\b(?:aksepterer|akseptert|godtar|godkjent|bekreftet tilbudet|onsker a bestille|sett oss opp)\b/.test(currentText);
+    const directPositiveReply = /\b(?:jo fortere jo bedre|sa fort som mulig|gjerne sa fort som mulig|kjor pa|ja takk|vi tar den|det gar vi for|sett i gang|bestill den|det passer)\b/.test(currentText);
+    const positiveConfirmation = /\b(?:det hores fornuftig ut|det hores greit ut|det hores bra ut|det ser greit ut|det ser bra ut|det ser fint ut|det passer bra|dette virker fornuftig|dette virker greit)\b/.test(currentText);
+    const installationTimingRequested = /\b(?:nar|hvilken dag|hvilket tidspunkt)\b.{0,80}\b(?:monter|montere|monteres|montering|installer|installere|installeres|installasjon)\b|\b(?:nar kan dette|nar kan den|nar kan dere)\b.{0,80}\b(?:monteres|installeres|gjores)\b/.test(currentText);
+    const conditionalQuestion = /\b(?:hvis|dersom|om jeg|om vi|eventuelt|kanskje)\b.{0,100}\b(?:bestill\w*|ga for|aksepter\w*|monter\w*|installer\w*)\b/.test(currentText);
+    const deferred = /\b(?:vil vente|onsker a vente|venter med|vente litt|utsett|utsette|utsettes|utsettelse|sette dette pa vent|ikke na|kommer tilbake|ma tenke|vil tenke|avventer)\b/.test(currentText);
+    const declined = /\b(?:takker nei|ikke aktuelt|onsker ikke|vil ikke bestille|gar ikke videre|dropper dette|godtar ikke|aksepterer ikke|ikke akseptert|ikke godkjent)\b/.test(currentText);
+    const priceQuestion = /\b(?:hva koster|pris pa|pris for|tillegg|ekstra kostnad|inkludert i prisen|med i prisen|prisforbehold|forbehold om pris)\b/.test(currentText);
+    const referencedAcceptance = offerReferenced
+      && !conditionalQuestion
+      && (directPositiveReply || positiveConfirmation || installationTimingRequested);
+    const serviceConfirmation = (
+      ["service_request", "installation"].includes(analyzedCategory)
+      || /\b(?:service|rens|vedlikehold)\b/.test(currentText)
+      || /\b(?:service|installasjon|montering)\b/.test(normalize(draft.type))
+    )
+      && directPositiveReply
+      && !conditionalQuestion;
+    const workAccepted = !declined
+      && (directAcceptance || ((referencedAcceptance || serviceConfirmation) && !(deferred && !directAcceptance)));
+    let category = "general";
+    if (workAccepted && offerReferenced) category = "quote_accepted";
+    else if (workAccepted && analyzedCategory) category = analyzedCategory;
+    else if (declined || deferred) category = offerReferenced ? "quote_question" : "general";
+    else if (/service|rens|vedlikehold/.test(currentText)) category = "service_request";
+    else if (/repar|feil|virker ikke|varmer ikke|kjoler ikke/.test(currentText)) category = "repair_request";
+    else if (/befaring/.test(currentText)) category = "inspection_request";
+    else if (/ny varmepumpe|onsker tilbud|hva koster|pris pa|komplett pris/.test(currentText)) category = "quote_request";
+    else if (/monter|install/.test(currentText)) category = offerReferenced ? "quote_question" : "installation";
+    else if (!latestMessage && analyzedCategory) category = analyzedCategory;
+    return {
+      category,
+      explicitAcceptance: workAccepted,
+      directAcceptance,
+      implicitAcceptance: workAccepted && !directAcceptance,
+      workAccepted,
+      deferred,
+      declined,
+      installationTimingRequested,
+      priceReservation: workAccepted && priceQuestion,
+      offerReferenced,
+      evaluatedTextSource: latestMessage ? "latest_external_message" : "full_source_fallback",
+    };
   }
 
   function areaFromContext(context = {}) {
@@ -139,7 +186,7 @@
     const category = intentValues(context).category;
     const type = String(context.draft?.type || "").toLowerCase();
     if (/service/.test(type) || category === "service_request") return { type: "service", label: "Service", durationMinutes: 60, maxPerDay: 8 };
-    if (/install/.test(type) || category === "installation") return { type: "installasjon", label: "Installasjon", durationMinutes: 240, maxPerDay: 2 };
+    if (/install/.test(type) || category === "installation" || category === "quote_accepted") return { type: "installasjon", label: "Installasjon", durationMinutes: 240, maxPerDay: 2 };
     if (/befaring/.test(type) || category === "inspection_request") return { type: "befaring", label: "Befaring", durationMinutes: 60, maxPerDay: 5 };
     if (/repar|timejobb/.test(type) || category === "repair_request") return { type: "reparasjon", label: "Servicearbeid", durationMinutes: 120, maxPerDay: 4 };
     return { type: "oppfolging", label: "Oppfølging", durationMinutes: 30, maxPerDay: 8 };
@@ -344,6 +391,12 @@
       "assigned_to_name",
     ])).replace(/\s+/g, " ").trim().slice(0, 160);
     const acceptanceField = ownBooleanField(raw, ["customerAccepted", "customer_accepted"]);
+    const workAcceptanceField = ownBooleanField(raw, ["workAccepted", "work_accepted"]);
+    const priceReservationField = ownBooleanField(raw, ["priceReservation", "price_reservation"]);
+    const priceReservationNote = repairTextEncoding(firstScalarField(raw, [
+      "priceReservationNote",
+      "price_reservation_note",
+    ])).trim().slice(0, 1000);
     const rawMode = normalize(firstScalarField(raw, ["mode", "bookingMode", "booking_mode"])).replaceAll(" ", "_");
     const routeModes = ["route", "route_plan", "route_planning", "rute", "rute_plan", "ruteplan", "ruteplanlegging", "multiple", "flere"];
     const rawOperation = normalize(firstScalarField(raw, ["operation", "bookingOperation", "booking_operation"])).replaceAll(" ", "_");
@@ -382,6 +435,9 @@
       durationMinutes,
       resource,
       customerAccepted: acceptanceField.present ? acceptanceField.value : false,
+      workAccepted: workAcceptanceField.present ? workAcceptanceField.value : false,
+      priceReservation: priceReservationField.present ? priceReservationField.value : false,
+      priceReservationNote,
       scheduleRequested,
       mode: routeModes.includes(rawMode) ? "route" : "single",
       operation,
@@ -1593,6 +1649,7 @@
   }
 
   function replySubject(intent) {
+    if (intent.category === "quote_accepted") return "Videre plan for montering";
     if (intent.category === "quote_request") return "Oppfølging av forespørsel og tilbud";
     if (intent.category === "service_request") return "Service på varmepumpe";
     if (intent.category === "installation") return "Videre plan for varmepumpe";
@@ -1609,7 +1666,7 @@
       body = `${greeting}\n\nTakk for bekreftelsen. Jeg samler servicejobber i samme område for å bruke dagen effektivt. Jeg finner en ledig dag i ${area.label.toLowerCase()} og sender et konkret forslag til dag og tidsvindu før noe bookes.`;
     } else if (intent.category === "service_request") {
       body = `${greeting}\n\nTakk for meldingen. Vi kan hjelpe med service på varmepumpen. Bekreft gjerne at du ønsker service, og send merke/modell og anleggsadresse hvis dette mangler. Deretter foreslår jeg en dag når vi har flere jobber i samme område.`;
-    } else if (intent.category === "installation" && intent.explicitAcceptance) {
+    } else if ((intent.category === "installation" || intent.category === "quote_accepted") && intent.explicitAcceptance) {
       body = `${greeting}\n\nTakk for bekreftelsen. Jeg finner et ledig tidspunkt for montering og sender et konkret forslag før avtalen bookes. Oppgi gjerne anleggsadressen hvis den ikke allerede er avklart.`;
     } else if (intent.category === "installation") {
       body = `${greeting}\n\nTakk for henvendelsen. Jeg følger opp varmepumpen og monteringen. For å gi riktig tilbud trenger jeg anleggsadresse og gjerne bilder av ønsket plassering inne og ute dersom dette ikke allerede er sendt.`;
@@ -1637,8 +1694,12 @@
     const blockers = [];
     if (!recipient) blockers.push("Mangler mottaker for valgt kanal");
     if (booking.type !== "oppfolging" && area.needsClarification) blockers.push("Område eller anleggsadresse må avklares");
-    if (booking.type !== "oppfolging" && !intent.explicitAcceptance) blockers.push("Kunden må bekrefte før booking");
+    if (booking.type !== "oppfolging" && !intent.workAccepted) blockers.push("Kunden må bekrefte arbeidet før jobb opprettes");
     const relevantBooking = booking.type !== "oppfolging";
+    const allowedToCreateJob = relevantBooking && intent.workAccepted && !area.needsClarification;
+    const priceReservationNote = intent.priceReservation
+      ? "Grunnarbeidet er akseptert, men pris eller tillegg må avklares separat før fakturering."
+      : "";
     const reply = {
       actionType: channel === "sms" ? "sms_reply" : "email_reply",
       channel,
@@ -1652,8 +1713,17 @@
     const planning = {
       actionType: "booking_proposal",
       relevant: relevantBooking,
-      allowedToBook: relevantBooking && intent.explicitAcceptance && !area.needsClarification,
-      customerAccepted: intent.explicitAcceptance,
+      allowedToBook: false,
+      allowedToCreateJob,
+      createAsUnscheduled: allowedToCreateJob,
+      workAccepted: intent.workAccepted,
+      customerAccepted: false,
+      scheduleRequested: false,
+      scheduledDate: "",
+      scheduledTime: "",
+      priceReservation: intent.priceReservation,
+      priceReservationNote,
+      reservations: priceReservationNote ? [priceReservationNote] : [],
       jobType: booking.type,
       jobLabel: booking.label,
       durationMinutes: booking.durationMinutes,
