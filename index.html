@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260730-02" />
+    <link rel="stylesheet" href="./styles.css?v=20260730-03" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -752,43 +752,51 @@
             <p>Forslag må kontrolleres før noe sendes eller endres.</p>
           </div>
           <div class="crm-assistant-head-actions">
-            <button id="crmAssistantQueueButton" class="crm-assistant-queue-button" type="button" title="Åpne alle forslag som venter på kontroll">Til kontroll <span data-assistant-queue-count>0</span></button>
-            <button id="crmAssistantThreadsButton" class="secondary" type="button" aria-label="Samtaler og historikk" aria-controls="crmAssistantThreadDrawer" aria-expanded="false">Samtaler</button>
-            <button id="crmAssistantNewThreadButton" class="secondary" type="button">Ny</button>
+            <button id="crmAssistantThreadsButton" class="secondary crm-assistant-chat-tool" type="button" aria-label="Samtaler og historikk" aria-controls="crmAssistantThreadDrawer" aria-expanded="false">Samtaler</button>
+            <button id="crmAssistantNewThreadButton" class="secondary crm-assistant-chat-tool" type="button">Ny</button>
             <button id="closeCrmAssistantButton" class="crm-assistant-close" type="button" aria-label="Lukk CRM-assistent">×</button>
           </div>
         </header>
 
-        <section id="crmAssistantContext" class="crm-assistant-context" aria-live="polite"></section>
-        <section id="crmAssistantMemories" class="crm-assistant-memories hidden" aria-label="Husket informasjon"></section>
+        <nav id="crmAssistantModeTabs" class="crm-assistant-mode-tabs" aria-label="Visning i CRM-assistenten" role="tablist">
+          <button id="crmAssistantChatButton" type="button" role="tab" aria-controls="crmAssistantChatView" aria-selected="true">Samtale</button>
+          <button id="crmAssistantQueueButton" class="crm-assistant-queue-button" type="button" role="tab" aria-controls="crmAssistantReviewView" aria-selected="false">Til kontroll <span data-assistant-queue-count>0</span></button>
+        </nav>
 
-        <section id="crmAssistantThreadDrawer" class="crm-assistant-thread-drawer hidden" aria-label="Tidligere samtaler">
-          <div class="crm-assistant-thread-head">
-            <div>
-              <strong>Samtaler</strong>
-              <span>Velg en tidligere samtale eller start en ny.</span>
+        <div id="crmAssistantChatView" class="crm-assistant-chat-view" role="tabpanel" aria-labelledby="crmAssistantChatButton">
+          <section id="crmAssistantContext" class="crm-assistant-context" aria-live="polite"></section>
+          <section id="crmAssistantSuggestions" class="crm-assistant-suggestions hidden" aria-label="Nye forslag"></section>
+          <section id="crmAssistantMemories" class="crm-assistant-memories hidden" aria-label="Husket informasjon"></section>
+
+          <section id="crmAssistantThreadDrawer" class="crm-assistant-thread-drawer hidden" aria-label="Tidligere samtaler">
+            <div class="crm-assistant-thread-head">
+              <div>
+                <strong>Samtaler</strong>
+                <span>Velg en tidligere samtale eller start en ny.</span>
+              </div>
+              <button id="crmAssistantDrawerNewThreadButton" type="button">Ny samtale</button>
             </div>
-            <button id="crmAssistantDrawerNewThreadButton" type="button">Ny samtale</button>
-          </div>
-          <div id="crmAssistantThreadList" class="crm-assistant-thread-list"></div>
-        </section>
+            <div id="crmAssistantThreadList" class="crm-assistant-thread-list"></div>
+          </section>
 
-        <div id="crmAssistantError" class="crm-assistant-error hidden" role="alert">
-          <span id="crmAssistantErrorText"></span>
-          <button id="crmAssistantRetryButton" class="secondary hidden" type="button">Prøv igjen</button>
+          <div id="crmAssistantError" class="crm-assistant-error hidden" role="alert">
+            <span id="crmAssistantErrorText"></span>
+            <button id="crmAssistantRetryButton" class="secondary hidden" type="button">Prøv igjen</button>
+          </div>
+
+          <div id="crmAssistantMessages" class="crm-assistant-messages" role="log" aria-live="polite" aria-relevant="additions text"></div>
+
+          <form id="crmAssistantForm" class="crm-assistant-form">
+            <label class="sr-only" for="crmAssistantInput">Skriv til CRM-assistenten</label>
+            <textarea id="crmAssistantInput" rows="3" maxlength="6000" placeholder="Skriv hva du vil finne, oppsummere eller forberede…" autocomplete="off"></textarea>
+            <div class="crm-assistant-form-foot">
+              <span id="crmAssistantStatus">Enter sender · Shift+Enter gir ny linje</span>
+              <button id="crmAssistantSendButton" type="submit">Send</button>
+            </div>
+          </form>
         </div>
 
-        <div id="crmAssistantMessages" class="crm-assistant-messages" role="log" aria-live="polite" aria-relevant="additions text"></div>
-        <section id="crmAssistantSuggestions" class="crm-assistant-suggestions hidden" aria-label="Forslag til kontroll"></section>
-
-        <form id="crmAssistantForm" class="crm-assistant-form">
-          <label class="sr-only" for="crmAssistantInput">Skriv til CRM-assistenten</label>
-          <textarea id="crmAssistantInput" rows="3" maxlength="6000" placeholder="Skriv hva du vil finne, oppsummere eller forberede…" autocomplete="off"></textarea>
-          <div class="crm-assistant-form-foot">
-            <span id="crmAssistantStatus">Enter sender · Shift+Enter gir ny linje</span>
-            <button id="crmAssistantSendButton" type="submit">Send</button>
-          </div>
-        </form>
+        <section id="crmAssistantReviewView" class="crm-assistant-review-view hidden" role="tabpanel" aria-labelledby="crmAssistantQueueButton"></section>
       </aside>
     </div>
 
@@ -1438,11 +1446,11 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260730-02"></script>
-    <script src="./supabase-adapter.js?v=20260730-02"></script>
-    <script src="./intake-parser.js?v=20260730-02"></script>
-    <script src="./assistant-coordinator.js?v=20260730-02"></script>
-    <script src="./app-20260730-02.js"></script>
+    <script src="./supabase-config.js?v=20260730-03"></script>
+    <script src="./supabase-adapter.js?v=20260730-03"></script>
+    <script src="./intake-parser.js?v=20260730-03"></script>
+    <script src="./assistant-coordinator.js?v=20260730-03"></script>
+    <script src="./app-20260730-03.js"></script>
   </body>
 </html>
 
