@@ -10122,12 +10122,12 @@ label {
   }
 
   .top-search-results {
-    position: fixed;
-    top: 112px;
-    left: 10px;
-    right: 10px;
-    width: auto;
-    max-height: calc(100vh - 190px);
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-height: calc(100dvh - 220px);
   }
 
   .new-action-wrap {
