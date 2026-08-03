@@ -6551,12 +6551,31 @@ textarea {
 }
 
 .planning-head {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.planning-period-nav {
+  display: grid;
+  grid-template-columns: minmax(110px, auto) minmax(220px, 1fr) minmax(110px, auto);
+  gap: 8px;
+  align-items: center;
+}
+
+.planning-period-nav button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.planning-toolbar {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 8px;
   align-items: center;
-  margin-bottom: 12px;
 }
 
 .plan-tabs {
@@ -6580,12 +6599,14 @@ textarea {
   color: var(--teal);
 }
 
-.planning-head strong {
+.planning-period-nav strong {
   min-width: 220px;
   text-align: center;
+  text-transform: capitalize;
 }
 
-.planning-head button {
+.planning-head button,
+.planning-more-tools summary {
   min-height: 40px;
   padding: 8px 12px;
 }
@@ -8563,6 +8584,60 @@ textarea {
   color: var(--ink);
 }
 
+.planning-more-tools {
+  position: relative;
+}
+
+.planning-more-tools > summary {
+  width: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1;
+  list-style: none;
+}
+
+.planning-more-tools > summary::-webkit-details-marker {
+  display: none;
+}
+
+.planning-more-tools[open] > summary {
+  border-color: var(--teal);
+  background: var(--teal-soft);
+  color: var(--teal);
+}
+
+.planning-more-tools > div {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 220px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.planning-more-tools > div button {
+  width: 100%;
+}
+
+.planning-day-picker {
+  display: none;
+}
+
+.planning-mobile-edit {
+  display: none;
+}
+
 .crm-assistant-review-filters button span {
   min-width: 19px;
   min-height: 19px;
@@ -9853,8 +9928,9 @@ textarea {
 }
 
 .planning-month-grid .month-day.selected {
-  outline: 3px solid rgba(37, 99, 235, 0.22);
-  border-color: #2563eb;
+  outline: 2px solid rgba(15, 118, 110, 0.24);
+  border-color: var(--teal);
+  background: var(--teal-soft);
 }
 
 .booking-month-legend {
@@ -10925,16 +11001,58 @@ label {
   }
 
   .planning-head {
+    gap: 8px;
+  }
+
+  .planning-period-nav {
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    gap: 6px;
+  }
+
+  .planning-period-nav strong {
+    min-width: 0;
+    padding-inline: 2px;
+    font-size: 14px;
+    line-height: 1.2;
+    text-align: center;
+  }
+
+  .planning-period-nav button {
+    width: 44px;
+    min-width: 44px;
+    padding-inline: 8px;
+    font-size: 20px;
+  }
+
+  .planning-period-nav button span:not([aria-hidden="true"]) {
+    display: none;
+  }
+
+  .planning-toolbar {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr) auto auto;
     justify-content: stretch;
     align-items: stretch;
   }
 
-  .planning-head strong {
+  .planning-toolbar > .planning-mode-toggle {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .planning-toolbar > #todayButton {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .planning-toolbar > .planning-more-tools {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .planning-toolbar > .planning-resource-filter {
     grid-column: 1 / -1;
-    min-width: 0;
-    text-align: left;
+    grid-row: 2;
   }
 
   .planning-head button,
@@ -10961,20 +11079,175 @@ label {
     min-width: 0;
   }
 
+  .planning-more-tools > div {
+    position: fixed;
+    top: auto;
+    right: 12px;
+    bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+    left: 12px;
+    min-width: 0;
+  }
+
+  .planning-day-picker:not(.hidden) {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(38px, 1fr));
+    gap: 4px;
+    margin: 4px 0 10px;
+  }
+
+  .planning-day-picker button {
+    min-width: 0;
+    min-height: 54px;
+    display: grid;
+    grid-template-rows: auto auto;
+    place-items: center;
+    gap: 0;
+    position: relative;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 5px 2px;
+    background: #fff;
+    color: var(--muted);
+  }
+
+  .planning-day-picker button span {
+    font-size: 10px;
+    font-weight: 900;
+    text-transform: capitalize;
+  }
+
+  .planning-day-picker button strong {
+    color: var(--ink);
+    font-size: 15px;
+  }
+
+  .planning-day-picker button em {
+    min-width: 16px;
+    min-height: 16px;
+    display: grid;
+    place-items: center;
+    position: absolute;
+    top: -5px;
+    right: -3px;
+    border-radius: 999px;
+    background: var(--orange);
+    color: #fff;
+    font-size: 9px;
+    font-style: normal;
+    font-weight: 950;
+  }
+
+  .planning-day-picker button em:empty {
+    display: none;
+  }
+
+  .planning-day-picker button.today {
+    border-color: rgba(15, 118, 110, 0.5);
+  }
+
+  .planning-day-picker button.active {
+    border-color: var(--teal);
+    background: var(--teal-soft);
+    box-shadow: inset 0 0 0 1px var(--teal);
+    color: var(--teal-dark);
+  }
+
+  .planning-month-overview {
+    gap: 6px;
+    margin: 4px 0 0;
+    padding: 8px;
+  }
+
+  .planning-month-summary {
+    display: block;
+  }
+
+  .planning-month-summary span {
+    font-size: 12px;
+  }
+
+  .planning-month-overview .booking-month-legend {
+    display: none;
+  }
+
+  .planning-month-grid .month-day {
+    min-height: 52px;
+    padding: 3px 1px;
+  }
+
+  .planning-month-grid .month-day.free em,
+  .planning-month-grid .month-day small {
+    display: none;
+  }
+
+  .planning-month-grid .month-day em {
+    min-height: 0;
+    font-size: 9px;
+  }
+
   .planning-board {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    margin-inline: -2px;
-    overflow-x: auto;
-    scroll-padding-inline: 2px;
-    scroll-snap-type: x proximity;
+    display: block;
+    margin: 0;
+    overflow: visible;
   }
 
   .planning-day {
-    flex: 0 0 min(86vw, 320px);
+    display: none;
+    width: 100%;
     min-width: 0;
-    scroll-snap-align: start;
+    padding: 10px;
+  }
+
+  .planning-day.mobile-selected {
+    display: block;
+  }
+
+  .planning-day .day-timeline-wrap,
+  .planning-day .drop-hint {
+    display: none;
+  }
+
+  .planning-day .day-head {
+    grid-template-columns: 1fr auto;
+    align-items: baseline;
+  }
+
+  .planning-day .day-head strong {
+    text-transform: capitalize;
+  }
+
+  .planning-day .day-head span,
+  .planning-day .day-head small {
+    justify-self: end;
+  }
+
+  .planning-day .day-head em {
+    grid-column: 1 / -1;
+  }
+
+  #planningView .day-job-details {
+    margin-top: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  #planningView .day-job-details > summary {
+    display: none;
+  }
+
+  #planningView .day-job-details > .day-jobs {
+    border: 0;
+    padding: 0;
+    max-height: none;
+    overflow: visible;
+  }
+
+  #planningView .job-card .workflow-inline {
+    display: none;
+  }
+
+  #planningView .planning-mobile-edit {
+    display: inline-flex;
   }
 
   .day-timeline {
@@ -11059,16 +11332,24 @@ label {
 
 @media (max-width: 420px) {
   .top-actions {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
   }
 
+  .top-search,
+  #importSeedButton,
+  .crm-assistant-button {
+    grid-column: 1 / -1;
+  }
+
   .new-action-wrap {
+    grid-column: 2;
     width: 100%;
     justify-self: stretch;
   }
 
   .quick-reminder-button {
+    grid-column: 1;
     width: 100%;
     justify-content: center;
   }

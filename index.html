@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260802-02" />
+    <link rel="stylesheet" href="./styles.css?v=20260803-01" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -469,24 +469,34 @@
               <button data-plan-tab-view="routeplanner" type="button">Servicerute</button>
             </div>
             <div class="planning-head">
-              <button id="previousWeekButton" type="button">Forrige uke</button>
-              <strong id="weekLabel"></strong>
-              <button id="nextWeekButton" type="button">Neste uke</button>
-              <div class="planning-mode-toggle">
-                <button id="planningWeekModeButton" class="active" type="button">Uke</button>
-                <button id="planningMonthModeButton" type="button">Måned</button>
+              <div class="planning-period-nav">
+                <button id="previousWeekButton" type="button"><span aria-hidden="true">&larr;</span><span>Forrige</span></button>
+                <strong id="weekLabel"></strong>
+                <button id="nextWeekButton" type="button"><span>Neste</span><span aria-hidden="true">&rarr;</span></button>
               </div>
-              <label class="planning-resource-filter">Vis
-                <select id="planningResourceFilter">
-                  <option value="all">Alle ansatte</option>
-                </select>
-              </label>
-              <button id="todayButton" type="button">Denne uken</button>
-              <button id="copyDayPlanButton" type="button">Kopier dagsplan</button>
+              <div class="planning-toolbar">
+                <div class="planning-mode-toggle" aria-label="Kalendervisning">
+                  <button id="planningWeekModeButton" class="active" type="button">Uke</button>
+                  <button id="planningMonthModeButton" type="button">Måned</button>
+                </div>
+                <label class="planning-resource-filter">Ansatt
+                  <select id="planningResourceFilter">
+                    <option value="all">Alle ansatte</option>
+                  </select>
+                </label>
+                <button id="todayButton" type="button">I dag</button>
+                <details class="planning-more-tools">
+                  <summary aria-label="Flere planvalg" title="Flere planvalg">&#8943;</summary>
+                  <div>
+                    <button id="copyDayPlanButton" type="button">Kopier valgt dagsplan</button>
+                  </div>
+                </details>
+              </div>
             </div>
+            <div id="planningDayPicker" class="planning-day-picker hidden" aria-label="Velg dag i uken"></div>
             <div id="planningMonthOverview" class="planning-month-overview hidden">
               <div class="planning-month-summary">
-                <strong id="planningMonthLabel"></strong>
+                <strong id="planningMonthLabel" class="sr-only"></strong>
                 <span id="planningMonthSummary"></span>
               </div>
               <div class="booking-month-legend">
@@ -1446,11 +1456,11 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260802-02"></script>
-    <script src="./supabase-adapter.js?v=20260802-02"></script>
-    <script src="./intake-parser.js?v=20260802-02"></script>
-    <script src="./assistant-coordinator.js?v=20260802-02"></script>
-    <script src="./app-20260802-02.js"></script>
+    <script src="./supabase-config.js?v=20260803-01"></script>
+    <script src="./supabase-adapter.js?v=20260803-01"></script>
+    <script src="./intake-parser.js?v=20260803-01"></script>
+    <script src="./assistant-coordinator.js?v=20260803-01"></script>
+    <script src="./app-20260803-01.js"></script>
   </body>
 </html>
 
