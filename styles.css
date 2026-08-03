@@ -2500,6 +2500,18 @@ textarea {
   border-left-color: #64748b;
 }
 
+.lead-list button.inbox-source-website {
+  border-left: 5px solid #0f766e;
+}
+
+.lead-list button.inbox-source-intake {
+  border-left: 5px solid #2563eb;
+}
+
+.lead-list button.inbox-source-assistant {
+  border-left: 5px solid #0891b2;
+}
+
 .order-list-row > button {
   border-left-width: 5px;
 }
@@ -2594,6 +2606,47 @@ textarea {
   line-height: 1.35;
 }
 
+.inbox-source-badge {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 2px 6px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.inbox-source-badge.website {
+  border-color: #99f6e4;
+  background: #f0fdfa;
+  color: #0f766e;
+}
+
+.inbox-source-badge.email,
+.inbox-source-badge.sms {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.inbox-source-badge.assistant {
+  border-color: #a5f3fc;
+  background: #ecfeff;
+  color: #0e7490;
+}
+
+.lead-list button.inbox-show-more {
+  min-height: 44px;
+  display: flex;
+  justify-content: center;
+  border-left: 1px solid var(--line);
+  color: var(--teal-dark);
+  text-align: center;
+}
+
 .lead-list strong,
 .order-list strong {
   display: flex;
@@ -2650,6 +2703,10 @@ textarea {
   border-left: 5px solid #2563eb;
 }
 
+.inbox-filter-cards button[data-lead-inbox-tab="drafts"] {
+  border-left: 5px solid #0891b2;
+}
+
 .inbox-filter-cards button[data-lead-inbox-tab="archive"] {
   border-left: 5px solid #64748b;
 }
@@ -2666,10 +2723,56 @@ textarea {
   color: #1d4ed8;
 }
 
+.inbox-filter-cards button[data-lead-inbox-tab="drafts"].active {
+  border-color: #22d3ee;
+  background: #ecfeff;
+  color: #0e7490;
+}
+
 .inbox-filter-cards button[data-lead-inbox-tab="archive"].active {
   border-color: #94a3b8;
   background: #f1f5f9;
   color: #334155;
+}
+
+.inbox-detail-heading {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 12px;
+}
+
+.inbox-detail-heading span {
+  color: var(--teal-dark);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.inbox-detail-heading h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.inbox-detail-source-card {
+  display: block;
+}
+
+.inbox-detail-source-card > article {
+  border: 0;
+  padding: 0;
+}
+
+.inbox-intake-detail pre {
+  max-height: 320px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.inbox-assistant-detail .assistant-action-main {
+  min-width: 0;
 }
 
 .order-metrics button[data-order-filter-shortcut="active"] {

@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260803-01" />
+    <link rel="stylesheet" href="./styles.css?v=20260803-02" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -212,7 +212,6 @@
         </section>
 
         <section id="leadsView" class="view hidden">
-          <section id="assistantActionQueue" class="panel assistant-action-queue hidden"></section>
           <details class="panel ai-registration-panel">
             <summary class="ai-registration-summary">
               <span>
@@ -249,16 +248,17 @@
               <div class="section-head">
                 <div>
                   <h2>Innboks</h2>
-                  <p title="Her ligger nettskjema, e-post og saker som må følges opp.">Velg neste oppgave. Kilden ligger under Flere filtre.</p>
+                  <p>Alt som trenger en handling, samlet i én liste.</p>
                 </div>
               </div>
               <div class="lead-metrics inbox-filter-cards" role="tablist" aria-label="Innboksfilter">
-                <button class="active" data-lead-inbox-tab="new" type="button" title="Nye meldinger og saker der kunden må kontaktes eller retningen må avklares."><strong id="leadFollowupMetric">0</strong><span>Nytt / må kontaktes</span></button>
+                <button class="active" data-lead-inbox-tab="new" type="button" title="Nye meldinger og saker som må avklares."><strong id="leadFollowupMetric">0</strong><span>Nytt</span></button>
                 <button data-lead-inbox-tab="followup" type="button" title="Saker der neste steg er å skrive tilbud, vente på svar eller følge opp kunden."><strong id="leadNeedsOfferMetric">0</strong><span>Tilbud / svar</span></button>
+                <button data-lead-inbox-tab="drafts" type="button" title="Svar, jobber og andre utkast som må kontrolleres før noe utføres."><strong id="leadDraftMetric">0</strong><span>Utkast</span></button>
                 <button data-lead-inbox-tab="archive" type="button" title="Ferdig koblede og tapte saker. Arkiv er ikke en aktiv arbeidsliste."><strong id="leadLostMetric">0</strong><span>Arkiv</span></button>
               </div>
               <div class="search-row">
-                <input id="leadSearch" type="search" placeholder="Søk navn, telefon, sted eller produkt" />
+                <input id="leadSearch" type="search" placeholder="Søk i innboksen" />
                 <details class="lead-filter-details">
                   <summary title="Filtrer på kilde eller en bestemt status.">Flere filtre</summary>
                   <div class="lead-source-filters" aria-label="Filtrer etter kilde">
@@ -276,13 +276,14 @@
                   </select>
                 </details>
               </div>
-              <div id="websiteSubmissionInbox" class="website-submission-inbox hidden"></div>
               <div id="leadList" class="lead-list"></div>
             </section>
             <section id="leadDetail" class="panel lead-detail">
               <div class="empty-state">Velg en sak til venstre, eller bruk + Ny for å lime inn en melding.</div>
             </section>
           </div>
+          <section id="assistantActionQueue" class="assistant-action-queue hidden" aria-hidden="true"></section>
+          <section id="websiteSubmissionInbox" class="website-submission-inbox hidden" aria-hidden="true"></section>
           <section id="intakeInbox" class="panel intake-inbox-panel hidden"></section>
         </section>
 
@@ -1456,11 +1457,11 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260803-01"></script>
-    <script src="./supabase-adapter.js?v=20260803-01"></script>
-    <script src="./intake-parser.js?v=20260803-01"></script>
-    <script src="./assistant-coordinator.js?v=20260803-01"></script>
-    <script src="./app-20260803-01.js"></script>
+    <script src="./supabase-config.js?v=20260803-02"></script>
+    <script src="./supabase-adapter.js?v=20260803-02"></script>
+    <script src="./intake-parser.js?v=20260803-02"></script>
+    <script src="./assistant-coordinator.js?v=20260803-02"></script>
+    <script src="./app-20260803-02.js"></script>
   </body>
 </html>
 
