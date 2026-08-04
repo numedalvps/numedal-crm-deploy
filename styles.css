@@ -9675,12 +9675,14 @@ textarea {
 
 .completion-summary {
   display: grid;
+  min-width: 0;
   gap: 4px;
   margin-bottom: 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 12px;
   background: #f8fafc;
+  overflow-wrap: anywhere;
 }
 
 .completion-summary strong {
@@ -9690,8 +9692,10 @@ textarea {
 
 .completion-summary span,
 .completion-summary p {
+  min-width: 0;
   margin: 0;
   color: var(--muted);
+  overflow-wrap: anywhere;
 }
 
 .completion-summary ul {
