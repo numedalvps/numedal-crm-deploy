@@ -15,6 +15,16 @@
     { pattern: /notodden/i, key: "notodden", label: "Notodden" },
   ];
 
+  const DISTANT_SERVICE_AREA_KEYS = new Set([
+    "vegglifjell_nord",
+    "vegglifjell_sor",
+    "vegglifjell_uavklart",
+    "fagerfjell_blaberg",
+    "blefjell",
+    "rodberg_nore_uvdal",
+    "notodden",
+  ]);
+
   function repairTextEncoding(value) {
     let text = String(value || "");
     const replacements = [
@@ -155,9 +165,87 @@
     };
   }
 
+  function locationRows(context = {}) {
+    const nestedCustomer = context.customerBundle?.customer || context.customer?.customer || {};
+    const rows = [
+      ...(Array.isArray(context.locations) ? context.locations : []),
+      ...(Array.isArray(context.customerLocations) ? context.customerLocations : []),
+      ...(Array.isArray(context.customer?.locations) ? context.customer.locations : []),
+      ...(Array.isArray(context.customerBundle?.locations) ? context.customerBundle.locations : []),
+    ];
+    const installations = [
+      context.installation,
+      context.selectedInstallation,
+      ...(Array.isArray(context.installations) ? context.installations : []),
+      ...(Array.isArray(context.customer?.installations) ? context.customer.installations : []),
+      ...(Array.isArray(context.customerBundle?.installations) ? context.customerBundle.installations : []),
+    ].filter(Boolean);
+    for (const installation of installations) {
+      if (installation.location && typeof installation.location === "object") rows.push(installation.location);
+      const locationId = String(installation.location_id || installation.locationId || "").trim();
+      if (locationId) {
+        const match = rows.find((row) => String(row?.id || "") === locationId);
+        if (match) rows.unshift(match);
+      }
+    }
+    if (nestedCustomer && nestedCustomer !== context.customer) rows.push(nestedCustomer);
+    return rows.filter((row) => row && typeof row === "object");
+  }
+
+  function addressParts(value = {}) {
+    return {
+      street: String(value.street || value.address || value.visit_street || "").trim(),
+      zip: String(value.zip || value.postal_code || value.postalCode || value.visit_zip || "").trim(),
+      city: String(value.city || value.visit_city || "").trim(),
+      locationType: String(value.location_type || value.locationType || value.visit_location_type || "").trim(),
+      isPrimary: value.is_primary === true || value.isPrimary === true,
+    };
+  }
+
+  function serviceAddressState(context = {}, booking = bookingKind(context), intent = intentValues(context)) {
+    const draft = context.draft || {};
+    const customer = context.customer?.customer || context.customer || {};
+    const lead = context.lead?.lead || context.lead || {};
+    const candidates = [draft, lead, ...locationRows(context), customer]
+      .map(addressParts)
+      .filter((candidate) => candidate.street || candidate.zip || candidate.city);
+    const score = (candidate) => (
+      (candidate.street ? 4 : 0)
+      + (candidate.zip ? 2 : 0)
+      + (candidate.city ? 1 : 0)
+    );
+    candidates.sort((left, right) => score(right) - score(left));
+    const best = candidates[0] || addressParts({});
+    const relevant = ["service", "installasjon", "reparasjon", "befaring"].includes(booking.type)
+      || ["service_request", "installation", "quote_accepted", "quote_request", "repair_request", "inspection_request"].includes(intent.category);
+    const contextText = normalize([
+      draft.location_type,
+      draft.locationType,
+      lead.location_type,
+      lead.locationType,
+      customer.location_type,
+      customer.locationType,
+      ...candidates.map((candidate) => candidate.locationType),
+      sourceText(context),
+    ].filter(Boolean).join(" "));
+    const cabin = /\b(hytt(?:e|a|en|er)|fritidsbolig|fritidseiendom|fjellhytte|cabin)\b/.test(contextText);
+    const complete = Boolean(best.street && best.zip && best.city);
+    return {
+      relevant,
+      complete,
+      needsClarification: relevant && !complete,
+      kind: cabin ? "cabin" : "installation",
+      promptLabel: cabin ? "fullstendige hytte-/anleggsadressen" : "fullstendige anleggsadressen",
+      street: best.street,
+      zip: best.zip,
+      city: best.city,
+    };
+  }
+
   function areaFromContext(context = {}) {
     const draft = context.draft || {};
-    const customer = context.customer || {};
+    const customer = context.customer?.customer || context.customer || {};
+    const locations = locationRows(context);
     const text = repairTextEncoding([
       draft.street,
       draft.zip,
@@ -167,6 +255,10 @@
       customer.visit_zip,
       customer.visit_city,
       customer.location_tag,
+      ...locations.flatMap((location) => {
+        const address = addressParts(location);
+        return [address.street, address.zip, address.city];
+      }),
       sourceText(context),
     ].filter(Boolean).join(" "));
     for (const rule of AREA_RULES.slice(0, 2)) {
@@ -178,7 +270,8 @@
     for (const rule of AREA_RULES.slice(2)) {
       if (rule.pattern.test(text)) return { key: rule.key, label: rule.label, needsClarification: false };
     }
-    const fallback = String(draft.city || customer.visit_city || customer.location_tag || "").trim();
+    const locationFallback = locations.map(addressParts).find((address) => address.city)?.city || "";
+    const fallback = String(draft.city || customer.visit_city || customer.location_tag || locationFallback || "").trim();
     return { key: fallback ? normalize(fallback).replaceAll(" ", "_") : "uavklart", label: fallback || "Område må avklares", needsClarification: !fallback };
   }
 
@@ -1658,20 +1751,26 @@
     return "Oppfølging fra Numedal Varmepumpeservice";
   }
 
-  function replyBody(context, intent, area, booking) {
+  function replyBody(context, intent, area, booking, address) {
     const contact = contactValues(context);
     const greeting = firstName(contact.name) ? `Hei ${firstName(contact.name)}` : "Hei";
+    const addressRequest = address.needsClarification
+      ? ` Send den ${address.promptLabel} med vei/gate, postnummer og poststed.`
+      : "";
+    const distantService = booking.type === "service" && DISTANT_SERVICE_AREA_KEYS.has(area.key);
     let body;
     if (intent.category === "service_request" && intent.explicitAcceptance) {
-      body = `${greeting}\n\nTakk for bekreftelsen. Jeg samler servicejobber i samme område for å bruke dagen effektivt. Jeg finner en ledig dag i ${area.label.toLowerCase()} og sender et konkret forslag til dag og tidsvindu før noe bookes.`;
+      body = distantService
+        ? `${greeting}\n\nTakk for bekreftelsen.${addressRequest} Fordi ${area.label.toLowerCase()} ligger et stykke unna, samler vi normalt flere servicejobber i samme eller nærliggende område på én dag. Jeg sender et konkret forslag til dag og tidsvindu før noe bookes.`
+        : `${greeting}\n\nTakk for bekreftelsen.${addressRequest} Jeg samler servicejobber i samme eller nærliggende område for å bruke dagen effektivt. Jeg finner en ledig dag i ${area.label.toLowerCase()} og sender et konkret forslag til dag og tidsvindu før noe bookes.`;
     } else if (intent.category === "service_request") {
-      body = `${greeting}\n\nTakk for meldingen. Vi kan hjelpe med service på varmepumpen. Bekreft gjerne at du ønsker service, og send merke/modell og anleggsadresse hvis dette mangler. Deretter foreslår jeg en dag når vi har flere jobber i samme område.`;
+      body = `${greeting}\n\nTakk for meldingen. Vi kan hjelpe med service på varmepumpen. Bekreft gjerne at du ønsker service, og send merke/modell hvis dette mangler.${addressRequest} Deretter foreslår jeg en dag når vi har flere jobber i samme eller nærliggende område.`;
     } else if ((intent.category === "installation" || intent.category === "quote_accepted") && intent.explicitAcceptance) {
-      body = `${greeting}\n\nTakk for bekreftelsen. Jeg finner et ledig tidspunkt for montering og sender et konkret forslag før avtalen bookes. Oppgi gjerne anleggsadressen hvis den ikke allerede er avklart.`;
+      body = `${greeting}\n\nTakk for bekreftelsen.${addressRequest} Jeg finner et ledig tidspunkt for montering og sender et konkret forslag før avtalen bookes.`;
     } else if (intent.category === "installation") {
-      body = `${greeting}\n\nTakk for henvendelsen. Jeg følger opp varmepumpen og monteringen. For å gi riktig tilbud trenger jeg anleggsadresse og gjerne bilder av ønsket plassering inne og ute dersom dette ikke allerede er sendt.`;
+      body = `${greeting}\n\nTakk for henvendelsen. Jeg følger opp varmepumpen og monteringen.${addressRequest} Send gjerne bilder av ønsket plassering inne og ute dersom dette ikke allerede er gjort.`;
     } else if (intent.category === "quote_request") {
-      body = `${greeting}\n\nTakk for forespørselen. Jeg lager et oversiktlig tilbud basert på valgt varmepumpe, montering og eventuelle tillegg. Send gjerne anleggsadresse og bilder av plasseringen inne og ute hvis dette mangler.`;
+      body = `${greeting}\n\nTakk for forespørselen. Jeg lager et oversiktlig tilbud basert på valgt varmepumpe, montering og eventuelle tillegg.${addressRequest} Send gjerne bilder av plasseringen inne og ute hvis dette mangler.`;
     } else if (intent.category === "repair_request") {
       body = `${greeting}\n\nTakk for meldingen. Send gjerne merke/modell, en kort beskrivelse av feilen og eventuelle feilkoder eller bilder. Da kan vi vurdere neste steg før vi avtaler tid.`;
     } else if (intent.category === "inspection_request") {
@@ -1690,6 +1789,8 @@
     const intent = intentValues(expanded);
     const area = areaFromContext(expanded);
     const booking = bookingKind(expanded);
+    const address = serviceAddressState(expanded, booking, intent);
+    const distantArea = booking.type === "service" && DISTANT_SERVICE_AREA_KEYS.has(area.key);
     const recipient = channel === "email" ? contact.email : channel === "sms" ? contact.phone : "";
     const blockers = [];
     if (!recipient) blockers.push("Mangler mottaker for valgt kanal");
@@ -1705,7 +1806,7 @@
       channel,
       recipient,
       subject: channel === "email" ? replySubject(intent) : "",
-      body: replyBody(expanded, intent, area, booking),
+      body: replyBody(expanded, intent, area, booking, address),
       confidence: recipient ? (analysis?.warnings?.length ? 0.72 : 0.86) : 0.55,
       blockers: blockers.filter((item) => !/booking/i.test(item)),
       needsReview: true,
@@ -1730,9 +1831,16 @@
       maxPerDay: booking.maxPerDay,
       areaKey: area.key,
       areaLabel: area.label,
+      addressComplete: address.complete,
+      addressNeedsClarification: address.needsClarification,
+      addressKind: address.kind,
+      distantArea,
+      batchNearbyJobs: booking.type === "service",
       resourceSuggestion: "Ledig aktiv tekniker",
       rule: booking.type === "service"
-        ? "Samle opptil 8 servicer samme dag bare når adressene ligger i samme eller nærliggende område."
+        ? distantArea
+          ? "Foreslå å samle servicer i dette fjernområdet på samme dag når adressene er nærliggende. Lag bare forslag; aldri book automatisk."
+          : "Samle opptil 8 servicer samme dag bare når adressene ligger i samme eller nærliggende område. Lag bare forslag; aldri book automatisk."
         : booking.type === "installasjon"
           ? "Planlegg normalt maks 2 installasjoner per dag og kontroller kjøretid."
           : "Kontroller eksisterende avtaler, kjøretid og nødvendig arbeidstid.",
@@ -1741,7 +1849,7 @@
     };
     const enrichment = buildHistoricalSmsEnrichment(expanded);
     return {
-      version: "2026-07-12-2",
+      version: "2026-08-07-1",
       generatedAt: new Date().toISOString(),
       sourceChannel: channel,
       intent,
@@ -1803,6 +1911,7 @@
     intentValues,
     normalizeBookingProposal,
     normalizeReminderProposal,
+    serviceAddressState,
     serviceEvidence,
     sourceChannel,
   };
