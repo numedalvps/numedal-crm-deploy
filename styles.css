@@ -5601,6 +5601,7 @@ textarea {
 }
 
 .facts div {
+  min-width: 0;
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 10px;
@@ -5614,10 +5615,14 @@ textarea {
 }
 
 .facts dd {
+  min-width: 0;
   margin: 4px 0 0;
+  overflow-wrap: anywhere;
 }
 
 .copy-field {
+  min-width: 0;
+  max-width: 100%;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -6664,6 +6669,14 @@ textarea {
   grid-template-columns: minmax(110px, auto) minmax(220px, 1fr) minmax(110px, auto);
   gap: 8px;
   align-items: center;
+}
+
+.copy-field > span,
+.copy-field > a {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .planning-period-nav button {
@@ -7888,9 +7901,9 @@ textarea {
 
 .side-modal {
   width: min(520px, calc(100vw - 18px));
-  max-width: none;
-  height: 100vh;
-  max-height: 100vh;
+  max-width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
   margin: 0 0 0 auto;
   border: 0;
   border-left: 1px solid var(--line);
@@ -9001,13 +9014,29 @@ textarea {
 
   .crm-assistant-panel {
     z-index: 80;
-    left: 0;
-    right: 0;
-    width: 100%;
-    max-width: 100%;
-    height: 100dvh;
+    inset: 0;
+    width: auto;
+    max-width: none;
+    height: auto;
+    max-height: 100dvh;
     border-left: 0;
     box-shadow: none;
+  }
+
+  .crm-assistant-panel > *,
+  .crm-assistant-chat-view,
+  .crm-assistant-suggestions,
+  .crm-assistant-form,
+  .crm-assistant-form textarea,
+  .crm-assistant-starters,
+  .crm-assistant-starters button {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .crm-assistant-form textarea,
+  .crm-assistant-starters button {
+    width: 100%;
   }
 
   .crm-assistant-head {
@@ -9216,6 +9245,8 @@ textarea {
 
 .quick-facts div,
 .quick-block {
+  min-width: 0;
+  max-width: 100%;
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 10px;
@@ -9244,7 +9275,42 @@ textarea {
 }
 
 .quick-facts dd {
+  min-width: 0;
   margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.billing-contact-check {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid #99f6e4;
+  border-radius: 8px;
+  padding: 10px;
+  background: #f0fdfa;
+}
+
+.billing-contact-check.missing {
+  border-color: #fdba74;
+  background: #fff7ed;
+}
+
+.billing-contact-check > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.billing-contact-check strong,
+.billing-contact-check span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.billing-contact-check > div > strong {
+  font-size: 12px;
 }
 
 .quick-actions {
@@ -10400,6 +10466,36 @@ label {
 
 @media (max-width: 620px) {
   .main {
+    min-width: 0;
+    max-width: 100%;
+    padding: 12px;
+  }
+
+  .main > .view,
+  .panel,
+  .leads-layout,
+  .customer-layout,
+  .orders-layout,
+  .customer-detail,
+  .lead-detail,
+  .order-detail {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .side-modal {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+    border-left: 0;
+  }
+
+  .side-panel {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
     padding: 12px;
   }
 

@@ -1756,20 +1756,29 @@
     const booking = context.booking || {};
     const order = context.order || {};
     const body = String(context.billingText || "").trim();
+    const customerName = String(customer.name || customer.display_name || "").trim();
+    const customerEmail = String(customer.email || "").trim();
+    const customerPhone = String(customer.phone || customer.mobile || "").trim();
+    const organizationNumber = String(customer.organization_number || customer.organizationNumber || "").trim();
     const blockers = [];
-    if (!String(customer.name || customer.display_name || "").trim()) blockers.push("Mangler kundenavn");
+    if (!customerName) blockers.push("Mangler kundenavn");
+    if (!customerEmail) blockers.push("Kundekortet mangler e-postadresse");
     if (!body || /mangler prislinjer/i.test(body)) blockers.push("Prislinjer må kontrolleres");
     return {
-      version: "2026-07-12-1",
+      version: "2026-08-07-1",
       actionType: "invoice_draft",
       channel: "internal",
-      title: `Fakturautkast - ${String(customer.name || customer.display_name || "kunde").trim()}`,
+      title: `Fakturautkast - ${customerName || "kunde"}`,
       body,
       customerId: customer.id || null,
       orderId: order.id || null,
       jobId: order.job_id || order.jobId || null,
       payload: {
         createCustomerIfMissing: true,
+        customerName: customerName || null,
+        customerEmail: customerEmail || null,
+        customerPhone: customerPhone || null,
+        organizationNumber: organizationNumber || null,
         bookingId: booking.id || null,
         jobType: order.type || booking.type || null,
         billingStatusAfterDraft: "exported",
