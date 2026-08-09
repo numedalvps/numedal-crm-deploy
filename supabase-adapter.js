@@ -2245,6 +2245,20 @@
       if (data?.error) throw new Error(data.error);
       return data;
     },
+    async setUserActive(profileId, active) {
+      const supabase = await requireClient();
+      if (!isUuid(profileId)) throw new Error("Ugyldig brukerprofil.");
+      const { data, error } = await withTimeout(
+        supabase.functions.invoke("manage-users", {
+          body: { action: "set_active", profileId, active: Boolean(active) },
+        }),
+        "Brukerendringen tok for lang tid. Prøv igjen.",
+        30000,
+      );
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
     async saveTimeEntry(entry) {
       const supabase = await requireClient();
       const payload = {
