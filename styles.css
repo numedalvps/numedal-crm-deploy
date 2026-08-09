@@ -760,6 +760,70 @@ small {
   background: var(--teal-soft);
 }
 
+.google-period-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.google-period-navigation {
+  min-width: min(100%, 430px);
+  display: grid;
+  grid-template-columns: auto minmax(150px, 1fr) auto;
+  gap: 7px;
+  align-items: center;
+}
+
+.google-period-navigation strong {
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-size: 13px;
+  text-align: center;
+}
+
+.google-period-navigation button,
+.google-period-options button,
+.google-query-toggle {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 7px 10px;
+  background: #fff;
+  color: var(--teal);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.google-period-navigation button:disabled {
+  opacity: 0.42;
+  cursor: default;
+}
+
+.google-period-options {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+}
+
+.google-period-options button {
+  border: 0;
+  border-right: 1px solid var(--line);
+  border-radius: 0;
+}
+
+.google-period-options button:last-child {
+  border-right: 0;
+}
+
+.google-period-options button[aria-pressed="true"] {
+  background: var(--teal);
+  color: #fff;
+}
+
 .google-metrics-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -824,7 +888,7 @@ small {
 .google-trend {
   height: 128px;
   display: grid;
-  grid-template-columns: repeat(14, minmax(9px, 1fr));
+  grid-template-columns: repeat(var(--google-columns, 14), minmax(4px, 1fr));
   gap: 4px;
   align-items: end;
   margin-top: 10px;
@@ -899,6 +963,13 @@ small {
 .google-query-list small {
   grid-column: 1 / -1;
   color: var(--muted);
+}
+
+.google-query-toggle {
+  width: 100%;
+  margin-top: 7px;
+  background: var(--teal-soft);
+  text-align: center;
 }
 
 .google-business-summary,
@@ -1372,6 +1443,20 @@ small {
 .global-search-results small {
   color: var(--muted);
   font-weight: 700;
+}
+
+.global-search-results .global-search-more {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  grid-template-columns: none;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border-color: #9ccbc5;
+  background: var(--teal-soft);
+  color: var(--teal-dark);
+  text-align: center;
 }
 
 .dashboard-focus-grid button {
@@ -11836,6 +11921,25 @@ label {
   .google-insights-links a {
     flex: 1 1 130px;
     justify-content: center;
+  }
+
+  .google-period-toolbar,
+  .google-period-navigation,
+  .google-period-options {
+    width: 100%;
+  }
+
+  .google-period-navigation {
+    min-width: 0;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .google-period-navigation button {
+    padding-inline: 8px;
+  }
+
+  .google-period-options button {
+    flex: 1 1 0;
   }
 
   .google-metrics-grid {
