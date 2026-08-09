@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260807-02" />
+    <link rel="stylesheet" href="./styles.css?v=20260809-01" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -67,7 +67,7 @@
             <div class="top-search">
               <label class="sr-only" for="globalSearchInput">Søk i CRM</label>
               <input id="globalSearchInput" type="search" placeholder="Søk kunde, e-post, notat, anlegg, jobb eller faktura" title="Søk i hele CRM. Trykk Ctrl+K for å åpne søket." autocomplete="off" />
-              <div id="globalSearchResults" class="global-search-results top-search-results"></div>
+              <div id="globalSearchResults" class="global-search-results top-search-results hidden"></div>
             </div>
             <button id="crmAssistantButton" class="secondary crm-assistant-button" type="button" aria-controls="crmAssistantPanel" aria-expanded="false" title="Åpne CRM-assistenten uten å forlate siden du jobber på."><span aria-hidden="true">✦</span> Assistent <span class="assistant-queue-badge hidden" data-assistant-queue-count data-hide-when-zero aria-label="åpne forslag til kontroll"></span></button>
             <button id="quickReminderButton" class="secondary quick-reminder-button" data-new-action="reminder" type="button" title="Lag en rask påminnelse som vises på forsiden.">Påminnelse</button>
@@ -697,10 +697,12 @@
               </div>
               <div class="technician-actions">
                 <input id="technicianDate" type="date" />
+                <select id="technicianLanguage" aria-label="Språk"></select>
                 <button id="technicianRouteButton" type="button">Åpne dagsrute</button>
               </div>
             </div>
             <div id="technicianHelp" class="technician-help hidden"></div>
+            <div id="technicianTimesheet" class="technician-timesheet"></div>
             <div id="technicianJobs" class="tech-jobs"></div>
           </section>
         </section>
@@ -715,6 +717,9 @@
               <button id="refreshProfilesButton" class="secondary" type="button">Oppdater</button>
             </div>
             <div id="settingsAccessSummary" class="settings-summary"></div>
+            <div id="userInviteSettings" class="user-invite-settings"></div>
+            <div id="timesheetSettings" class="timesheet-settings"></div>
+            <div id="profileList" class="profile-list"></div>
             <div class="settings-grid">
               <article>
                 <h3>Tilganger</h3>
@@ -722,7 +727,7 @@
               </article>
               <article>
                 <h3>Ny bruker</h3>
-                <p>Opprett først brukeren i Supabase Auth. Legg deretter inn eller endre CRM-profilen her med riktig rolle.</p>
+                <p>Inviter teknikere eller administratorer her. Invitasjon og CRM-profil opprettes samlet.</p>
               </article>
               <article>
                 <h3>Glemt passord</h3>
@@ -733,7 +738,6 @@
             <div id="offerTemplateSettings" class="offer-template-settings"></div>
             <div id="privateDataExportSettings" class="private-data-export-settings"></div>
             <div id="tagSettings" class="tag-settings"></div>
-            <div id="profileList" class="profile-list"></div>
           </section>
         </section>
       </main>
@@ -1457,11 +1461,11 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260807-02"></script>
-    <script src="./supabase-adapter.js?v=20260807-02"></script>
-    <script src="./intake-parser.js?v=20260807-02"></script>
-    <script src="./assistant-coordinator.js?v=20260807-02"></script>
-    <script src="./app-20260807-02.js"></script>
+    <script src="./supabase-config.js?v=20260809-01"></script>
+    <script src="./supabase-adapter.js?v=20260809-01"></script>
+    <script src="./intake-parser.js?v=20260809-01"></script>
+    <script src="./assistant-coordinator.js?v=20260809-01"></script>
+    <script src="./app-20260809-01.js"></script>
   </body>
 </html>
 

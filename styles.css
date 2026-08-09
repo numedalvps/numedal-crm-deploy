@@ -6000,6 +6000,27 @@ textarea {
   gap: 8px;
 }
 
+.equipment-heading {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.equipment-heading > span,
+.installation-kind-icon {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  place-items: center;
+  border: 1px solid #99f6e4;
+  border-radius: 7px;
+  background: #ecfdf5;
+  color: #0f766e;
+  font-size: 16px;
+  line-height: 1;
+}
+
 .installation-card {
   display: grid;
   gap: 6px;
@@ -6642,6 +6663,78 @@ textarea {
   min-width: 0;
 }
 
+.profile-row-actions {
+  display: grid;
+  gap: 6px;
+}
+
+.user-invite-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.user-invite-grid label {
+  margin: 0;
+}
+
+.timesheet-month-label {
+  min-width: 160px;
+  margin: 0;
+}
+
+.timesheet-admin-list {
+  display: grid;
+  gap: 8px;
+}
+
+.timesheet-admin-list article {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto auto auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fff;
+}
+
+.timesheet-admin-list article > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.timesheet-admin-list small,
+.timesheet-admin-list span {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.time-status {
+  display: inline-flex;
+  width: fit-content;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.time-status.submitted {
+  border-color: #fcd34d;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.time-status.approved {
+  border-color: #86efac;
+  background: #f0fdf4;
+  color: #166534;
+}
+
 .profile-active {
   margin: 0;
 }
@@ -6662,6 +6755,28 @@ textarea {
   display: grid;
   gap: 8px;
   margin-bottom: 12px;
+}
+
+.installation-card .installation-card-title {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.installation-card .installation-card-title strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.installation-card .installation-kind-icon {
+  border: 1px solid #99f6e4;
+  border-radius: 7px;
+  padding: 0;
+  background: #ecfdf5;
+  color: #0f766e;
+  font-size: 15px;
 }
 
 .planning-period-nav {
@@ -9367,6 +9482,102 @@ textarea {
   min-width: 160px;
 }
 
+.technician-actions select {
+  width: auto;
+  min-width: 130px;
+}
+
+.technician-timesheet {
+  margin: 0 0 16px;
+}
+
+.technician-timesheet-details {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.technician-timesheet-details > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+}
+
+.technician-timesheet-details > summary span {
+  display: grid;
+  gap: 2px;
+}
+
+.technician-timesheet-details > summary small {
+  color: var(--muted);
+}
+
+.technician-timesheet-details > summary em {
+  color: var(--teal);
+  font-style: normal;
+  font-weight: 900;
+}
+
+.technician-time-list {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.technician-time-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(90px, 0.7fr)) minmax(180px, 1.4fr) auto;
+  gap: 8px;
+  align-items: end;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #fff;
+}
+
+.technician-time-row label {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.technician-time-row input,
+.technician-time-row select {
+  width: 100%;
+  min-width: 0;
+}
+
+.technician-time-summary,
+.technician-time-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.technician-time-actions {
+  grid-column: 1 / -1;
+}
+
+.technician-jobs-heading {
+  margin: 4px 0 0;
+  font-size: 18px;
+}
+
+.technician-job-card .job-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .job-card {
   cursor: pointer;
 }
@@ -10405,6 +10616,9 @@ label {
   .rental-image-grid,
   .profile-list article,
   .tag-settings-list article,
+  .user-invite-grid,
+  .timesheet-admin-list article,
+  .technician-time-row,
   .product-catalog-form-grid,
   .product-catalog-toolbar,
   .global-search-results button,
@@ -10554,6 +10768,7 @@ label {
   }
 
   .technician-actions input,
+  .technician-actions select,
   .technician-actions button {
     width: 100%;
   }
@@ -10627,6 +10842,19 @@ label {
 
   .main {
     padding: 12px;
+  }
+
+  .settings-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .settings-summary article {
+    min-width: 0;
+    padding: 10px;
+  }
+
+  .settings-summary article:last-child {
+    grid-column: 1 / -1;
   }
 
   .attachment-preview-dialog {

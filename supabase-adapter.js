@@ -1076,6 +1076,17 @@
     return client;
   }
 
+  function isOptionalTimeEntriesError(error) {
+    return error && (
+      error.code === "42P01"
+      || error.code === "42501"
+      || /relation .* does not exist/i.test(error.message || "")
+      || /Could not find the table/i.test(error.message || "")
+      || /permission denied for table time_entries/i.test(error.message || "")
+      || /time_entries/i.test(error.message || "") && /schema cache/i.test(error.message || "")
+    );
+  }
+
   async function patchCachedAssistantActions(userId, assistantActions) {
     if (!userId || !Array.isArray(assistantActions)) return false;
     const db = await openDataCache();
@@ -1417,6 +1428,7 @@
         assistantActionResult,
         attachmentResult,
         settingsResult,
+        timeEntryResult,
       ] = await withDbTimeout(runWithConcurrency([
         () => fetchAllRows(() => supabase.from("customers").select("*").order("name").order("id")),
         () => fetchAllRows(() => supabase.from("bookings").select("*").neq("status", "cancelled").order("starts_at").order("id")),
@@ -1436,6 +1448,7 @@
         () => assistantActionQueueQuery(supabase),
         () => supabase.from("crm_attachments").select("*").is("deleted_at", null).order("created_at", { ascending: false }).limit(2000),
         () => supabase.from("crm_settings").select("*"),
+        () => supabase.from("time_entries").select("*").order("work_date", { ascending: false }).order("start_time", { ascending: true }).limit(3000),
       ], 4), "laste CRM-data", 45000);
       if (customerError) throw customerError;
       if (bookingError) throw bookingError;
@@ -1455,6 +1468,7 @@
       if (assistantActionResult.error && !isOptionalAssistantActionsError(assistantActionResult.error)) throw assistantActionResult.error;
       if (attachmentResult.error && !isOptionalCrmAttachmentsError(attachmentResult.error)) throw attachmentResult.error;
       if (settingsResult.error && !isOptionalSettingsError(settingsResult.error)) throw settingsResult.error;
+      if (timeEntryResult.error && !isOptionalTimeEntriesError(timeEntryResult.error)) throw timeEntryResult.error;
       return {
         customers: (customerRows || []).map(customerFromDb),
         bookings: Object.fromEntries((bookingRows || []).map((row) => [row.id, bookingFromDb(row)])),
@@ -1480,6 +1494,7 @@
         crmSettings: settingsResult.error
           ? {}
           : Object.fromEntries((settingsResult.data || []).map((row) => [row.key, row.value])),
+        timeEntries: timeEntryResult.error ? [] : timeEntryResult.data || [],
       };
     },
     async loadAssistantActions() {
@@ -1551,6 +1566,8 @@
       if ("phone" in patch) dbPatch.phone = String(patch.phone || "").trim() || null;
       if ("role" in patch) dbPatch.role = patch.role === "admin" ? "admin" : "technician";
       if ("active" in patch) dbPatch.active = Boolean(patch.active);
+      if ("preferred_language" in patch) dbPatch.preferred_language = ["nb", "pl", "en"].includes(patch.preferred_language) ? patch.preferred_language : "nb";
+      if ("extra_help" in patch) dbPatch.extra_help = Boolean(patch.extra_help);
       dbPatch.updated_at = new Date().toISOString();
       if (!dbPatch.display_name && "display_name" in dbPatch) throw new Error("Navn kan ikke være tomt.");
       const { data, error } = await withDbTimeout(
@@ -2203,6 +2220,59 @@
       }
       if (data?.error) throw new Error(data.error);
       return data;
+    },
+    async saveOwnProfilePreferences(language, extraHelp) {
+      const supabase = await requireClient();
+      const cleanLanguage = ["nb", "pl", "en"].includes(language) ? language : "nb";
+      const { data, error } = await withDbTimeout(
+        supabase.rpc("update_own_profile_preferences", {
+          p_language: cleanLanguage,
+          p_extra_help: Boolean(extraHelp),
+        }),
+        "lagre språkvalg",
+      );
+      if (error) throw error;
+      return Array.isArray(data) ? data[0] || null : data;
+    },
+    async inviteUser(payload) {
+      const supabase = await requireClient();
+      const { data, error } = await withTimeout(
+        supabase.functions.invoke("manage-users", { body: { action: "invite", ...payload } }),
+        "Brukerinvitasjonen tok for lang tid. Prøv igjen.",
+        30000,
+      );
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    async saveTimeEntry(entry) {
+      const supabase = await requireClient();
+      const payload = {
+        profile_id: entry.profile_id,
+        work_date: entry.work_date,
+        start_time: entry.start_time,
+        end_time: entry.end_time,
+        break_minutes: Math.max(0, Math.round(Number(entry.break_minutes) || 0)),
+        work_type: ["work", "travel", "other"].includes(entry.work_type) ? entry.work_type : "work",
+        note: String(entry.note || "").trim().slice(0, 1000),
+        status: ["draft", "submitted", "approved"].includes(entry.status) ? entry.status : "draft",
+      };
+      const query = isUuid(entry.id)
+        ? supabase.from("time_entries").update(payload).eq("id", entry.id).select("*").single()
+        : supabase.from("time_entries").insert(payload).select("*").single();
+      const { data, error } = await withDbTimeout(query, "lagre timeliste");
+      if (error) throw error;
+      return data;
+    },
+    async deleteTimeEntry(id) {
+      const supabase = await requireClient();
+      if (!isUuid(id)) throw new Error("Ugyldig timelinje.");
+      const { error } = await withDbTimeout(
+        supabase.from("time_entries").delete().eq("id", id),
+        "slette timelinje",
+      );
+      if (error) throw error;
+      return true;
     },
     async preflightAssistantEmailAction(id) {
       const supabase = await requireClient();
