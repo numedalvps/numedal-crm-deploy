@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260810-02" />
+    <link rel="stylesheet" href="./styles.css?v=20260810-03" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -180,6 +180,13 @@
         <section id="customersView" class="view hidden">
           <div class="customer-layout">
             <section class="panel customer-list-panel">
+              <div class="list-panel-toolbar">
+                <h2>Kunder</h2>
+                <div class="list-view-switch" data-list-mode-scope="customers" role="group" aria-label="Visning av kundelisten">
+                  <button class="active" data-list-mode="cards" type="button" aria-pressed="true" title="Vis kundene som kort.">Kort</button>
+                  <button data-list-mode="details" type="button" aria-pressed="false" title="Vis kundene i en detaljert tabell.">Detaljer</button>
+                </div>
+              </div>
               <div class="search-row">
                 <input id="customerSearch" type="search" placeholder="Søk navn, telefon, adresse, merke" autocomplete="off" autocapitalize="off" enterkeyhint="search" spellcheck="false" />
                 <select id="statusFilter">
@@ -249,6 +256,10 @@
                 <div>
                   <h2>Innboks</h2>
                   <p>Alt som trenger en handling, samlet i én liste.</p>
+                </div>
+                <div class="list-view-switch" data-list-mode-scope="inbox" role="group" aria-label="Visning av innboksen">
+                  <button class="active" data-list-mode="cards" type="button" aria-pressed="true" title="Vis sakene som kort.">Kort</button>
+                  <button data-list-mode="details" type="button" aria-pressed="false" title="Vis sakene i en detaljert tabell.">Detaljer</button>
                 </div>
               </div>
               <div class="lead-metrics inbox-filter-cards" role="tablist" aria-label="Innboksfilter">
@@ -1461,11 +1472,11 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260810-02"></script>
-    <script src="./supabase-adapter.js?v=20260810-02"></script>
-    <script src="./intake-parser.js?v=20260810-02"></script>
-    <script src="./assistant-coordinator.js?v=20260810-02"></script>
-    <script src="./app-20260810-02.js"></script>
+    <script src="./supabase-config.js?v=20260810-03"></script>
+    <script src="./supabase-adapter.js?v=20260810-03"></script>
+    <script src="./intake-parser.js?v=20260810-03"></script>
+    <script src="./assistant-coordinator.js?v=20260810-03"></script>
+    <script src="./app-20260810-03.js"></script>
   </body>
 </html>
 
