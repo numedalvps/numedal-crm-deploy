@@ -712,6 +712,16 @@
     return "not_ready";
   }
 
+  function orderBillingStatusForDb(value) {
+    const status = String(value || "not_ready").trim().toLowerCase();
+    if (["not_ready", "ready", "draft", "sent", "paid"].includes(status)) return status;
+    if (["ready_for_invoice", "credit_needed"].includes(status)) return "ready";
+    if (status === "exported") return "draft";
+    if (status === "invoiced") return "sent";
+    if (status === "paid_on_site") return "paid";
+    return "not_ready";
+  }
+
   function paymentStatusForJob(status) {
     if (status === "paid") return "paid_on_site";
     if (status === "draft") return "unpaid";
@@ -776,7 +786,7 @@
       title: order.title || "Ordre",
       job_type: jobTypeFor(type),
       status: order.status || "unscheduled",
-      billing_status: order.billingStatus || order.billing_status || "not_ready",
+      billing_status: orderBillingStatusForDb(order.billingStatus || order.billing_status),
       source: order.source || "manual",
       booking_ids: bookingIdsForOrder(order),
       scheduled_date: normalizeDate(order.scheduledDate || order.scheduled_date),
@@ -1438,7 +1448,7 @@
         () => fetchAllRows(() => supabase.from("customer_locations").select("*").order("created_at").order("id")),
         () => supabase.from("orders").select("*").order("updated_at", { ascending: false }),
         () => supabase.from("leads").select("*").order("updated_at", { ascending: false }).limit(2000),
-        () => supabase.from("activities").select("*").order("occurred_at", { ascending: false }).limit(1000),
+        () => supabase.from("activities").select("*").neq("activity_type", "email_history").order("occurred_at", { ascending: false }).limit(1000),
         () => supabase.from("jobs").select("*").neq("work_status", "cancelled").order("updated_at", { ascending: false }).limit(2000),
         () => supabase.from("appointments").select("*").neq("status", "cancelled").order("start_at", { ascending: true }).limit(2000),
         () => supabase.from("access_notes").select("*").eq("active", true).order("updated_at", { ascending: false }).limit(2000),
@@ -1893,18 +1903,23 @@
       if (error) throw error;
       return data;
     },
-    async saveLeadFromCustomer(customer, status, note) {
+    async saveLeadFromCustomer(customer, status, note, options = {}) {
       const supabase = await requireClient();
       if (!customer?.id || !isUuid(customer.id)) return null;
       const dbLead = leadFromCustomerToDb(customer, status, note);
-      const { data: existingRows, error: existingError } = await withDbTimeout(supabase
+      const requestedLeadId = isUuid(options.leadId || options.lead_id) ? (options.leadId || options.lead_id) : "";
+      let existingQuery = supabase
         .from("leads")
         .select("*")
-        .eq("existing_customer_id", customer.id)
-        .order("updated_at", { ascending: false })
-        .limit(1), "finne eksisterende lead");
+        .eq("existing_customer_id", customer.id);
+      if (requestedLeadId) existingQuery = existingQuery.eq("id", requestedLeadId);
+      const { data: existingRows, error: existingError } = await withDbTimeout(
+        existingQuery.order("updated_at", { ascending: false }).limit(1),
+        "finne eksisterende lead",
+      );
       if (existingError) throw existingError;
       const existing = existingRows?.[0] || null;
+      if (requestedLeadId && !existing) throw new Error("Den koblede salgssaken finnes ikke lenger på kunden.");
       const query = existing
         ? supabase.from("leads").update(dbLead).eq("id", existing.id).select("*").single()
         : supabase.from("leads").insert(dbLead).select("*").single();
