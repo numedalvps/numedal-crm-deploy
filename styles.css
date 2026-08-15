@@ -10265,12 +10265,29 @@ textarea {
 }
 
 .lead-status-order-fields {
-  border: 1px solid #bfdbfe;
-  border-left: 4px solid #2563eb;
-  border-radius: 8px;
-  padding: 12px;
-  background: #eff6ff;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
   overflow-x: hidden;
+}
+
+.lead-status-order-summary {
+  display: grid;
+  gap: 3px;
+  border-left: 4px solid #15803d;
+  padding: 8px 10px;
+  background: #f0fdf4;
+}
+
+.lead-status-order-summary span,
+.lead-status-order-summary small {
+  color: #166534;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.lead-status-order-summary strong {
+  color: #14532d;
+  line-height: 1.35;
 }
 
 .lead-status-price-controls {
@@ -10326,6 +10343,52 @@ textarea {
   display: grid;
   gap: 10px;
   padding: 0 10px 10px;
+}
+
+.lead-status-next-step {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.lead-status-installation-hint {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.lead-status-next-step legend {
+  margin-bottom: 4px;
+  padding: 0;
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.lead-status-next-step .check-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 9px;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 10px;
+  background: #fff;
+}
+
+.lead-status-next-step .check-row > span {
+  display: grid;
+  gap: 2px;
+}
+
+.lead-status-next-step .check-row small {
+  color: var(--muted);
+  font-weight: 700;
 }
 
 .manual-copy-fallback {
@@ -10530,7 +10593,7 @@ textarea {
   }
 
   .lead-status-order-fields {
-    padding: 10px;
+    padding-top: 10px;
   }
 
   .lead-status-price-controls,

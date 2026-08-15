@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260814-02" />
+    <link rel="stylesheet" href="./styles.css?v=20260815-01" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -1019,6 +1019,7 @@
             </label>
             <p id="leadStatusAcceptedOfferHint"></p>
           </section>
+          <div id="leadStatusOrderSummary" class="lead-status-order-summary hidden" aria-live="polite"></div>
           <details id="leadStatusProductEditor" class="lead-status-product-editor" open>
             <summary>Endre varer eller pris</summary>
             <div class="lead-status-product-editor-body">
@@ -1042,22 +1043,31 @@
                 <textarea id="leadStatusProduct" rows="4" placeholder="Legg inn faktisk modell, standard montering og tillegg. Egen vare kan skrives med pris, f.eks. Mitsubishi Kaiteki 29 900. Kan rettes når jobben fullføres."></textarea>
               </label>
               <div id="leadStatusProductTotal" class="completion-price-total"></div>
+              <label>Tilbehør eller noe som må sjekkes
+                <textarea id="leadStatusAccessories" rows="2" placeholder="F.eks. trevegg, ekstra rør eller varmepumpehus."></textarea>
+              </label>
             </div>
           </details>
-          <label>Tilbehør / notat utenom listen
-            <textarea id="leadStatusAccessories" rows="2" placeholder="F.eks. trevegg, ekstra rør, varmepumpehus som kunden vurderer, eller annet som må sjekkes."></textarea>
-          </label>
           <label>Jobben gjelder
             <select id="leadStatusInstallation" aria-label="Jobben gjelder anlegg">
               <option value="">Nytt anlegg</option>
             </select>
-            <small id="leadStatusInstallationHint" class="compact-help"></small>
+            <small id="leadStatusInstallationHint" class="lead-status-installation-hint"></small>
           </label>
-          <label class="check-row"><input id="leadStatusCreateOrder" type="checkbox" checked /> Opprett jobb</label>
-          <label class="check-row"><input id="leadStatusBookAfter" type="checkbox" checked /> Book jobb i kalender etterpå</label>
+          <fieldset class="lead-status-next-step">
+            <legend>Neste steg</legend>
+            <label class="check-row">
+              <input id="leadStatusCreateOrder" type="checkbox" checked />
+              <span><strong>Opprett jobb</strong><small>Bruk avtalt varegrunnlag på jobben.</small></span>
+            </label>
+            <label class="check-row">
+              <input id="leadStatusBookAfter" type="checkbox" checked />
+              <span><strong>Velg tid etterpå</strong><small>Åpner kalenderen når jobben er lagret.</small></span>
+            </label>
+          </fieldset>
         </div>
-        <label>Notat til historikk
-          <textarea id="leadStatusNote" rows="4" placeholder="F.eks. tilbud sendt på e-post, kunden sa ja, må følges opp senere, eller hvorfor saken er tapt."></textarea>
+        <label>Kort notat (valgfritt)
+          <textarea id="leadStatusNote" rows="2" placeholder="Hva ble avtalt, eller hvorfor avsluttes saken?"></textarea>
         </label>
         <div class="modal-actions">
           <button class="secondary" id="cancelLeadStatusDialog" type="button">Avbryt</button>
@@ -1472,11 +1482,11 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260814-02"></script>
-    <script src="./supabase-adapter.js?v=20260814-02"></script>
-    <script src="./intake-parser.js?v=20260814-02"></script>
-    <script src="./assistant-coordinator.js?v=20260814-02"></script>
-    <script src="./app-20260814-02.js"></script>
+    <script src="./supabase-config.js?v=20260815-01"></script>
+    <script src="./supabase-adapter.js?v=20260815-01"></script>
+    <script src="./intake-parser.js?v=20260815-01"></script>
+    <script src="./assistant-coordinator.js?v=20260815-01"></script>
+    <script src="./app-20260815-01.js"></script>
   </body>
 </html>
 
