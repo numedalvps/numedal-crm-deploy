@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260816-07" />
+    <link rel="stylesheet" href="./styles.css?v=20260816-08" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -275,6 +275,7 @@
                 <button data-lead-inbox-tab="drafts" type="button" title="Svar, jobber og andre utkast som må kontrolleres før noe utføres."><strong id="leadDraftMetric">0</strong><span>Utkast</span></button>
                 <button data-lead-inbox-tab="archive" type="button" title="Ferdig koblede og tapte saker. Arkiv er ikke en aktiv arbeidsliste."><strong id="leadLostMetric">0</strong><span>Arkiv</span></button>
               </div>
+              <div id="leadStageFilters" class="lead-stage-filters hidden" role="group" aria-label="Velg neste oppgave"></div>
               <div class="search-row">
                 <input id="leadSearch" type="search" placeholder="Søk i innboksen" />
                 <details class="lead-filter-details">
@@ -1489,11 +1490,11 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260816-07"></script>
-    <script src="./supabase-adapter.js?v=20260816-07"></script>
-    <script src="./intake-parser.js?v=20260816-07"></script>
-    <script src="./assistant-coordinator.js?v=20260816-07"></script>
-    <script src="./app-20260816-07.js"></script>
+    <script src="./supabase-config.js?v=20260816-08"></script>
+    <script src="./supabase-adapter.js?v=20260816-08"></script>
+    <script src="./intake-parser.js?v=20260816-08"></script>
+    <script src="./assistant-coordinator.js?v=20260816-08"></script>
+    <script src="./app-20260816-08.js"></script>
   </body>
 </html>
 
