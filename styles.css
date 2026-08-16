@@ -3523,6 +3523,48 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.website-address-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 7px;
+  border: 1px solid #cfe4df;
+  border-radius: 7px;
+  padding: 7px 8px;
+  background: #f2fbf8;
+}
+
+.website-address-actions .mini-action-row {
+  flex: 0 0 auto;
+}
+
+.website-address-actions .button-link,
+.street-view-action {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 13px;
+  background: #fff;
+  color: var(--teal);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+@media (max-width: 620px) {
+  .website-address-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .website-address-actions .mini-action-row > * {
+    flex: 1 1 0;
+  }
+}
+
 .website-submission-fields dt {
   color: var(--muted);
   font-weight: 950;
