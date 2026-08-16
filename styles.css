@@ -7386,7 +7386,7 @@ textarea {
 }
 
 .planning-day.drag-over .drop-hint::before {
-  content: "Slipp i tidslinjen for klokkeslett i 15-minutters steg, eller over en jobb for før/etter.";
+  content: "Slipp på ønsket klokkeslett i 15-minutters steg.";
 }
 
 .drop-hint[data-drop-label]::after {
@@ -7585,6 +7585,13 @@ textarea {
 .timeline-event.dragging {
   opacity: 0.55;
   cursor: grabbing;
+}
+
+.timeline-event.moving,
+.job-card.moving {
+  opacity: 0.7;
+  cursor: progress;
+  pointer-events: none;
 }
 
 .timeline-event strong,

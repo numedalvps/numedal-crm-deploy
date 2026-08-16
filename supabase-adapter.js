@@ -1418,6 +1418,7 @@
     async loadAll(options = {}) {
       const supabase = await requireClient();
       const includeAssistantActions = options.includeAssistantActions !== false;
+      const includeHistory = options.includeHistory !== false;
       const [
         { data: customerRows, error: customerError },
         { data: bookingRows, error: bookingError },
@@ -1441,13 +1442,19 @@
       ] = await withDbTimeout(runWithConcurrency([
         () => fetchAllRows(() => supabase.from("customers").select("*").order("name").order("id")),
         () => fetchAllRows(() => supabase.from("bookings").select("*").neq("status", "cancelled").order("starts_at").order("id")),
-        () => supabase.from("invoice_metadata").select("*").order("invoice_date", { ascending: false }).limit(1000),
-        () => supabase.from("service_events").select("*").order("event_date", { ascending: false }).limit(1000),
+        () => includeHistory
+          ? supabase.from("invoice_metadata").select("*").order("invoice_date", { ascending: false }).limit(1000)
+          : Promise.resolve({ data: null, error: null }),
+        () => includeHistory
+          ? supabase.from("service_events").select("*").order("event_date", { ascending: false }).limit(1000)
+          : Promise.resolve({ data: null, error: null }),
         () => fetchAllRows(() => supabase.from("installations").select("*").order("created_at").order("id")),
         () => fetchAllRows(() => supabase.from("customer_locations").select("*").order("created_at").order("id")),
         () => supabase.from("orders").select("*").order("updated_at", { ascending: false }),
         () => supabase.from("leads").select("*").order("updated_at", { ascending: false }).limit(2000),
-        () => supabase.from("activities").select("*").neq("activity_type", "email_history").order("occurred_at", { ascending: false }).limit(1000),
+        () => includeHistory
+          ? supabase.from("activities").select("*").neq("activity_type", "email_history").order("occurred_at", { ascending: false }).limit(1000)
+          : Promise.resolve({ data: null, error: null }),
         () => supabase.from("jobs").select("*").neq("work_status", "cancelled").order("updated_at", { ascending: false }).limit(2000),
         () => supabase.from("appointments").select("*").neq("status", "cancelled").order("start_at", { ascending: true }).limit(2000),
         () => supabase.from("access_notes").select("*").eq("active", true).order("updated_at", { ascending: false }).limit(2000),
@@ -1484,16 +1491,18 @@
         customers: (customerRows || []).map(customerFromDb),
         bookings: Object.fromEntries((bookingRows || []).map((row) => [row.id, bookingFromDb(row)])),
         orders: orderResult.error ? null : Object.fromEntries((orderResult.data || []).map((row) => [row.id, orderFromDb(row)])),
-        invoices: (invoiceRows || []).map((row) => ({
-          ...row,
-          lime_id: row.legacy_lime_id,
-          date: row.invoice_date,
-        })),
-        serviceEvents: serviceEventRows || [],
+        invoices: includeHistory
+          ? (invoiceRows || []).map((row) => ({
+            ...row,
+            lime_id: row.legacy_lime_id,
+            date: row.invoice_date,
+          }))
+          : null,
+        serviceEvents: includeHistory ? serviceEventRows || [] : null,
         installations: installationRows || [],
         customerLocations: locationRows || [],
         leads: leadRows || [],
-        activities: activityRows || [],
+        activities: includeHistory ? activityRows || [] : null,
         jobs: jobRows || [],
         appointments: appointmentRows || [],
         accessNotes: accessNoteRows || [],
@@ -1508,6 +1517,26 @@
           ? {}
           : Object.fromEntries((settingsResult.data || []).map((row) => [row.key, row.value])),
         timeEntries: timeEntryResult.error ? [] : timeEntryResult.data || [],
+      };
+    },
+    async loadDeferredHistory() {
+      const supabase = await requireClient();
+      const [invoiceResult, serviceResult, activityResult] = await withDbTimeout(runWithConcurrency([
+        () => supabase.from("invoice_metadata").select("*").order("invoice_date", { ascending: false }).limit(1000),
+        () => supabase.from("service_events").select("*").order("event_date", { ascending: false }).limit(1000),
+        () => supabase.from("activities").select("*").neq("activity_type", "email_history").order("occurred_at", { ascending: false }).limit(1000),
+      ], 3), "laste faktura- og kundehistorikk", 30000);
+      if (invoiceResult.error) throw invoiceResult.error;
+      if (serviceResult.error) throw serviceResult.error;
+      if (activityResult.error) throw activityResult.error;
+      return {
+        invoices: (invoiceResult.data || []).map((row) => ({
+          ...row,
+          lime_id: row.legacy_lime_id,
+          date: row.invoice_date,
+        })),
+        serviceEvents: serviceResult.data || [],
+        activities: activityResult.data || [],
       };
     },
     async loadAssistantActions() {
