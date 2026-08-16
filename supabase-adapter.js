@@ -1727,6 +1727,61 @@
       }
       return { id: data.id, booking: bookingFromDb(data) };
     },
+    async moveBookingAsAdmin(id, booking, options = {}) {
+      const supabase = await requireClient();
+      const resourceProfileId = booking?.assigned_to
+        || booking?.assignedTo
+        || booking?.resourceProfileId
+        || booking?.resource_profile_id
+        || "";
+      const scheduledDate = normalizeDate(booking?.date);
+      const scheduledTime = String(booking?.time || "").trim().slice(0, 5);
+      const durationMinutes = Number(booking?.duration || booking?.duration_minutes || 0);
+      const expectedUpdatedAt = String(options.expectedUpdatedAt || booking?.updated_at || "").trim();
+      if (!isUuid(id)) throw new Error("Ugyldig booking-id for flytting.");
+      if (!scheduledDate || !/^\d{2}:\d{2}$/.test(scheduledTime)) {
+        throw new Error("Velg gyldig dato og klokkeslett før jobben flyttes.");
+      }
+      if (!Number.isInteger(durationMinutes) || durationMinutes < 15 || durationMinutes > 720 || durationMinutes % 15 !== 0) {
+        throw new Error("Varigheten må være mellom 15 minutter og 12 timer i 15-minutters steg.");
+      }
+      if (!isUuid(resourceProfileId)) {
+        throw new Error("Velg en aktiv CRM-bruker som servicemann før jobben flyttes.");
+      }
+      if (!expectedUpdatedAt) {
+        throw new Error("Bookingen mangler radversjon. Last inn planen på nytt før du flytter den.");
+      }
+      const { data, error } = await withDbTimeout(
+        supabase.rpc("move_booking_as_admin", {
+          p_booking_id: id,
+          p_scheduled_date: scheduledDate,
+          p_scheduled_time: scheduledTime,
+          p_duration_minutes: durationMinutes,
+          p_resource_profile_id: resourceProfileId,
+          p_expected_booking_updated_at: expectedUpdatedAt,
+          p_booking_note: booking?.note || null,
+        }),
+        "flytte booking og jobb samlet",
+      );
+      if (error) {
+        if (isBookingOverlapError(error)) throw new Error(bookingOverlapMessage(error));
+        if (/function .*move_booking_as_admin/i.test(error.message || "")) {
+          throw new Error("CRM-serveren mangler trygg planflytting. Last inn siden på nytt, eller kontakt administrator.");
+        }
+        throw error;
+      }
+      if (!data?.booking?.id) throw new Error("CRM-serveren returnerte ikke den flyttede bookingen.");
+      return {
+        id: data.booking.id,
+        booking: bookingFromDb(data.booking),
+        order: data.order?.id ? orderFromDb(data.order) : null,
+        job: data.job?.id ? data.job : null,
+        appointment: data.appointment?.id ? data.appointment : null,
+        before: data.before || null,
+        after: data.after || null,
+        alreadyApplied: Boolean(data.alreadyApplied),
+      };
+    },
     async saveCustomerLocation(customerId, location) {
       const supabase = await requireClient();
       if (!isUuid(customerId)) throw new Error("Ugyldig kunde for anleggsadresse.");
