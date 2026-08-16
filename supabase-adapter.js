@@ -1226,9 +1226,7 @@
   }
 
   function assistantActionQueueQuery(supabase) {
-    const receiptCutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    return supabase.from("assistant_actions").select("*")
-      .or(`status.in.(needs_review,approved,executing,failed),and(status.eq.completed,executed_at.gte.${receiptCutoff})`)
+    return supabase.from("assistant_review_queue_v1").select("*")
       .order("created_at", { ascending: false }).limit(200);
   }
 
@@ -2809,16 +2807,37 @@
       }
       const body = String(review.body || "").trim();
       if (!body) throw new Error("Meldingsteksten kan ikke være tom.");
+      const expectedUpdatedAt = String(review.expectedUpdatedAt || review.expected_updated_at || "").trim();
+      if (!expectedUpdatedAt || Number.isNaN(new Date(expectedUpdatedAt).getTime())) {
+        throw new Error("Revisjonen mangler tidspunktet for utkastversjonen.");
+      }
+      const expectedRevision = Number(review.expectedRevision || review.expected_revision || 0);
+      if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 1) {
+        throw new Error("Revisjonen mangler et gyldig versjonsnummer.");
+      }
+      const expectedContentHash = String(review.expectedContentHash || review.expected_content_hash || "").trim().toLowerCase();
+      if (!/^[0-9a-f]{64}$/.test(expectedContentHash)) {
+        throw new Error("Revisjonen mangler en gyldig innholdskontroll.");
+      }
+      const reviewOrigin = String(review.reviewOrigin || review.review_origin || "crm_ui").trim();
+      if (!["crm_ui", "codex_thread", "automation", "migration"].includes(reviewOrigin)) {
+        throw new Error("Ugyldig kilde for revisjonen.");
+      }
       const { data, error } = await withDbTimeout(
-        supabase.rpc("review_assistant_action", {
+        supabase.rpc("review_assistant_action_v2", {
           p_action_id: id,
           p_client_event_id: clientEventId,
           p_expected_status: expectedStatus,
+          p_expected_updated_at: expectedUpdatedAt,
+          p_expected_revision: expectedRevision,
+          p_expected_content_hash: expectedContentHash,
+          p_expected_source_ref: String(review.expectedSourceRef ?? review.expected_source_ref ?? "").trim() || null,
           p_event_type: eventType,
           p_subject: String(review.subject || "").trim(),
           p_body: body,
           p_reason_code: String(review.reasonCode || review.reason_code || "").trim() || null,
           p_reviewer_note: String(review.note || review.reviewer_note || "").trim().slice(0, 2000) || null,
+          p_review_origin: reviewOrigin,
         }).single(),
         "lagre kontrollert assistentrevisjon",
       );
