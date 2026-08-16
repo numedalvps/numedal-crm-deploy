@@ -1415,8 +1415,9 @@
       }
       return data;
     },
-    async loadAll() {
+    async loadAll(options = {}) {
       const supabase = await requireClient();
+      const includeAssistantActions = options.includeAssistantActions !== false;
       const [
         { data: customerRows, error: customerError },
         { data: bookingRows, error: bookingError },
@@ -1453,11 +1454,13 @@
         () => supabase.from("website_submissions").select("*").order("received_at", { ascending: false }).limit(200),
         () => supabase.from("profiles").select("*").order("display_name"),
         () => supabase.from("intake_items").select("*").in("status", ["draft", "needs_review", "ready", "failed"]).order("created_at", { ascending: false }).limit(100),
-        () => assistantActionQueueQuery(supabase),
+        () => includeAssistantActions
+          ? assistantActionQueueQuery(supabase)
+          : Promise.resolve({ data: [], error: null }),
         () => supabase.from("crm_attachments").select("*").is("deleted_at", null).order("created_at", { ascending: false }).limit(2000),
         () => supabase.from("crm_settings").select("*"),
         () => supabase.from("time_entries").select("*").order("work_date", { ascending: false }).order("start_time", { ascending: true }).limit(3000),
-      ], 4), "laste CRM-data", 45000);
+      ], 6), "laste CRM-data", 45000);
       if (customerError) throw customerError;
       if (bookingError) throw bookingError;
       if (invoiceError) throw invoiceError;
@@ -1497,7 +1500,9 @@
         websiteSubmissions: websiteSubmissionRows || [],
         profiles: profileRows || [],
         intakeItems: intakeResult.error ? [] : intakeResult.data || [],
-        assistantActions: assistantActionResult.error ? [] : assistantActionResult.data || [],
+        assistantActions: includeAssistantActions
+          ? (assistantActionResult.error ? [] : assistantActionResult.data || [])
+          : null,
         crmAttachments: attachmentResult.error ? [] : attachmentResult.data || [],
         crmSettings: settingsResult.error
           ? {}
