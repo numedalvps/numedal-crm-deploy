@@ -238,6 +238,34 @@
     return `${year}-${month}-${day}`;
   }
 
+  function osloDateTimeParts(value) {
+    const instant = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(instant.getTime())) return { date: "", time: "" };
+    try {
+      const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Europe/Oslo",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23",
+      }).formatToParts(instant).reduce((result, part) => {
+        if (part.type !== "literal") result[part.type] = part.value;
+        return result;
+      }, {});
+      return {
+        date: `${parts.year}-${parts.month}-${parts.day}`,
+        time: `${parts.hour}:${parts.minute}`,
+      };
+    } catch (_error) {
+      return {
+        date: localIsoDate(instant),
+        time: instant.toTimeString().slice(0, 5),
+      };
+    }
+  }
+
   function repairTextEncoding(value) {
     let text = String(value ?? "");
     if (!/[ÃÂâ]/.test(text)) return text;
@@ -466,6 +494,7 @@
 
   function bookingFromDb(row) {
     const starts = new Date(row.starts_at);
+    const osloStarts = osloDateTimeParts(starts);
     const note = repairTextEncoding(row.note || "");
     const isBefaring = /^\[Befaring\]/i.test(note);
     const isInsulation = /^\[(Blåseisolering|Blaseisolering)\]/i.test(note);
@@ -473,8 +502,8 @@
     return {
       id: row.id,
       customerId: row.customer_id,
-      date: Number.isNaN(starts.getTime()) ? "" : localIsoDate(starts),
-      time: Number.isNaN(starts.getTime()) ? "" : starts.toTimeString().slice(0, 5),
+      date: osloStarts.date,
+      time: osloStarts.time,
       type: isInsulation ? "blaseisolering" : isBefaring ? "befaring" : row.job_type,
       duration: String(row.duration_minutes || 60),
       resource: row.assigned_name || "Hubert",

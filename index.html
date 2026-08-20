@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260816-11" />
+    <link rel="stylesheet" href="./styles.css?v=20260820-01" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -992,6 +992,12 @@
             <label>Antall
               <input id="orderPriceQuantity" type="number" min="0" step="0.5" value="1" />
             </label>
+            <label>Pris per enhet inkl. mva
+              <input id="orderPriceUnitPrice" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Skriv pris" />
+            </label>
+            <label>Rabatt %
+              <input id="orderPriceDiscount" type="number" min="0" max="100" step="0.1" inputmode="decimal" value="0" />
+            </label>
             <button id="orderAddPriceLine" class="secondary" type="button" title="Legg valgt produkt, tillegg eller egen vare inn som grunnlag for jobben.">Legg til varelinje</button>
           </div>
           <label id="orderStandardInstallationWrap" class="check-row compact hidden">
@@ -1040,6 +1046,12 @@
                 </label>
                 <label class="lead-status-qty-field">Antall
                   <input id="leadStatusProductQuantity" type="number" min="0" step="0.5" value="1" aria-label="Antall varer" />
+                </label>
+                <label class="lead-status-unit-price-field">Pris per enhet inkl. mva
+                  <input id="leadStatusProductUnitPrice" type="number" min="0" step="0.01" inputmode="decimal" aria-label="Pris per enhet inklusiv merverdiavgift" placeholder="Skriv pris" />
+                </label>
+                <label class="lead-status-discount-field">Rabatt %
+                  <input id="leadStatusProductDiscount" type="number" min="0" max="100" step="0.1" inputmode="decimal" value="0" aria-label="Rabatt i prosent" />
                 </label>
                 <button id="leadStatusAddProduct" class="secondary" type="button" title="Legg valgt vare, tillegg eller egen vare inn som avtalt grunnlag.">Legg til varelinje</button>
               </div>
@@ -1284,6 +1296,12 @@
             <label>Antall
               <input id="completionPriceQuantity" type="number" min="0" step="0.5" value="1" />
             </label>
+            <label>Pris per enhet inkl. mva
+              <input id="completionPriceUnitPrice" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Skriv pris" />
+            </label>
+            <label>Rabatt %
+              <input id="completionPriceDiscount" type="number" min="0" max="100" step="0.1" inputmode="decimal" value="0" />
+            </label>
             <button id="completionAddPriceLine" class="secondary" type="button" title="Legg valgt tillegg eller egen vare inn i prisgrunnlaget for jobben.">Legg til prislinje</button>
           </div>
           <textarea id="completionPriceLines" rows="4" placeholder="Tillegg eller prisgrunnlag som bør kontrolleres før faktura."></textarea>
@@ -1359,6 +1377,12 @@
           </label>
           <label>Antall
             <input id="billingPriceQuantity" type="number" min="0" step="0.5" value="1" />
+          </label>
+          <label>Pris per enhet inkl. mva
+            <input id="billingPriceUnitPrice" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Skriv pris" />
+          </label>
+          <label>Rabatt %
+            <input id="billingPriceDiscount" type="number" min="0" max="100" step="0.1" inputmode="decimal" value="0" />
           </label>
           <button id="billingAddPriceLine" class="secondary" type="button" title="Legg valgt produkt, tillegg eller egen vare inn i fakturagrunnlaget.">Legg til fakturalinje</button>
         </div>
@@ -1490,11 +1514,11 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260816-11"></script>
-    <script src="./supabase-adapter.js?v=20260816-11"></script>
-    <script src="./intake-parser.js?v=20260816-11"></script>
-    <script src="./assistant-coordinator.js?v=20260816-11"></script>
-    <script src="./app-20260816-11.js"></script>
+    <script src="./supabase-config.js?v=20260820-01"></script>
+    <script src="./supabase-adapter.js?v=20260820-01"></script>
+    <script src="./intake-parser.js?v=20260820-01"></script>
+    <script src="./assistant-coordinator.js?v=20260820-01"></script>
+    <script src="./app-20260820-01.js"></script>
   </body>
 </html>
 
