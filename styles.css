@@ -826,8 +826,32 @@ small {
 
 .google-metrics-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 8px;
+}
+
+.customer-action-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  align-items: stretch;
+}
+
+.customer-action-bar > *,
+.customer-action-bar > .inline-more-actions,
+.customer-action-bar > .inline-more-actions > summary {
+  min-width: 0;
+  width: 100%;
+}
+
+.customer-action-bar > a,
+.customer-action-bar > button,
+.customer-action-bar > .inline-more-actions > summary {
+  min-height: 42px;
+  padding: 9px 11px;
+  font-size: 14px;
+  line-height: 1.2;
+  text-align: center;
+  white-space: normal;
 }
 
 .google-metric {
@@ -870,7 +894,7 @@ small {
 
 .google-insights-detail-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(240px, 0.65fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
   margin-top: 14px;
   padding-top: 13px;
@@ -943,12 +967,27 @@ small {
   border-bottom: 0;
 }
 
-.google-query-list span {
+.google-query-list span,
+.google-query-list a {
   overflow: hidden;
   font-size: 12px;
   font-weight: 850;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.google-page-list a,
+.google-index-issues a {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.google-page-list a:hover,
+.google-page-list a:focus-visible,
+.google-index-issues a:hover,
+.google-index-issues a:focus-visible {
+  color: var(--teal);
+  text-decoration: underline;
 }
 
 .google-query-list strong,
@@ -970,6 +1009,76 @@ small {
   margin-top: 7px;
   background: var(--teal-soft);
   text-align: center;
+}
+
+.google-index-summary {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 9px 10px;
+  border-left: 4px solid var(--line-strong);
+  background: #f8fafc;
+}
+
+.google-index-summary.is-ok {
+  border-left-color: var(--service);
+  background: #f0fdf4;
+}
+
+.google-index-summary.has-warning {
+  border-left-color: #d97706;
+  background: #fffbeb;
+}
+
+.google-index-summary.has-error {
+  border-left-color: var(--danger);
+  background: #fff5f5;
+}
+
+.google-index-summary strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.google-index-summary span,
+.google-index-summary small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.google-index-issues {
+  display: grid;
+  gap: 0;
+  margin: 7px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.google-index-issues li {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, auto);
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid #edf1f4;
+  font-size: 11px;
+}
+
+.google-index-issues li:last-child {
+  border-bottom: 0;
+}
+
+.google-index-issues span {
+  color: #9a5b08;
+  text-align: right;
+}
+
+.google-index-ok {
+  margin: 8px 0 0;
+  color: var(--service-dark);
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .google-business-summary,
@@ -10643,13 +10752,14 @@ textarea {
 .completion-price-controls {
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(150px, 0.9fr) minmax(170px, 1.1fr) 82px minmax(120px, 0.65fr) 88px auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   align-items: end;
   margin-top: 10px;
 }
 
 .completion-price-controls > label,
+.completion-price-controls > fieldset,
 .completion-price-controls > button,
 .lead-status-order-fields label,
 .lead-status-order-fields textarea,
@@ -10659,12 +10769,99 @@ textarea {
   max-width: 100%;
 }
 
+.price-discount-editor {
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr);
+  gap: 4px 6px;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.price-discount-editor legend {
+  grid-column: 1 / -1;
+  margin: 0 0 1px;
+  padding: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.price-discount-mode {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+}
+
+.price-discount-mode label {
+  display: block;
+  margin: 0 !important;
+  cursor: pointer;
+}
+
+.price-discount-mode input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.price-discount-mode span {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--line);
+  color: var(--teal);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.price-discount-mode label:last-child span {
+  border-right: 0;
+}
+
+.price-discount-mode input:checked + span {
+  background: var(--teal);
+  color: #fff;
+}
+
+.price-discount-mode input:focus-visible + span {
+  outline: 3px solid rgba(13, 148, 136, 0.22);
+  outline-offset: -3px;
+}
+
+.price-discount-editor > input {
+  min-width: 0;
+  width: 100%;
+}
+
+.price-discount-editor > small {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 750;
+}
+
 .order-price-controls {
-  grid-template-columns: minmax(150px, 0.9fr) minmax(170px, 1.1fr) 82px minmax(120px, 0.65fr) 88px auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .completion-price-details textarea {
+  width: 100%;
+  max-width: 100%;
   margin-top: 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  resize: vertical;
 }
 
 .completion-price-total {
@@ -10713,12 +10910,61 @@ textarea {
   display: grid;
   gap: 4px;
   margin: 0;
-  padding-left: 18px;
+  padding: 0;
+  list-style: none;
+}
+
+.completion-attachment-list li {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 7px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--soft);
+}
+
+.completion-attachment-list li > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.completion-attachment-list .remove-pending-attachment {
+  width: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0;
+  border: 1px solid #fecaca;
+  background: #fff;
+  color: #b91c1c;
+  font-size: 20px;
+  line-height: 1;
 }
 
 .completion-attachment-list small {
   color: var(--muted);
   font-weight: 700;
+}
+
+.crm-attachment-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.crm-attachment-actions .remove-crm-attachment {
+  width: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0;
+  border: 1px solid #fecaca;
+  background: #fff;
+  color: #b91c1c;
+  font-size: 20px;
+  line-height: 1;
 }
 
 @media (max-width: 900px) {

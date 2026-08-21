@@ -3025,6 +3025,29 @@
       }
       return data;
     },
+    async deleteCrmAttachment(attachment) {
+      const supabase = await requireClient();
+      const id = attachment?.id;
+      if (!isUuid(id)) throw new Error("Ugyldig vedlegg-id.");
+      const deletedAt = new Date().toISOString();
+      const { data, error } = await supabase
+        .from("crm_attachments")
+        .update({ deleted_at: deletedAt })
+        .eq("id", id)
+        .is("deleted_at", null)
+        .select("id, storage_bucket, storage_path, deleted_at")
+        .single();
+      if (error) throw error;
+      const bucket = data?.storage_bucket || attachment.storage_bucket || "crm-attachments";
+      const path = data?.storage_path || attachment.storage_path || "";
+      let storageRemoved = true;
+      if (path) {
+        const { error: storageError } = await supabase.storage.from(bucket).remove([path]);
+        storageRemoved = !storageError;
+        if (storageError) console.warn("Vedleggsraden ble slettet, men lagringsfilen kunne ikke fjernes.", storageError);
+      }
+      return { ...data, storage_removed: storageRemoved };
+    },
     async linkCrmAttachments(patch = {}) {
       const supabase = await requireClient();
       const intakeId = patch.intake_id || patch.intakeId;
