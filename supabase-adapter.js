@@ -7,7 +7,7 @@
   const rememberLoginKey = "numedalRememberLogin";
   const dataCacheDbName = "numedal-crm-data-cache";
   const dataCacheStoreName = "snapshots";
-  const dataCacheSchema = "20260714-02";
+  const dataCacheSchema = "20260822-01";
   const dataCacheMaxAgeMs = 2 * 24 * 60 * 60 * 1000;
   const dataCacheUserHintKey = "numedalCrmCacheUserId";
 
@@ -488,6 +488,34 @@
     if (Number.isFinite(longitude) && Math.abs(longitude) <= 180) row.longitude = longitude;
     if ("geocode_status" in location || "geocodeStatus" in location) {
       row.geocode_status = String(location.geocode_status || location.geocodeStatus || "unknown").trim() || "unknown";
+    }
+    if ("service_area_key" in location || "serviceAreaKey" in location) {
+      row.service_area_key = String(location.service_area_key || location.serviceAreaKey || "").trim() || null;
+    }
+    if ("service_area_status" in location || "serviceAreaStatus" in location) {
+      row.service_area_status = String(location.service_area_status || location.serviceAreaStatus || "needs_review").trim() || "needs_review";
+    }
+    if ("service_area_confidence" in location || "serviceAreaConfidence" in location) {
+      const confidence = Number(location.service_area_confidence ?? location.serviceAreaConfidence);
+      row.service_area_confidence = Number.isFinite(confidence) && confidence >= 0 && confidence <= 1 ? confidence : null;
+    }
+    if ("service_area_source" in location || "serviceAreaSource" in location) {
+      row.service_area_source = String(location.service_area_source || location.serviceAreaSource || "").trim() || null;
+    }
+    if ("service_area_classifier_version" in location || "serviceAreaClassifierVersion" in location) {
+      row.service_area_classifier_version = String(location.service_area_classifier_version || location.serviceAreaClassifierVersion || "").trim() || null;
+    }
+    if ("service_area_evidence" in location || "serviceAreaEvidence" in location) {
+      const evidence = location.service_area_evidence || location.serviceAreaEvidence;
+      row.service_area_evidence = evidence && typeof evidence === "object" && !Array.isArray(evidence) ? evidence : {};
+    }
+    if ("service_area_reviewed_by" in location || "serviceAreaReviewedBy" in location) {
+      row.service_area_reviewed_by = isUuid(location.service_area_reviewed_by || location.serviceAreaReviewedBy)
+        ? location.service_area_reviewed_by || location.serviceAreaReviewedBy
+        : null;
+    }
+    if ("service_area_reviewed_at" in location || "serviceAreaReviewedAt" in location) {
+      row.service_area_reviewed_at = location.service_area_reviewed_at || location.serviceAreaReviewedAt || null;
     }
     return row;
   }
@@ -1455,6 +1483,8 @@
         { data: serviceEventRows, error: serviceEventError },
         { data: installationRows, error: installationError },
         { data: locationRows, error: locationError },
+        serviceAreaResult,
+        serviceAreaRelationResult,
         orderResult,
         { data: leadRows, error: leadError },
         { data: activityRows, error: activityError },
@@ -1479,6 +1509,8 @@
           : Promise.resolve({ data: null, error: null }),
         () => fetchAllRows(() => supabase.from("installations").select("*").order("created_at").order("id")),
         () => fetchAllRows(() => supabase.from("customer_locations").select("*").order("created_at").order("id")),
+        () => supabase.from("service_areas").select("*").eq("is_active", true).order("sort_order").order("area_key"),
+        () => supabase.from("service_area_relations").select("*").order("source_area_key").order("priority"),
         () => supabase.from("orders").select("*").order("updated_at", { ascending: false }),
         () => supabase.from("leads").select("*").order("updated_at", { ascending: false }).limit(2000),
         () => includeHistory
@@ -1503,6 +1535,8 @@
       if (serviceEventError) throw serviceEventError;
       if (installationError) throw installationError;
       if (locationError) throw locationError;
+      if (serviceAreaResult.error) throw serviceAreaResult.error;
+      if (serviceAreaRelationResult.error) throw serviceAreaRelationResult.error;
       if (orderResult.error && !isOptionalOrdersError(orderResult.error)) throw orderResult.error;
       if (leadError) throw leadError;
       if (activityError) throw activityError;
@@ -1530,6 +1564,8 @@
         serviceEvents: includeHistory ? serviceEventRows || [] : null,
         installations: installationRows || [],
         customerLocations: locationRows || [],
+        serviceAreas: serviceAreaResult.data || [],
+        serviceAreaRelations: serviceAreaRelationResult.data || [],
         leads: leadRows || [],
         activities: includeHistory ? activityRows || [] : null,
         jobs: jobRows || [],

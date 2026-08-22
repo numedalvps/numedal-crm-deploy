@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260821-01" />
+    <link rel="stylesheet" href="./styles.css?v=20260822-01" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -555,9 +555,10 @@
                 </div>
               </div>
               <div class="route-controls primary">
-                <label>Område/sted
-                  <input id="routeArea" list="routeAreaOptions" placeholder="Vegglifjell nord, Vegglifjell sør, Blefjell..." />
-                  <datalist id="routeAreaOptions"></datalist>
+                <label>Serviceområde
+                  <select id="routeArea">
+                    <option value="">Velg område</option>
+                  </select>
                 </label>
                 <label>Dato ved booking
                   <input id="routeBookingDate" type="date" />
@@ -576,15 +577,15 @@
                   <input id="routeOrigin" value="Svene, 3622, Norge" />
                 </label>
                 <label>Avreise
-                  <input id="routeStartTime" type="time" value="08:00" step="900" />
+                  <input id="routeStartTime" type="time" value="07:15" step="900" />
                 </label>
                 <label>Ferdig senest
                   <input id="routeEndTime" type="time" value="18:00" step="900" />
                 </label>
                 <label>Varighet pr. service
                   <select id="routeDuration">
+                    <option value="45" selected>45 min</option>
                     <option value="60">60 min</option>
-                    <option value="45">45 min</option>
                     <option value="75">75 min</option>
                   </select>
                 </label>
@@ -932,6 +933,11 @@
               <option value="24" selected>2 år</option>
               <option value="36">3 år</option>
               <option value="0">Manuelt / ikke fast</option>
+            </select>
+          </label>
+          <label>Serviceområde
+            <select id="installationServiceArea">
+              <option value="">Må avklares</option>
             </select>
           </label>
           <label class="installation-location-field">Adressenavn<input id="installationLocationName" placeholder="F.eks. Hjemme, Hytte Blefjell" /></label>
@@ -1520,11 +1526,11 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260821-01"></script>
-    <script src="./supabase-adapter.js?v=20260821-01"></script>
-    <script src="./intake-parser.js?v=20260821-01"></script>
-    <script src="./assistant-coordinator.js?v=20260821-01"></script>
-    <script src="./app-20260821-01.js"></script>
+    <script src="./supabase-config.js?v=20260822-01"></script>
+    <script src="./supabase-adapter.js?v=20260822-01"></script>
+    <script src="./intake-parser.js?v=20260822-01"></script>
+    <script src="./assistant-coordinator.js?v=20260822-01"></script>
+    <script src="./app-20260822-01.js"></script>
   </body>
 </html>
 

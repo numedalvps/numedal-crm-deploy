@@ -6753,6 +6753,22 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.installation-card .service-area-state {
+  width: fit-content;
+  padding: 3px 7px;
+  border: 1px solid #a7f3d0;
+  border-radius: 5px;
+  background: #ecfdf5;
+  color: #065f46;
+  font-weight: 800;
+}
+
+.installation-card .service-area-state.needs-review {
+  border-color: #fbbf24;
+  background: #fffbeb;
+  color: #92400e;
+}
+
 .installation-card button {
   justify-self: start;
   min-height: 34px;
