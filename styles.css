@@ -1,12 +1,15 @@
 ﻿:root {
-  --ink: #172033;
-  --muted: #64748b;
-  --line: #dbe3ea;
-  --soft: #f5f8fa;
+  --ink: #1f2937;
+  --muted: #5f6b7a;
+  --line: #d5dde5;
+  --soft: #f4f7f8;
   --panel: #ffffff;
-  --teal: #0f766e;
-  --teal-soft: #e7f4f2;
-  --shadow: 0 8px 26px rgba(15, 23, 42, 0.06);
+  --teal: #0b6b63;
+  --teal-dark: #07574f;
+  --teal-soft: #e9f5f3;
+  --blue: #1d4ed8;
+  --blue-soft: #eff6ff;
+  --shadow: 0 8px 24px rgba(15, 23, 42, 0.07);
   --yellow: #f2c94c;
   --red: #dc2626;
   --orange: #f59e0b;
@@ -17,7 +20,7 @@
   --insulation: #0891b2;
   --insulation-dark: #155e75;
   --insulation-soft: #cffafe;
-  font-family: Inter, Segoe UI, Arial, sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 * {
@@ -28,6 +31,7 @@ body {
   margin: 0;
   background: var(--soft);
   color: var(--ink);
+  line-height: 1.45;
 }
 
 button,
@@ -56,7 +60,7 @@ button {
   padding: 9px 13px;
   background: var(--teal);
   color: #fff;
-  font-weight: 800;
+  font-weight: 700;
   cursor: pointer;
 }
 
@@ -13168,6 +13172,513 @@ label {
   .google-insights-meta a {
     width: 100%;
     margin-left: 0;
+  }
+}
+
+/* Unified CRM interaction and typography pass, 2026-08-22. */
+h1,
+h2,
+h3,
+h4,
+button,
+input,
+select,
+textarea,
+summary,
+.status,
+.soft-pill {
+  letter-spacing: 0;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  color: var(--ink);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+button,
+.action-row a,
+.job-actions a,
+.lead-contact-actions a,
+.billing-draft-actions a,
+.inline-more-actions summary {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+button,
+.action-row a,
+.job-actions a,
+.lead-contact-actions a,
+.billing-draft-actions a,
+input,
+select,
+textarea,
+summary {
+  border-radius: 8px;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.28);
+  outline-offset: 2px;
+}
+
+button:not(:disabled):active,
+.action-row a:active,
+.job-actions a:active {
+  transform: translateY(1px);
+}
+
+input,
+select,
+textarea {
+  border-color: #cbd5df;
+  font-weight: 500;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: #6b9be8;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+label,
+.planning-resource-filter,
+.modal label:not(.choice-stack label) {
+  color: #44505f;
+  font-weight: 650;
+}
+
+.panel {
+  border-color: var(--line);
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.section-head h2,
+.view-head h2 {
+  font-size: 20px;
+}
+
+.section-head p,
+.view-subtitle,
+.context-hint {
+  color: var(--muted);
+  font-weight: 450;
+}
+
+.status,
+.soft-pill,
+.invoice-pill,
+.job-type-pill,
+.done-pill {
+  font-weight: 700 !important;
+}
+
+.plan-tabs {
+  gap: 18px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+  padding: 0;
+}
+
+.plan-tabs button {
+  min-height: 42px;
+  margin-bottom: -1px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  padding: 8px 2px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 650;
+}
+
+.plan-tabs button.active {
+  border-color: var(--teal);
+  background: transparent;
+  color: var(--teal-dark);
+}
+
+.planning-mode-toggle {
+  gap: 2px;
+  border-color: var(--line);
+  border-radius: 8px;
+  padding: 3px;
+  background: #eef2f5;
+}
+
+.planning-mode-toggle button {
+  min-height: 34px;
+  border-radius: 6px;
+  color: var(--muted);
+  font-weight: 650;
+}
+
+.planning-mode-toggle button.active {
+  background: #fff;
+  color: var(--teal-dark);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
+}
+
+.planning-toolbar {
+  justify-content: flex-end;
+}
+
+.planning-resource-filter,
+.planning-month-summary span,
+.booking-month-legend {
+  font-weight: 600;
+}
+
+.customer-title h2 {
+  margin-top: 8px;
+  font-size: 24px;
+}
+
+.customer-title p {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.customer-action-bar {
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.customer-key-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 1px;
+  margin: 8px 0 10px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--line);
+}
+
+.customer-key-facts > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  align-content: center;
+  min-height: 58px;
+  padding: 9px 11px;
+  background: #fff;
+}
+
+.customer-key-facts span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: uppercase;
+}
+
+.customer-key-facts strong {
+  min-width: 0;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.customer-work-summary span,
+.customer-work-summary small,
+.customer-more-sections > summary span {
+  font-weight: 600;
+}
+
+.customer-work-summary strong,
+.customer-more-sections > summary {
+  font-weight: 700;
+}
+
+.map-primary-action {
+  border-color: #b7c8e8 !important;
+  background: var(--blue-soft) !important;
+  color: #174ea6 !important;
+  font-weight: 700 !important;
+}
+
+.job-card {
+  border-color: #cfe2d4;
+  border-left-color: var(--service);
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+  text-align: left;
+  transform: none;
+}
+
+.job-card:hover {
+  border-color: #aacfb5;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  transform: none;
+}
+
+.job-card.installasjon {
+  border-color: #cbdcf8;
+  border-left-color: #2563eb;
+  background: #f8fbff;
+}
+
+.job-card.befaring {
+  border-color: #ead8b5;
+  border-left-color: #d97706;
+  background: #fffcf5;
+}
+
+.job-card.reparasjon {
+  border-color: #d8d5ef;
+  border-left-color: #6366f1;
+  background: #fafaff;
+}
+
+.job-card.blaseisolering {
+  border-color: #bfe1e9;
+  border-left-color: var(--insulation);
+  background: #f7fdff;
+}
+
+.job-card.done {
+  border-color: #c9ded0;
+  border-left-color: var(--green);
+  background: #f7fbf8;
+}
+
+.job-card.settled {
+  border-color: #d5dce4;
+  border-left-color: #8492a3;
+  background: #f4f6f8;
+  box-shadow: none;
+  opacity: 0.88;
+}
+
+.job-card.needs-move {
+  border-color: #d9cff2;
+  border-left-color: #7c3aed;
+  background: #fbfaff;
+}
+
+.job-card.overlap {
+  border-color: #e7a9a9;
+  border-left-color: var(--red);
+  background: #fffafa;
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.08);
+}
+
+.job-card span,
+.job-card small,
+.job-card p {
+  color: var(--muted);
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: left;
+}
+
+.job-card strong,
+.job-card .job-meta {
+  font-weight: 700;
+  text-align: left;
+}
+
+.job-card .job-actions {
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+}
+
+.job-card .job-actions a,
+.job-card .job-actions button,
+.job-card .inline-more-actions summary {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-color: var(--line);
+  background: #fff;
+  color: var(--teal-dark);
+  font-size: 12px;
+  font-weight: 650;
+  text-align: center;
+}
+
+.job-card .job-actions .order-primary {
+  border-color: var(--teal);
+  background: var(--teal);
+  color: #fff;
+}
+
+.planning-month-overview {
+  background: #f7f9fa;
+}
+
+.planning-month-grid .month-day {
+  border-color: #d6dee6;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.planning-month-grid .month-day.selected {
+  border-color: var(--teal);
+  outline: 3px solid rgba(11, 107, 99, 0.13);
+  background: #edf8f6;
+}
+
+.planning-month-grid .month-day small,
+.planning-month-grid .month-day em {
+  font-weight: 600;
+}
+
+.planning-month-agenda {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+.planning-month-agenda > header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: end;
+  justify-content: space-between;
+}
+
+.planning-month-agenda > header span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: uppercase;
+}
+
+.planning-month-agenda > header h3 {
+  margin: 2px 0 0;
+  font-size: 17px;
+  text-transform: capitalize;
+}
+
+.planning-month-agenda > header small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.planning-month-agenda-list {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 8px;
+}
+
+.modal {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.modal form {
+  max-height: calc(100dvh - 24px);
+  overflow: auto;
+  background: #fff;
+}
+
+#bookingDialog form,
+#bookingDialog.booking-service form,
+#bookingDialog.booking-befaring form,
+#bookingDialog.booking-reparasjon form,
+#bookingDialog.booking-installasjon form,
+#bookingDialog.booking-blaseisolering form {
+  background: #fff;
+}
+
+.modal-head {
+  position: sticky;
+  z-index: 4;
+  top: -18px;
+  margin: -18px -18px 14px;
+  border-bottom: 1px solid var(--line);
+  padding: 14px 18px 12px;
+  background: #fff;
+}
+
+.modal-head h2 {
+  font-size: 20px;
+}
+
+.modal form > .modal-actions {
+  position: sticky;
+  z-index: 4;
+  bottom: -18px;
+  margin: 14px -18px -18px;
+  border-top: 1px solid var(--line);
+  padding: 12px 18px 16px;
+  background: #fff;
+}
+
+@media (max-width: 760px) {
+  .customer-title h2 {
+    font-size: 21px;
+  }
+
+  .customer-key-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .customer-key-facts > div {
+    min-height: 52px;
+  }
+
+  .customer-action-bar,
+  .job-card .job-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .customer-action-bar > *,
+  .job-card .job-actions > * {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .planning-toolbar {
+    justify-content: stretch;
+  }
+
+  .planning-month-agenda {
+    scroll-margin-top: 8px;
+  }
+
+  .planning-month-agenda-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .modal form {
+    max-height: calc(100dvh - 12px);
+  }
+
+  .modal-head {
+    top: -12px;
+    margin: -12px -12px 12px;
+    padding: 12px;
+  }
+
+  .modal form > .modal-actions {
+    bottom: -12px;
+    margin: 12px -12px -12px;
+    padding: 10px 12px 12px;
   }
 }
 
