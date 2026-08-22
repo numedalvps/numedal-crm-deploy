@@ -1859,6 +1859,37 @@
       if (error) throw error;
       return data;
     },
+    async saveCustomerLocationServiceArea(customerId, locationId, values = {}) {
+      const supabase = await requireClient();
+      if (!isUuid(customerId) || !isUuid(locationId)) throw new Error("Ugyldig anleggsadresse for serviceområde.");
+      const areaKey = String(values.service_area_key || values.serviceAreaKey || "").trim();
+      if (!areaKey) throw new Error("Serviceområde mangler.");
+      const reviewedBy = values.service_area_reviewed_by || values.serviceAreaReviewedBy || "";
+      const patch = {
+        service_area_key: areaKey,
+        service_area_status: "manual",
+        service_area_confidence: 1,
+        service_area_source: String(values.service_area_source || values.serviceAreaSource || "manual_review_worklist"),
+        service_area_classifier_version: String(values.service_area_classifier_version || values.serviceAreaClassifierVersion || "manual-v1"),
+        service_area_evidence: values.service_area_evidence && typeof values.service_area_evidence === "object"
+          ? values.service_area_evidence
+          : {},
+        service_area_reviewed_by: isUuid(reviewedBy) ? reviewedBy : null,
+        service_area_reviewed_at: values.service_area_reviewed_at || values.serviceAreaReviewedAt || new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      let query = supabase
+        .from("customer_locations")
+        .update(patch)
+        .eq("id", locationId)
+        .eq("customer_id", customerId);
+      const expectedUpdatedAt = values.expected_updated_at || values.expectedUpdatedAt || "";
+      if (expectedUpdatedAt) query = query.eq("updated_at", expectedUpdatedAt);
+      const { data, error } = await withDbTimeout(query.select("*").maybeSingle(), "lagre kontrollert serviceområde");
+      if (error) throw error;
+      if (!data) throw new Error("Anleggsadressen er endret i en annen økt. Oppdater siden før du velger område på nytt.");
+      return data;
+    },
     async saveInstallation(customerId, installation) {
       const supabase = await requireClient();
       if (!isUuid(customerId)) throw new Error("Ugyldig kunde for varmepumpe/anlegg.");

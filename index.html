@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260822-01" />
+    <link rel="stylesheet" href="./styles.css?v=20260822-02" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -606,6 +606,28 @@
                 <button id="routeCampaignButton" class="secondary" type="button">Finn servicekunder i området og lag SMS-utkast</button>
                 <small>Bruker området over og lager separate utkast til kontroll. Valgte rutekunder brukes ikke, og ingenting sendes automatisk.</small>
               </div>
+              <details id="serviceAreaReviewDetails" class="service-area-review">
+                <summary>
+                  <span>Adresser som må avklares</span>
+                  <strong id="serviceAreaReviewSummary">Laster oversikt</strong>
+                </summary>
+                <div class="service-area-review-body">
+                  <div class="service-area-review-toolbar">
+                    <label>Søk
+                      <input id="serviceAreaReviewSearch" type="search" placeholder="Kunde, adresse eller sted" autocomplete="off" />
+                    </label>
+                    <label>Vis
+                      <select id="serviceAreaReviewFilter">
+                        <option value="installations">Adresser med aktive anlegg</option>
+                        <option value="vegglifjell">Vegglifjell må deles</option>
+                        <option value="all">Alle uavklarte adresser</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div id="serviceAreaReviewList" class="service-area-review-list"></div>
+                  <button id="serviceAreaReviewMoreButton" class="secondary hidden" type="button">Vis flere</button>
+                </div>
+              </details>
               <details class="route-advanced">
                 <summary>Flere valg</summary>
                 <div class="route-controls">
@@ -1526,11 +1548,11 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260822-01"></script>
-    <script src="./supabase-adapter.js?v=20260822-01"></script>
-    <script src="./intake-parser.js?v=20260822-01"></script>
-    <script src="./assistant-coordinator.js?v=20260822-01"></script>
-    <script src="./app-20260822-01.js"></script>
+    <script src="./supabase-config.js?v=20260822-02"></script>
+    <script src="./supabase-adapter.js?v=20260822-02"></script>
+    <script src="./intake-parser.js?v=20260822-02"></script>
+    <script src="./assistant-coordinator.js?v=20260822-02"></script>
+    <script src="./app-20260822-02.js"></script>
   </body>
 </html>
 
