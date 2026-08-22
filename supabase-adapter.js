@@ -2291,14 +2291,14 @@
           .order("campaign_created_at", { ascending: false })
           .order("status_recorded_at", { ascending: false })
           .limit(200),
-        "laste svar og kapasitet for servicekampanjen",
+        "laste svar og kapasitet for serviceutsendingen",
       );
       if (error) throw error;
       return Array.isArray(data) ? data : [];
     },
     async recordServiceCampaignResponse(memberId, values = {}) {
       const supabase = await requireClient();
-      if (!isUuid(memberId)) throw new Error("Ugyldig servicekampanje-kunde.");
+      if (!isUuid(memberId)) throw new Error("Ugyldig kunde i serviceutsendingen.");
       const expectedRevision = Number(values.expectedRevision || values.expected_revision || 0);
       if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 1) {
         throw new Error("Svarstatusen mangler en gyldig revisjon.");
