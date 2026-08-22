@@ -8033,6 +8033,7 @@ textarea {
 
 .route-advanced,
 .route-calendar-details,
+.service-campaign-tracking,
 .service-area-review {
   border: 1px solid #d7e5e8;
   border-radius: 10px;
@@ -8041,11 +8042,169 @@ textarea {
 
 .route-advanced summary,
 .route-calendar-details summary,
+.service-campaign-tracking > summary,
 .service-area-review > summary {
   cursor: pointer;
   padding: 10px 12px;
   color: var(--teal);
   font-weight: 900;
+}
+
+.service-campaign-tracking > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.service-campaign-tracking > summary strong {
+  color: #475569;
+  font-size: 12px;
+}
+
+.service-campaign-body {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding: 12px;
+}
+
+.service-campaign-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.service-campaign-metrics span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  border: 1px solid #d7e5e8;
+  border-radius: 6px;
+  padding: 5px 8px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.service-campaign-metrics span strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.service-campaign-metrics .capacity.available {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.service-campaign-metrics .capacity.full {
+  border-color: #93c5fd;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.service-campaign-metrics .capacity.over {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.service-campaign-list {
+  display: grid;
+  gap: 8px;
+}
+
+.service-campaign-member {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-left: 4px solid #94a3b8;
+  border-radius: 8px;
+  padding: 10px;
+  background: #fff;
+}
+
+.service-campaign-member.accepted,
+.service-campaign-member.booked {
+  border-left-color: #16a34a;
+}
+
+.service-campaign-member.later {
+  border-left-color: #2563eb;
+}
+
+.service-campaign-member.declined,
+.service-campaign-member.no_reply {
+  border-left-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.service-campaign-member > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.service-campaign-member > header div,
+.service-campaign-member > header strong,
+.service-campaign-member > header span,
+.service-campaign-member > small {
+  min-width: 0;
+}
+
+.service-campaign-member > header strong,
+.service-campaign-member > header span,
+.service-campaign-member > small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.service-campaign-member > header span,
+.service-campaign-member > small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.service-campaign-member > header em {
+  flex: 0 0 auto;
+  border-radius: 6px;
+  padding: 4px 7px;
+  background: #eef2f7;
+  color: #334155;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.service-campaign-controls {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(135px, 1fr));
+  gap: 8px;
+}
+
+.service-campaign-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-items: center;
+}
+
+.service-campaign-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 10px;
+  background: #fff;
+  color: var(--teal);
+  font-size: 12px;
+  font-weight: 900;
+  text-decoration: none;
 }
 
 .service-area-review > summary {
@@ -9529,9 +9688,32 @@ textarea {
 
 .route-campaign-entry {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 10px;
   margin-top: 10px;
+}
+
+.route-lunch-marker {
+  display: block;
+  width: fit-content;
+  margin-top: 8px;
+  border: 1px solid #fbbf24;
+  border-radius: 8px;
+  padding: 4px 8px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.route-campaign-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.route-campaign-actions label {
+  min-width: 112px;
 }
 
 .route-campaign-entry small {
@@ -12784,10 +12966,42 @@ label {
     padding: 10px;
   }
 
+  .service-campaign-tracking > summary,
   .service-area-review > summary {
     align-items: flex-start;
     flex-direction: column;
     gap: 2px;
+  }
+
+  .service-campaign-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .route-campaign-entry,
+  .route-campaign-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .route-campaign-actions label,
+  #routeCampaignButton {
+    width: 100%;
+  }
+
+  .service-campaign-member > header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .service-campaign-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .service-campaign-actions button,
+  .service-campaign-actions a,
+  #serviceCampaignRefreshButton {
+    width: 100%;
   }
 
   .service-area-review-toolbar,

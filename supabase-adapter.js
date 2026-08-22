@@ -2267,6 +2267,56 @@
       }
       return data || {};
     },
+    async listServiceCampaignMembers(filters = {}) {
+      const supabase = await requireClient();
+      const campaignKey = String(filters.campaignKey || filters.campaign_key || "").trim();
+      const areaKey = String(filters.areaKey || filters.area_key || "").trim();
+      const serviceDate = String(filters.serviceDate || filters.service_date || "").trim();
+      const channel = String(filters.channel || "").trim();
+      let query = supabase
+        .from("service_campaign_member_worklist_v1")
+        .select("*")
+        .eq("campaign_status", "active");
+      if (campaignKey) query = query.eq("campaign_key", campaignKey);
+      else {
+        if (!areaKey) return [];
+        query = query.eq("campaign_area_key", areaKey);
+        if (["sms", "email"].includes(channel)) query = query.eq("campaign_channel", channel);
+        query = serviceDate
+          ? query.eq("effective_service_date", serviceDate)
+          : query.is("effective_service_date", null);
+      }
+      const { data, error } = await withDbTimeout(
+        query
+          .order("campaign_created_at", { ascending: false })
+          .order("status_recorded_at", { ascending: false })
+          .limit(200),
+        "laste svar og kapasitet for servicekampanjen",
+      );
+      if (error) throw error;
+      return Array.isArray(data) ? data : [];
+    },
+    async recordServiceCampaignResponse(memberId, values = {}) {
+      const supabase = await requireClient();
+      if (!isUuid(memberId)) throw new Error("Ugyldig servicekampanje-kunde.");
+      const expectedRevision = Number(values.expectedRevision || values.expected_revision || 0);
+      if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 1) {
+        throw new Error("Svarstatusen mangler en gyldig revisjon.");
+      }
+      const { data, error } = await withDbTimeout(
+        supabase.rpc("record_service_campaign_response_v1", {
+          p_member_id: memberId,
+          p_expected_revision: expectedRevision,
+          p_response_status: String(values.responseStatus || values.response_status || "").trim(),
+          p_response_channel: String(values.responseChannel || values.response_channel || "").trim() || null,
+          p_time_preference: String(values.timePreference || values.time_preference || "").trim() || null,
+          p_planned_service_date: String(values.plannedServiceDate || values.planned_service_date || "").trim() || null,
+        }).single(),
+        "lagre kundens svar på serviceforespørselen",
+      );
+      if (error) throw error;
+      return data || null;
+    },
     async prepareAssistantSmsExecution(actionId, payloadHash, recipient) {
       const supabase = await requireClient();
       if (!isUuid(actionId)) throw new Error("Ugyldig SMS-utkast.");

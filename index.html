@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260822-02" />
+    <link rel="stylesheet" href="./styles.css?v=20260822-03" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -597,15 +597,49 @@
                     <option value="0">Ingen ekstra buffer</option>
                   </select>
                 </label>
+                <label>Lunsjstart
+                  <select id="routeLunchStart">
+                    <option value="11:30">11:30</option>
+                    <option value="11:45">11:45</option>
+                    <option value="12:00" selected>12:00</option>
+                    <option value="12:15">12:15</option>
+                    <option value="12:30">12:30</option>
+                  </select>
+                </label>
+                <label>Lunsjvarighet
+                  <select id="routeLunchDuration">
+                    <option value="30" selected>30 min</option>
+                    <option value="45">45 min</option>
+                  </select>
+                </label>
                 <label class="check-label">
                   <input id="routeReturnToOrigin" type="checkbox" checked />
                   Ta med retur til startsted
                 </label>
               </div>
               <div class="route-campaign-entry">
-                <button id="routeCampaignButton" class="secondary" type="button">Finn servicekunder i området og lag SMS-utkast</button>
-                <small>Bruker området over og lager separate utkast til kontroll. Valgte rutekunder brukes ikke, og ingenting sendes automatisk.</small>
+                <div class="route-campaign-actions">
+                  <label>Kanal
+                    <select id="routeCampaignChannel">
+                      <option value="sms">SMS</option>
+                      <option value="email">E-post</option>
+                    </select>
+                  </label>
+                  <button id="routeCampaignButton" class="secondary" type="button">Finn servicekunder og lag SMS-utkast</button>
+                </div>
+                <small>Bruker området og datoen over. Hver kunde får ett separat utkast til kontroll; ingenting sendes eller bookes automatisk.</small>
               </div>
+              <details id="serviceCampaignDetails" class="service-campaign-tracking">
+                <summary>
+                  <span>Svar og kapasitet</span>
+                  <strong id="serviceCampaignSummary">Velg område og dato</strong>
+                </summary>
+                <div class="service-campaign-body">
+                  <div id="serviceCampaignMetrics" class="service-campaign-metrics"></div>
+                  <div id="serviceCampaignList" class="service-campaign-list"></div>
+                  <button id="serviceCampaignRefreshButton" class="secondary" type="button">Oppdater svarlisten</button>
+                </div>
+              </details>
               <details id="serviceAreaReviewDetails" class="service-area-review">
                 <summary>
                   <span>Adresser som må avklares</span>
@@ -1548,11 +1582,11 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260822-02"></script>
-    <script src="./supabase-adapter.js?v=20260822-02"></script>
-    <script src="./intake-parser.js?v=20260822-02"></script>
-    <script src="./assistant-coordinator.js?v=20260822-02"></script>
-    <script src="./app-20260822-02.js"></script>
+    <script src="./supabase-config.js?v=20260822-03"></script>
+    <script src="./supabase-adapter.js?v=20260822-03"></script>
+    <script src="./intake-parser.js?v=20260822-03"></script>
+    <script src="./assistant-coordinator.js?v=20260822-03"></script>
+    <script src="./app-20260822-03.js"></script>
   </body>
 </html>
 
