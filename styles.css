@@ -8035,6 +8035,38 @@ textarea {
   margin-top: 10px;
 }
 
+.service-candidate-toolbar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.service-candidate-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  min-height: 42px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 9px 11px;
+  background: #fff;
+}
+
+.service-candidate-summary strong {
+  color: var(--ink);
+}
+
+.service-candidate-summary span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.service-candidate-help {
+  margin: 7px 0 0;
+}
+
 .route-advanced,
 .route-calendar-details,
 .service-campaign-tracking,
@@ -8367,7 +8399,7 @@ textarea {
   margin-top: 10px;
 }
 
-.route-customer-results button,
+.route-customer-results .route-candidate-card,
 .route-selected-customers article,
 .route-missing-list button {
   display: grid;
@@ -8382,13 +8414,83 @@ textarea {
   text-align: left;
 }
 
-.route-customer-results span,
+.route-customer-results .route-candidate-card.has-open-job {
+  border-color: #93c5fd;
+  background: #f8fbff;
+}
+
+.route-candidate-copy {
+  min-width: 0;
+}
+
+.route-candidate-title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  align-items: center;
+}
+
+.route-candidate-title strong {
+  overflow-wrap: anywhere;
+}
+
+.route-candidate-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  border-radius: 999px;
+  padding: 3px 7px;
+  background: #dcfce7;
+  color: #166534;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.route-candidate-badge.job {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.route-customer-results .route-candidate-copy > span,
 .route-selected-customers span,
 .route-missing-list span {
   display: block;
   margin-top: 3px;
   color: var(--muted);
   font-size: 13px;
+}
+
+.route-candidate-copy small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.route-candidate-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.route-candidate-actions > * {
+  min-height: 38px;
+}
+
+.route-candidate-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 10px;
+  background: #fff;
+  color: var(--teal);
+  font-size: 12px;
+  font-weight: 900;
+  text-decoration: none;
 }
 
 .route-summary {
@@ -11850,7 +11952,8 @@ label {
   .ai-draft-grid,
   .insulation-input-grid,
   .insulation-input-grid.compact,
-  .route-controls {
+  .route-controls,
+  .service-candidate-toolbar {
     grid-template-columns: 1fr;
   }
 
@@ -11983,13 +12086,17 @@ label {
   .ai-attachment-list article,
   .ai-draft-summary,
   .technician-actions,
-  .route-customer-results button,
+  .route-customer-results .route-candidate-card,
   .route-selected-customers article,
   .route-missing-list button,
   .insulation-customer-card,
   .ai-two-cols,
   .insulation-line {
     grid-template-columns: 1fr;
+  }
+
+  .route-candidate-actions {
+    justify-content: flex-start;
   }
 
   .technician-actions input,

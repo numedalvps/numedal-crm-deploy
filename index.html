@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css?v=1.9.4" />
-    <link rel="stylesheet" href="./styles.css?v=20260826-03" />
+    <link rel="stylesheet" href="./styles.css?v=20260826-04" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -560,7 +560,7 @@
               <div class="route-controls primary">
                 <label>Serviceområde
                   <select id="routeArea">
-                    <option value="">Velg område</option>
+                    <option value="">Alle områder</option>
                   </select>
                 </label>
                 <label>Dato ved booking
@@ -663,14 +663,6 @@
               <details class="route-advanced">
                 <summary>Flere valg</summary>
                 <div class="route-controls">
-                  <label>Status
-                    <select id="routeStatus">
-                      <option value="due">Forfalt + aktuell service</option>
-                      <option value="red">Forfalt service</option>
-                      <option value="yellow">Aktuell for service</option>
-                      <option value="green">Neste service senere</option>
-                    </select>
-                  </label>
                   <label>Notatindikasjon (må kontrolleres)
                     <select id="routeReplyFilter">
                       <option value="all">Alle aktuelle</option>
@@ -726,15 +718,48 @@
               </div>
               <div class="section-head">
                 <div>
-                  <h2>Aktuelle kunder</h2>
-                  <p>Appen foreslår rekkefølge når kundene er valgt.</p>
+                  <h2>Servicebehov og jobber</h2>
+                  <p>Filtrer på anlegg, servicedato og område. Appen foreslår rekkefølge når kundene er valgt.</p>
                 </div>
                 <button id="routeClearSelectionButton" class="secondary" type="button">Tøm valgte</button>
               </div>
-              <label>Legg til kunde
-                <input id="routeCustomerSearch" type="search" placeholder="Søk navn, telefon, adresse" autocomplete="off" />
-              </label>
+              <div class="service-candidate-toolbar">
+                <label>Vis
+                  <select id="routeItemFilter">
+                    <option value="all">Servicebehov + åpne jobber</option>
+                    <option value="needs">Anlegg uten åpen jobb</option>
+                    <option value="jobs">Åpne servicejobber</option>
+                  </select>
+                </label>
+                <label>Servicefrist
+                  <select id="routeStatus">
+                    <option value="due">Forfalt + aktuell service</option>
+                    <option value="red">Bare forfalt</option>
+                    <option value="within_30">Forfalt + neste 30 dager</option>
+                    <option value="within_90">Forfalt + neste 90 dager</option>
+                    <option value="within_180">Forfalt + neste 180 dager</option>
+                    <option value="yellow">Aktuell, ikke forfalt</option>
+                    <option value="green">Neste service senere</option>
+                    <option value="missing">Mangler servicedato</option>
+                    <option value="all">Alle servicedatoer</option>
+                  </select>
+                </label>
+                <label>Sorter
+                  <select id="routeSort">
+                    <option value="oldest">Eldste frist først</option>
+                    <option value="nearest">Nærmest dagens dato</option>
+                    <option value="area">Område, så frist</option>
+                    <option value="name">Kunde A-Å</option>
+                  </select>
+                </label>
+                <label>Søk
+                  <input id="routeCustomerSearch" type="search" placeholder="Navn, telefon, adresse eller varmepumpe" autocomplete="off" />
+                </label>
+              </div>
+              <div id="routeCandidateSummary" class="service-candidate-summary" aria-live="polite"></div>
+              <p class="compact-help service-candidate-help">Åpne jobber vises først. Servicefrist gjelder anlegg som ikke allerede har en åpen jobb.</p>
               <div id="routeCustomerResults" class="route-customer-results"></div>
+              <button id="routeCandidateMoreButton" class="secondary hidden" type="button">Vis flere</button>
               <div id="routeSelectedCustomers" class="route-selected-customers"></div>
             </section>
 
@@ -1067,7 +1092,10 @@
           <textarea id="orderPriceLines" rows="4" placeholder="Avtalt varmepumpe, standard montering, varmepumpehus, tillegg eller timer. Skriv egen vare med pris, f.eks. Mitsubishi Kaiteki 29 900. Kan korrigeres ved fullføring."></textarea>
           <div id="orderPriceTotal" class="completion-price-total"></div>
         </details>
-        <label>Notat<textarea id="orderNoteInput" rows="4" placeholder="Hva kunden ringte om, avtalt arbeid, pumpeinfo, adkomst eller annet."></textarea></label>
+        <label class="form-wide">Hva skal gjøres?
+          <textarea id="orderNoteInput" rows="4" placeholder="Beskriv feilen, kontrollen eller arbeidet teknikeren skal utføre."></textarea>
+          <span class="form-hint">Dette gjelder bare denne jobben. Teksten følger jobben til Planning og vises på kundekortet.</span>
+        </label>
         <div class="modal-actions">
           <button class="secondary" id="cancelOrderDialog" type="button">Avbryt</button>
           <button type="submit">Lagre jobb</button>
@@ -1308,7 +1336,10 @@
           <div id="bookingMonthGrid" class="booking-month-grid"></div>
           <div id="bookingDayAgenda" class="booking-day-agenda"></div>
         </section>
-        <label>Notat<textarea id="bookingNote" rows="3"></textarea></label>
+        <label class="form-wide">Hva skal gjøres?
+          <textarea id="bookingNote" rows="3" placeholder="Beskriv feilen, kontrollen eller arbeidet som skal utføres."></textarea>
+          <span class="form-hint">Dette gjelder bare denne jobben. Valgt anlegg, adresse og adkomst legges til automatisk.</span>
+        </label>
         <div class="modal-actions">
           <button class="secondary" id="deleteBookingButton" type="button">Fjern avtale</button>
           <button type="submit">Lagre avtale</button>
@@ -1627,12 +1658,12 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260826-03"></script>
-    <script src="./supabase-adapter.js?v=20260826-03"></script>
-    <script src="./intake-parser.js?v=20260826-03"></script>
-    <script src="./assistant-coordinator.js?v=20260826-03"></script>
-    <script src="./nearby-planning.js?v=20260826-03"></script>
-    <script src="./app-20260826-03.js"></script>
+    <script src="./supabase-config.js?v=20260826-04"></script>
+    <script src="./supabase-adapter.js?v=20260826-04"></script>
+    <script src="./intake-parser.js?v=20260826-04"></script>
+    <script src="./assistant-coordinator.js?v=20260826-04"></script>
+    <script src="./nearby-planning.js?v=20260826-04"></script>
+    <script src="./app-20260826-04.js"></script>
   </body>
 </html>
 

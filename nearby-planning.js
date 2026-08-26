@@ -63,6 +63,59 @@
     return "later";
   }
 
+  function serviceDueDays(value, now = new Date()) {
+    if (!value) return null;
+    const due = new Date(`${String(value).slice(0, 10)}T00:00:00`);
+    if (Number.isNaN(due.getTime())) return null;
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    return Math.round((due - today) / 86400000);
+  }
+
+  function serviceDueMatches(value, filter = "due", now = new Date(), warningDays = 120) {
+    const days = serviceDueDays(value, now);
+    const warning = Math.max(1, Number(warningDays) || 120);
+    if (filter === "all") return true;
+    if (filter === "missing") return days === null;
+    if (days === null) return false;
+    if (filter === "red") return days < 0;
+    if (filter === "yellow") return days >= 0 && days < warning;
+    if (filter === "green") return days >= warning;
+    if (filter === "within_30") return days <= 30;
+    if (filter === "within_90") return days <= 90;
+    if (filter === "within_180") return days <= 180;
+    return days < warning;
+  }
+
+  function sortServiceWorklist(candidates, mode = "oldest", now = new Date()) {
+    const rows = [...(Array.isArray(candidates) ? candidates : [])];
+    const categoryRank = { open_job: 0, service_need: 1 };
+    const dateValue = (candidate) => {
+      const days = serviceDueDays(candidate?.dueDate, now);
+      if (days === null) return Number.POSITIVE_INFINITY;
+      return mode === "nearest" ? Math.abs(days) : days;
+    };
+    return rows.sort((left, right) => {
+      const leftCategory = categoryRank[left?.kind] ?? 9;
+      const rightCategory = categoryRank[right?.kind] ?? 9;
+      if (leftCategory !== rightCategory) return leftCategory - rightCategory;
+      if (mode === "area") {
+        const areaCompare = String(left?.areaLabel || "").localeCompare(String(right?.areaLabel || ""), "nb");
+        if (areaCompare) return areaCompare;
+      }
+      if (mode === "name") {
+        const nameCompare = String(left?.customerName || "").localeCompare(String(right?.customerName || ""), "nb");
+        if (nameCompare) return nameCompare;
+      } else {
+        const leftDate = dateValue(left);
+        const rightDate = dateValue(right);
+        if (leftDate !== rightDate) return leftDate - rightDate;
+      }
+      return String(left?.customerName || left?.label || "")
+        .localeCompare(String(right?.customerName || right?.label || ""), "nb");
+    });
+  }
+
   function pairKey(left, right) {
     return [String(left || "").trim(), String(right || "").trim()].sort().join("::");
   }
@@ -105,6 +158,9 @@
     routeInsertionDetourKm,
     slotFit,
     dueKind,
+    serviceDueDays,
+    serviceDueMatches,
+    sortServiceWorklist,
     prohibitedAreaPair,
     sortCandidates,
   });
