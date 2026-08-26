@@ -2489,7 +2489,7 @@
         "Brukerinvitasjonen tok for lang tid. Prøv igjen.",
         30000,
       );
-      if (error) throw error;
+      if (error) throw new Error(await crmAssistantErrorMessage(error, "Klarte ikke sende brukerinvitasjonen."));
       if (data?.error) throw new Error(data.error);
       return data;
     },
@@ -2503,7 +2503,7 @@
         "Brukerendringen tok for lang tid. Prøv igjen.",
         30000,
       );
-      if (error) throw error;
+      if (error) throw new Error(await crmAssistantErrorMessage(error, "Klarte ikke endre brukeren."));
       if (data?.error) throw new Error(data.error);
       return data;
     },

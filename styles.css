@@ -13682,3 +13682,405 @@ label,
   }
 }
 
+.nearby-jobs-dialog {
+  width: min(760px, calc(100vw - 18px));
+}
+
+.nearby-jobs-panel {
+  padding: 0;
+  overflow: hidden;
+}
+
+.nearby-jobs-head {
+  position: relative;
+  top: 0;
+  margin: 0;
+  padding: 16px 18px 13px;
+}
+
+.nearby-jobs-head > div {
+  min-width: 0;
+}
+
+.nearby-jobs-head h2,
+.nearby-group-head h3,
+.nearby-candidate h4 {
+  margin: 0;
+}
+
+.nearby-jobs-head p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.nearby-jobs-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: end;
+  border-bottom: 1px solid var(--line);
+  padding: 10px 18px;
+  background: #f8fafc;
+}
+
+.nearby-jobs-controls label {
+  display: grid;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.nearby-jobs-controls select {
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 7px 30px 7px 10px;
+  background: #fff;
+  color: var(--ink);
+}
+
+.nearby-jobs-controls .segmented-control {
+  display: inline-flex;
+  gap: 2px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 2px;
+  background: #e8eef1;
+}
+
+.nearby-jobs-controls .segmented-control button {
+  min-height: 34px;
+  border-radius: 6px;
+  padding: 6px 10px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.nearby-jobs-controls .segmented-control button.active {
+  background: #fff;
+  color: var(--teal-dark);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.14);
+}
+
+.nearby-view-toggle {
+  margin-left: auto;
+}
+
+.nearby-jobs-summary {
+  display: grid;
+  gap: 2px;
+  border-bottom: 1px solid var(--line);
+  padding: 10px 18px;
+  background: #fff;
+  font-size: 13px;
+}
+
+.nearby-jobs-summary span {
+  color: var(--muted);
+}
+
+.nearby-jobs-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px 18px 24px;
+  background: #f5f7f8;
+}
+
+.nearby-candidate-group {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.nearby-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px;
+}
+
+.nearby-group-head h3 {
+  font-size: 16px;
+}
+
+.nearby-group-head span {
+  min-width: 26px;
+  border-radius: 999px;
+  padding: 2px 7px;
+  background: #e2e8f0;
+  color: #334155;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.nearby-candidate {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-left: 4px solid #2563a6;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.nearby-candidate.service.overdue {
+  border-left-color: #bd2c2c;
+}
+
+.nearby-candidate.service.soon {
+  border-left-color: #d18300;
+}
+
+.nearby-candidate-heading,
+.nearby-distance-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.nearby-status {
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: #e8eef8;
+  color: #1e4f86;
+  font-weight: 850;
+}
+
+.nearby-status.overdue {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.nearby-status.soon {
+  background: #fff3cd;
+  color: #854d0e;
+}
+
+.nearby-candidate h4 {
+  font-size: 17px;
+}
+
+.nearby-candidate p {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.nearby-candidate .nearby-candidate-title {
+  color: var(--ink);
+  font-weight: 750;
+}
+
+.nearby-installation-list {
+  display: grid;
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  background: #e2e8f0;
+}
+
+.nearby-installation-list > div {
+  display: grid;
+  gap: 1px;
+  padding: 6px 8px;
+  background: #f8fafc;
+}
+
+.nearby-installation-list strong {
+  font-size: 12px;
+}
+
+.nearby-installation-list small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.nearby-candidate-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 3px;
+}
+
+.nearby-candidate-actions a,
+.nearby-candidate-actions button {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 7px 10px;
+  background: #fff;
+  color: var(--teal-dark);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.nearby-candidate-actions .book-primary {
+  border-color: var(--teal);
+  background: var(--teal);
+  color: #fff;
+}
+
+.nearby-jobs-map-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: #e2e8f0;
+}
+
+.nearby-jobs-map {
+  flex: 1;
+  min-height: 500px;
+  background: #dce5e6;
+}
+
+.nearby-map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  border-top: 1px solid var(--line);
+  padding: 8px 12px;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.nearby-map-legend span {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.nearby-map-legend i {
+  width: 11px;
+  height: 11px;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: #94a3b8;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.22);
+}
+
+.nearby-map-legend i.anchor { background: #0f766e; }
+.nearby-map-legend i.open-job { background: #2563a6; }
+.nearby-map-legend i.overdue { background: #bd2c2c; }
+.nearby-map-legend i.soon { background: #d18300; }
+
+.nearby-jobs-map-panel > .form-hint {
+  margin: 0;
+  border-top: 1px solid var(--line);
+  padding: 7px 12px;
+  background: #fff;
+}
+
+.nearby-map-popup {
+  display: grid;
+  gap: 5px;
+  color: var(--ink);
+}
+
+.nearby-map-popup > strong {
+  font-size: 15px;
+}
+
+.nearby-map-popup > span,
+.nearby-map-popup > small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.nearby-map-popup p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.nearby-map-popup .nearby-candidate-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.nearby-map-popup .nearby-candidate-actions > * {
+  width: 100%;
+}
+
+@media (max-width: 760px) {
+  .planning-toolbar > #nearbyJobsOverviewButton {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+
+  .nearby-jobs-dialog {
+    width: 100vw;
+  }
+
+  .nearby-jobs-head {
+    padding: 12px;
+  }
+
+  .nearby-jobs-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    padding: 9px 12px;
+  }
+
+  .nearby-jobs-controls label select,
+  .nearby-jobs-controls .segmented-control {
+    width: 100%;
+  }
+
+  .nearby-jobs-controls .segmented-control button {
+    flex: 1;
+    min-width: 0;
+    padding-inline: 6px;
+  }
+
+  .nearby-view-toggle {
+    grid-column: 1 / -1;
+    margin-left: 0;
+  }
+
+  .nearby-jobs-summary {
+    padding: 9px 12px;
+  }
+
+  .nearby-jobs-list {
+    padding: 10px 12px 20px;
+  }
+
+  .nearby-candidate-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .nearby-candidate-actions > * {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .nearby-jobs-map {
+    min-height: 0;
+  }
+
+  .nearby-map-legend {
+    gap: 5px 10px;
+  }
+}
+

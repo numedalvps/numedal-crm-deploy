@@ -4,7 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
-    <link rel="stylesheet" href="./styles.css?v=20260826-01" />
+    <link rel="stylesheet" href="./vendor/leaflet/leaflet.css?v=1.9.4" />
+    <link rel="stylesheet" href="./styles.css?v=20260826-02" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -505,6 +506,7 @@
                   </select>
                 </label>
                 <button id="todayButton" type="button">I dag</button>
+                <button id="nearbyJobsOverviewButton" class="secondary" type="button" title="Vis åpne jobber og servicebehov på kart rundt valgt dag.">Servicekart</button>
                 <details class="planning-more-tools">
                   <summary aria-label="Flere planvalg" title="Flere planvalg">&#8943;</summary>
                   <div>
@@ -1570,6 +1572,49 @@
       </div>
     </dialog>
 
+    <dialog id="nearbyJobsDialog" class="side-modal nearby-jobs-dialog">
+      <div class="side-panel nearby-jobs-panel">
+        <div class="modal-head nearby-jobs-head">
+          <div>
+            <h2>Jobber i nærheten</h2>
+            <p id="nearbyJobsAnchor"></p>
+          </div>
+          <button id="closeNearbyJobsDialog" type="button" aria-label="Lukk">×</button>
+        </div>
+        <div class="nearby-jobs-controls">
+          <label>Avstand
+            <select id="nearbyJobsRadius">
+              <option value="15">15 km</option>
+              <option value="30">30 km</option>
+              <option value="50" selected>50 km</option>
+              <option value="80">80 km</option>
+              <option value="150">150 km</option>
+            </select>
+          </label>
+          <div class="segmented-control" role="group" aria-label="Sortering">
+            <button id="nearbyJobsSortNearby" class="active" type="button" aria-pressed="true">Nærmest</button>
+            <button id="nearbyJobsSortHome" type="button" aria-pressed="false">På vei hjem</button>
+          </div>
+          <div class="segmented-control nearby-view-toggle" role="tablist" aria-label="Visning">
+            <button id="nearbyJobsListTab" class="active" type="button" role="tab" aria-selected="true">Liste</button>
+            <button id="nearbyJobsMapTab" type="button" role="tab" aria-selected="false">Kart</button>
+          </div>
+        </div>
+        <div id="nearbyJobsSummary" class="nearby-jobs-summary" aria-live="polite"></div>
+        <div id="nearbyJobsList" class="nearby-jobs-list"></div>
+        <section id="nearbyJobsMapPanel" class="nearby-jobs-map-panel hidden" aria-label="Kart med jobber og servicebehov">
+          <div id="nearbyJobsMap" class="nearby-jobs-map"></div>
+          <div class="nearby-map-legend" aria-label="Kartforklaring">
+            <span><i class="anchor"></i>Valgt jobb</span>
+            <span><i class="open-job"></i>Åpen jobb</span>
+            <span><i class="overdue"></i>Service forfalt</span>
+            <span><i class="soon"></i>Service snart</span>
+          </div>
+          <p class="form-hint">Avstand og omvei er luftlinjeestimater. Åpne Google Maps før endelig kjøreplan.</p>
+        </section>
+      </div>
+    </dialog>
+
     <dialog id="customerQuickDialog" class="side-modal">
       <div class="side-panel">
         <div class="modal-head">
@@ -1581,11 +1626,12 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260826-01"></script>
-    <script src="./supabase-adapter.js?v=20260826-01"></script>
-    <script src="./intake-parser.js?v=20260826-01"></script>
-    <script src="./assistant-coordinator.js?v=20260826-01"></script>
-    <script src="./app-20260826-01.js"></script>
+    <script src="./supabase-config.js?v=20260826-02"></script>
+    <script src="./supabase-adapter.js?v=20260826-02"></script>
+    <script src="./intake-parser.js?v=20260826-02"></script>
+    <script src="./assistant-coordinator.js?v=20260826-02"></script>
+    <script src="./nearby-planning.js?v=20260826-02"></script>
+    <script src="./app-20260826-02.js"></script>
   </body>
 </html>
 
