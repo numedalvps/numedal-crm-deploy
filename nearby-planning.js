@@ -34,6 +34,23 @@
     return Math.max(0, viaCandidate - directHome);
   }
 
+  function routeInsertionDetourKm(previous, candidate, next) {
+    const direct = haversineKm(previous, next);
+    const viaCandidate = haversineKm(previous, candidate) + haversineKm(candidate, next);
+    if (!Number.isFinite(direct) || !Number.isFinite(viaCandidate)) return Number.POSITIVE_INFINITY;
+    return Math.max(0, viaCandidate - direct);
+  }
+
+  function slotFit(durationMinutes, slot) {
+    const duration = Math.max(0, Number(durationMinutes) || 0);
+    const available = Math.max(0, Number(slot?.end) - Number(slot?.start));
+    return {
+      durationMinutes: duration,
+      availableMinutes: available,
+      fits: Boolean(duration && available && duration <= available),
+    };
+  }
+
   function dueKind(value, now = new Date(), warningDays = 120) {
     if (!value) return "missing";
     const due = new Date(`${String(value).slice(0, 10)}T00:00:00`);
@@ -85,6 +102,8 @@
   return Object.freeze({
     haversineKm,
     routeHomeDetourKm,
+    routeInsertionDetourKm,
+    slotFit,
     dueKind,
     prohibitedAreaPair,
     sortCandidates,

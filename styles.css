@@ -13765,6 +13765,66 @@ label,
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.14);
 }
 
+.nearby-jobs-slots {
+  display: grid;
+  gap: 7px;
+  border-bottom: 1px solid var(--line);
+  padding: 10px 18px;
+  background: #eef6f4;
+}
+
+.nearby-jobs-slots > strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.nearby-jobs-slots > span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.nearby-jobs-slots > div {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+}
+
+.nearby-jobs-slots button {
+  min-width: 118px;
+  min-height: 44px;
+  display: grid;
+  gap: 1px;
+  flex: 0 0 auto;
+  border: 1px solid #9ebcb6;
+  border-radius: 7px;
+  padding: 5px 10px;
+  background: #fff;
+  color: var(--ink);
+  text-align: left;
+}
+
+.nearby-jobs-slots button span {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.nearby-jobs-slots button small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.nearby-jobs-slots button.active {
+  border-color: var(--teal);
+  background: var(--teal);
+  color: #fff;
+}
+
+.nearby-jobs-slots button.active small {
+  color: #dff6f1;
+}
+
 .nearby-view-toggle {
   margin-left: auto;
 }
@@ -13848,6 +13908,16 @@ label,
   color: var(--muted);
   font-size: 12px;
   font-weight: 650;
+}
+
+.nearby-slot-fit.fits {
+  color: #166534;
+  font-weight: 750;
+}
+
+.nearby-slot-fit.too-long {
+  color: #9a3412;
+  font-weight: 750;
 }
 
 .nearby-status {
@@ -13936,6 +14006,14 @@ label,
   border-color: var(--teal);
   background: var(--teal);
   color: #fff;
+}
+
+.nearby-candidate-actions .slot-too-short:disabled {
+  border-color: #e5c0aa;
+  background: #fff7ed;
+  color: #9a3412;
+  cursor: not-allowed;
+  opacity: 1;
 }
 
 .nearby-jobs-map-panel {
@@ -14058,6 +14136,10 @@ label,
   }
 
   .nearby-jobs-summary {
+    padding: 9px 12px;
+  }
+
+  .nearby-jobs-slots {
     padding: 9px 12px;
   }
 
