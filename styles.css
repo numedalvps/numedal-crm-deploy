@@ -6373,15 +6373,11 @@ textarea {
 .customer-more-sections > div {
   display: grid;
   gap: 10px;
-  max-height: min(560px, 62vh);
-  overflow: auto;
-  overscroll-behavior: contain;
   border-top: 1px solid var(--line);
   padding: 10px;
   background: #f8fafc;
 }
 
-.embedded-customer-details > div,
 .customer-warning-group > div {
   max-height: min(440px, 58vh);
 }
@@ -6846,6 +6842,24 @@ textarea {
   font-weight: 900;
 }
 
+.activity-timeline-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.customer-history-status {
+  color: #166534;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.customer-history-status.loading {
+  color: var(--muted);
+}
+
 .activity-timeline-toggle {
   justify-self: start;
 }
@@ -6984,6 +6998,18 @@ textarea {
   font-size: 12px;
   font-style: normal;
   font-weight: 900;
+}
+
+.expandable-expanded-label {
+  display: none;
+}
+
+.expandable-text[open] .expandable-collapsed-label {
+  display: none;
+}
+
+.expandable-text[open] .expandable-expanded-label {
+  display: inline;
 }
 
 .expandable-text[open] > summary em {
