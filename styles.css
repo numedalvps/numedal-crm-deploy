@@ -14205,8 +14205,8 @@ label,
 
 .nearby-map-status-bar {
   min-height: 39px;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(180px, auto) minmax(140px, 1fr) auto;
   gap: 5px 12px;
   align-items: center;
   border-bottom: 1px solid var(--line);
@@ -14222,7 +14222,9 @@ label,
 }
 
 #nearbyJobsMapLoadStatus {
-  margin-left: auto;
+  min-width: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
 }
 
 #nearbyJobsMapLoadStatus[data-kind="ready"] {
@@ -14240,6 +14242,130 @@ label,
   border-radius: 6px;
   padding: 4px 8px;
   font-size: 12px;
+  white-space: nowrap;
+}
+
+.nearby-map-route-context {
+  display: grid;
+  gap: 7px;
+  border-bottom: 1px solid var(--line);
+  padding: 8px 12px;
+  background: #f8fafc;
+}
+
+.nearby-map-route-head {
+  min-width: 0;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nearby-map-route-head > div:first-child {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.nearby-map-route-head strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.nearby-map-route-head span {
+  color: var(--muted);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.nearby-map-fit-actions {
+  display: inline-flex;
+  gap: 2px;
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 2px;
+  background: #e8eef1;
+}
+
+.nearby-map-fit-actions button {
+  min-height: 30px;
+  border-radius: 5px;
+  padding: 4px 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.nearby-map-fit-actions button.active {
+  background: #fff;
+  color: var(--teal-dark);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.14);
+}
+
+.nearby-map-day-route {
+  display: flex;
+  gap: 5px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+}
+
+.nearby-map-day-route button,
+.nearby-map-day-route .nearby-route-slot {
+  min-width: 112px;
+  min-height: 38px;
+  display: grid;
+  gap: 1px;
+  flex: 0 0 auto;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 5px 7px;
+  background: #fff;
+  color: var(--ink);
+  text-align: left;
+}
+
+.nearby-map-day-route button:hover,
+.nearby-map-day-route button:focus-visible {
+  border-color: var(--teal);
+  background: #f0fdfa;
+}
+
+.nearby-map-day-route button.current {
+  border-color: var(--teal);
+  background: #e8f6f3;
+}
+
+.nearby-map-day-route button.missing-point {
+  border-style: dashed;
+  color: var(--muted);
+}
+
+.nearby-map-day-route strong,
+.nearby-map-day-route span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nearby-map-day-route strong {
+  font-size: 11px;
+}
+
+.nearby-map-day-route span {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.nearby-map-day-route .nearby-route-slot {
+  border-color: #9ebcb6;
+  background: #eef8f6;
+  color: var(--teal-dark);
+}
+
+.nearby-map-day-route .nearby-route-slot strong {
+  color: var(--teal-dark);
 }
 
 .nearby-jobs-map {
@@ -14278,10 +14404,77 @@ label,
 .nearby-map-legend i.open-job { background: #2563a6; }
 .nearby-map-legend i.overdue { background: #bd2c2c; }
 .nearby-map-legend i.soon { background: #d18300; }
+.nearby-map-legend i.day-job {
+  width: 17px;
+  height: 17px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-color: #0f766e;
+  border-radius: 5px;
+  background: #fff;
+  color: #0f766e;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 900;
+}
 .nearby-map-legend i.approximate {
   border-color: #475569;
   border-style: dashed;
   background: rgba(209, 131, 0, 0.45);
+}
+
+.nearby-day-div-icon {
+  border: 0;
+  background: transparent;
+}
+
+.nearby-day-marker {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-content: center;
+  border: 3px solid #0f766e;
+  border-radius: 10px;
+  background: #fff;
+  color: #0f3f3a;
+  box-shadow: 0 2px 7px rgba(15, 23, 42, 0.3);
+  line-height: 1;
+  text-align: center;
+}
+
+.nearby-day-marker strong {
+  font-size: 15px;
+}
+
+.nearby-day-marker small {
+  margin-top: 2px;
+  font-size: 9px;
+  font-weight: 850;
+}
+
+.nearby-day-marker.current {
+  border-color: #fff;
+  background: #0f766e;
+  color: #fff;
+  box-shadow: 0 0 0 3px #0f766e, 0 3px 9px rgba(15, 23, 42, 0.34);
+}
+
+.nearby-day-marker.approximate {
+  border-style: dashed;
+}
+
+.nearby-day-tooltip {
+  border: 1px solid #0f766e;
+  border-radius: 5px;
+  color: #0f3f3a;
+  font-size: 11px;
+  font-weight: 800;
+  box-shadow: 0 2px 7px rgba(15, 23, 42, 0.18);
+}
+
+.nearby-map-route-line {
+  stroke-linecap: round;
 }
 
 .nearby-jobs-map-panel > .form-hint {
@@ -14392,6 +14585,29 @@ label,
 
 .nearby-map-popup .nearby-candidate-actions > * {
   width: 100%;
+}
+
+.nearby-map-more {
+  border-top: 1px solid var(--line);
+  padding-top: 5px;
+}
+
+.nearby-map-more summary {
+  cursor: pointer;
+  color: var(--teal-dark);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.nearby-map-more[open] {
+  display: grid;
+  gap: 5px;
+}
+
+.nearby-jobs-map .leaflet-popup-content-wrapper {
+  max-height: min(440px, calc(100vh - 220px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .nearby-map-group-popup > p {
@@ -14505,6 +14721,18 @@ label,
     overflow-y: auto;
   }
 
+  .nearby-jobs-dialog.map-active .nearby-jobs-slots,
+  .nearby-jobs-dialog.map-active .nearby-jobs-summary {
+    display: none;
+  }
+
+  .nearby-jobs-dialog.map-active .nearby-jobs-head p {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
   .nearby-jobs-dialog.map-active .nearby-jobs-map-panel {
     min-height: 610px;
     flex: 0 0 auto;
@@ -14516,18 +14744,47 @@ label,
   }
 
   .nearby-map-status-bar {
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: flex-start;
     padding-inline: 10px;
   }
 
   #nearbyJobsMapLoadStatus {
-    width: 100%;
-    order: 3;
-    margin-left: 0;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    text-align: left;
   }
 
   .nearby-map-status-bar button {
-    margin-left: auto;
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .nearby-map-route-context {
+    padding-inline: 10px;
+  }
+
+  .nearby-map-route-head {
+    display: grid;
+  }
+
+  .nearby-map-fit-actions {
+    width: 100%;
+  }
+
+  .nearby-map-fit-actions button {
+    min-width: 0;
+    flex: 1;
+    padding-inline: 4px;
+  }
+
+  .nearby-map-day-route button,
+  .nearby-map-day-route .nearby-route-slot {
+    min-width: 104px;
+  }
+
+  .nearby-jobs-map .leaflet-popup-content-wrapper {
+    max-height: 260px;
   }
 
   .nearby-map-legend {
