@@ -27,6 +27,54 @@
     return 2 * radiusKm * Math.asin(Math.sqrt(value));
   }
 
+  function distancePrecision(anchor, candidate) {
+    const anchorArea = String(anchor?.areaKey || "").trim();
+    const candidateArea = String(candidate?.areaKey || "").trim();
+    const anchorQuality = String(anchor?.pointQuality || anchor?.quality || "").trim();
+    const candidateQuality = String(candidate?.pointQuality || candidate?.quality || "").trim();
+    if (
+      anchorArea
+      && anchorArea === candidateArea
+      && anchorQuality !== "exact"
+      && candidateQuality !== "exact"
+    ) return "same_area";
+    if (anchorQuality === "exact" && candidateQuality === "exact") return "exact";
+    return "approximate";
+  }
+
+  function norwegianNumber(value, decimals) {
+    return Number(value).toFixed(decimals).replace(".", ",");
+  }
+
+  function formatDistanceKm(value, precision = "approximate") {
+    const distance = Number(value);
+    if (!Number.isFinite(distance)) return "Ukjent avstand";
+    if (precision === "same_area") return "Samme serviceområde · eksakt avstand mangler";
+    if (distance < 0.005) return precision === "exact" ? "Samme kartpunkt" : "Samme omtrentlige kartpunkt";
+    if (distance < 1) {
+      const meters = precision === "exact"
+        ? Math.max(10, Math.round(distance * 1000 / 10) * 10)
+        : Math.max(100, Math.round(distance * 1000 / 100) * 100);
+      return precision === "exact"
+        ? `${meters} m luftlinje`
+        : `ca. ${meters} m mellom kartpunkt`;
+    }
+    const formatted = norwegianNumber(distance, distance < 10 ? 1 : 0);
+    return precision === "exact"
+      ? `${formatted} km luftlinje`
+      : `ca. ${formatted} km mellom kartpunkt`;
+  }
+
+  function serviceVisitMessage({ name = "", area = "området ditt", date = "", equipment = "varmepumpen" } = {}) {
+    const customerName = String(name || "").trim();
+    const serviceArea = String(area || "området ditt").trim();
+    const serviceDate = String(date || "").trim();
+    const serviceEquipment = String(equipment || "varmepumpen").trim();
+    const greeting = customerName ? `Hei ${customerName}.` : "Hei.";
+    const when = serviceDate ? ` ${serviceDate}` : "";
+    return `${greeting} Vi planlegger service i ${serviceArea}${when} og samler flere jobber for å redusere reisekostnaden. Ønsker du service på ${serviceEquipment} denne dagen? Du trenger ikke være til stede hvis vi får nøkkel eller nøkkelbokskode. Vi kommer tilbake med ca. tidspunkt. Mvh Gunnar, Numedal Varmepumpeservice`;
+  }
+
   function routeHomeDetourKm(anchor, candidate, home) {
     const directHome = haversineKm(anchor, home);
     const viaCandidate = haversineKm(anchor, candidate) + haversineKm(candidate, home);
@@ -154,6 +202,9 @@
 
   return Object.freeze({
     haversineKm,
+    distancePrecision,
+    formatDistanceKm,
+    serviceVisitMessage,
     routeHomeDetourKm,
     routeInsertionDetourKm,
     slotFit,
