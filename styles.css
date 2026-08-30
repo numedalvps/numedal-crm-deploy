@@ -4837,6 +4837,100 @@ textarea {
   color: #991b1b;
 }
 
+.order-badge.priority.p0,
+.nearby-status.priority-p0,
+.route-candidate-badge.priority-p0 {
+  background: #b91c1c;
+  color: #fff;
+}
+
+.order-badge.priority.p1,
+.nearby-status.priority-p1,
+.route-candidate-badge.priority-p1 {
+  background: #f59e0b;
+  color: #422006;
+}
+
+.order-badge.priority.p2,
+.nearby-status.priority-p2,
+.route-candidate-badge.priority-p2 {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.order-priority-panel {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0;
+  border: 1px solid #cbd5e1;
+  border-left: 5px solid #64748b;
+  border-radius: 8px;
+  padding: 11px 12px;
+  background: #f8fafc;
+}
+
+.order-priority-panel.priority-p0 {
+  border-left-color: #b91c1c;
+  background: #fff7f7;
+}
+
+.order-priority-panel.priority-p1 {
+  border-left-color: #f59e0b;
+  background: #fffbeb;
+}
+
+.order-priority-summary {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.order-priority-summary > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.order-priority-summary strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.order-priority-summary span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.order-priority-panel summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--teal);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.order-priority-editor {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(240px, 1.2fr) auto;
+  gap: 8px;
+  align-items: end;
+  margin-top: 8px;
+}
+
+.order-priority-editor label {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.order-priority-editor select,
+.order-priority-editor input {
+  width: 100%;
+  min-width: 0;
+}
+
 .job-flow {
   display: grid;
   gap: 10px;
@@ -7092,6 +7186,78 @@ textarea {
   line-height: 1.45;
 }
 
+.eaccounting-integration-section .section-head {
+  align-items: flex-start;
+}
+
+.integration-status-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  padding: 5px 10px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.integration-status-badge.connected {
+  border-color: #f0c36a;
+  background: #fff8e6;
+  color: #7a4a00;
+}
+
+.integration-status-badge.ready {
+  border-color: #8fd6c7;
+  background: #ecfdf5;
+  color: #096b5d;
+}
+
+.integration-status-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.integration-status-list span {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.integration-status-list strong {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.integration-status-error,
+.integration-status-note {
+  margin: 8px 0;
+  color: #7a4a00;
+  font-size: 13px;
+}
+
+.integration-status-error {
+  color: var(--danger);
+}
+
+@media (max-width: 720px) {
+  .integration-status-list {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .integration-status-badge {
+    white-space: normal;
+  }
+}
+
 .offer-template-editor-list {
   display: grid;
   gap: 8px;
@@ -7224,6 +7390,35 @@ textarea {
 
 .product-catalog-actions {
   margin-top: 12px;
+}
+
+.product-catalog-browser {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.product-catalog-browser > summary {
+  cursor: pointer;
+  padding: 11px 12px;
+  color: var(--teal);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.product-catalog-browser[open] > summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.product-catalog-browser .product-catalog-toolbar,
+.product-catalog-browser .product-catalog-list {
+  margin-right: 10px;
+  margin-left: 10px;
+}
+
+.product-catalog-browser .product-catalog-list {
+  margin-bottom: 10px;
 }
 
 .settings-grid h3 {
@@ -14072,6 +14267,22 @@ label,
 .nearby-status.soon {
   background: #fff3cd;
   color: #854d0e;
+}
+
+.nearby-priority-reason {
+  color: #475569 !important;
+  font-size: 12px !important;
+  font-weight: 750;
+}
+
+@media (max-width: 720px) {
+  .order-priority-editor {
+    grid-template-columns: 1fr;
+  }
+
+  .order-priority-editor button {
+    width: 100%;
+  }
 }
 
 .nearby-candidate h4 {

@@ -920,6 +920,7 @@
       billing_status: billingStatusForJob(billingStatus),
       payment_status: paymentStatusForJob(billingStatus),
       description: order.note || null,
+      priority: order.priority || order.job_priority || existingJob?.priority || "normal",
       source_table: "orders",
       source_id: orderId,
       completed_at: dateToTimestamp(order.completedAt || order.completed_at),
@@ -1369,6 +1370,20 @@
     return data;
   }
 
+  async function invokeEaccountingFunction(functionName, body, timeoutMs = 30000) {
+    const allowedFunctions = new Set(["eaccounting-auth", "eaccounting-draft"]);
+    if (!allowedFunctions.has(functionName)) throw new Error("Ugyldig eAccounting-funksjon.");
+    const supabase = await requireClient();
+    const { data, error } = await withTimeout(
+      supabase.functions.invoke(functionName, { body: body || {} }),
+      "eAccounting svarte ikke innen tidsfristen. Ingen faktura er sendt.",
+      timeoutMs,
+    );
+    if (error) throw new Error(await crmAssistantErrorMessage(error, "eAccounting svarte ikke."));
+    if (data?.error || data?.ok !== true) throw new Error(String(data?.error || "eAccounting returnerte ikke en gyldig kvittering."));
+    return data;
+  }
+
   window.NumedalStore = {
     isConfigured,
     client,
@@ -1516,7 +1531,7 @@
         () => includeHistory
           ? supabase.from("activities").select("*").neq("activity_type", "email_history").order("occurred_at", { ascending: false }).limit(1000)
           : Promise.resolve({ data: null, error: null }),
-        () => supabase.from("jobs").select("*").neq("work_status", "cancelled").order("updated_at", { ascending: false }).limit(2000),
+        () => supabase.from("job_priority_worklist_v1").select("*").neq("work_status", "cancelled").order("updated_at", { ascending: false }).limit(2000),
         () => supabase.from("appointments").select("*").neq("status", "cancelled").order("start_at", { ascending: true }).limit(2000),
         () => supabase.from("access_notes").select("*").eq("active", true).order("updated_at", { ascending: false }).limit(2000),
         () => supabase.from("website_submissions").select("*").order("received_at", { ascending: false }).limit(200),
@@ -1718,6 +1733,31 @@
       const supabase = await requireClient();
       if (!isUuid(id)) throw new Error("Kan ikke opprette jobbspeil for ordre uten database-id.");
       return syncJobForOrder(supabase, id, { ...order, id });
+    },
+    async overrideJobPriority(jobId, options = {}) {
+      const supabase = await requireClient();
+      if (!isUuid(jobId)) throw new Error("Ugyldig jobb.");
+      const priorityClass = String(options.priorityClass || "").toUpperCase();
+      const clear = Boolean(options.clear);
+      const reason = String(options.reason || "").trim();
+      const expectedUpdatedAt = options.expectedUpdatedAt || null;
+      const { data, error } = await withDbTimeout(
+        supabase.rpc("override_job_priority_v1", {
+          p_job_id: jobId,
+          p_priority_class: clear ? null : priorityClass,
+          p_reason: reason,
+          p_expected_job_updated_at: expectedUpdatedAt,
+          p_clear: clear,
+        }),
+        clear ? "fjerne prioritetsstyring" : "endre jobbprioritet",
+      );
+      if (error) throw error;
+      const { data: refreshed, error: refreshError } = await withDbTimeout(
+        supabase.from("job_priority_worklist_v1").select("*").eq("id", jobId).single(),
+        "laste oppdatert jobbprioritet",
+      );
+      if (refreshError) throw refreshError;
+      return { event: data, job: refreshed };
     },
     async deleteOrder(id) {
       const supabase = await requireClient();
@@ -2395,6 +2435,64 @@
     },
     async crmAssistant(payload = {}) {
       return invokeCrmAssistant(payload);
+    },
+    async getEaccountingConnectionStatus() {
+      return invokeEaccountingFunction("eaccounting-auth", { action: "status" });
+    },
+    async getEaccountingDraftStatus() {
+      return invokeEaccountingFunction("eaccounting-draft", { action: "status" });
+    },
+    async startEaccountingConnection(options = {}) {
+      return invokeEaccountingFunction("eaccounting-auth", {
+        action: "start",
+        redirect_after: String(options.redirectAfter || options.redirect_after || "/?view=settings"),
+      });
+    },
+    async createEaccountingDraft(actionId, options = {}) {
+      if (!isUuid(actionId)) throw new Error("Ugyldig fakturagrunnlag.");
+      const clientEventId = String(options.clientEventId || options.client_event_id || "").trim();
+      if (!isUuid(clientEventId)) throw new Error("eAccounting-forsøket mangler en gyldig klient-id.");
+      const authorizationMode = String(
+        options.authorizationMode || options.authorization_mode || "direct_gunnar_instruction",
+      ).trim().toLowerCase();
+      if (!["direct_gunnar_instruction", "completed_billable_job"].includes(authorizationMode)) {
+        throw new Error("Ugyldig intern autorisasjon for fakturautkast.");
+      }
+      return invokeEaccountingFunction("eaccounting-draft", {
+        action: "create_draft",
+        assistant_action_id: actionId,
+        client_event_id: clientEventId,
+        authorization_mode: authorizationMode,
+      }, 90000);
+    },
+    async prepareCompletedJobInvoiceAction(jobId, values = {}) {
+      const supabase = await requireClient();
+      if (!isUuid(jobId)) throw new Error("Ugyldig jobb for automatisk fakturagrunnlag.");
+      const completedOn = String(values.completedOn || values.completed_on || "").trim();
+      const clientEventId = String(values.clientEventId || values.client_event_id || "").trim();
+      const payload = values.payload && typeof values.payload === "object" && !Array.isArray(values.payload)
+        ? values.payload
+        : {};
+      const blockers = Array.isArray(values.blockers) ? values.blockers.filter(Boolean) : [];
+      if (!/^20\d{2}-\d{2}-\d{2}$/.test(completedOn)) {
+        throw new Error("Fakturagrunnlaget mangler dokumentert fullføringsdato.");
+      }
+      if (!isUuid(clientEventId)) throw new Error("Fakturagrunnlaget mangler en gyldig klient-id.");
+      const { data, error } = await withDbTimeout(
+        supabase.rpc("prepare_completed_job_invoice_action_v1", {
+          p_job_id: jobId,
+          p_completed_on: completedOn,
+          p_body: String(values.body || "").trim(),
+          p_payload: payload,
+          p_blockers: blockers,
+          p_confidence: Number.isFinite(Number(values.confidence)) ? Number(values.confidence) : 0.55,
+          p_client_event_id: clientEventId,
+        }),
+        "klargjøre automatisk fakturagrunnlag",
+        30000,
+      );
+      if (error) throw error;
+      return data || {};
     },
     async listCrmAssistantThreads(context = {}) {
       return invokeCrmAssistant({ action: "list_threads", context });

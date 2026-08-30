@@ -1864,6 +1864,12 @@
     const booking = context.booking || {};
     const order = context.order || {};
     const body = String(context.billingText || "").trim();
+    const invoiceLines = Array.isArray(context.invoiceLines) ? context.invoiceLines : [];
+    const invoiceLineBlockers = Array.isArray(context.invoiceLineBlockers) ? context.invoiceLineBlockers.filter(Boolean) : [];
+    const expectedTotalInclVat = Number(context.expectedTotalInclVat);
+    const invoiceAddress = context.invoiceAddress || {};
+    const deliveryAddress = context.deliveryAddress || {};
+    const jobId = context.jobId || order.job_id || order.jobId || null;
     const customerName = String(customer.name || customer.display_name || "").trim();
     const customerEmail = String(customer.email || "").trim();
     const customerPhone = String(customer.phone || customer.mobile || "").trim();
@@ -1872,27 +1878,44 @@
     if (!customerName) blockers.push("Mangler kundenavn");
     if (!customerEmail) blockers.push("Kundekortet mangler e-postadresse");
     if (!body || /mangler prislinjer/i.test(body)) blockers.push("Prislinjer må kontrolleres");
+    if (!jobId) blockers.push("Mangler koblet jobb");
+    if (!invoiceLines.length) blockers.push("Mangler strukturerte varelinjer");
+    if (!Number.isFinite(expectedTotalInclVat) || expectedTotalInclVat <= 0) blockers.push("Summen må kontrolleres");
+    blockers.push(...invoiceLineBlockers);
     return {
-      version: "2026-08-07-1",
+      version: "2026-08-21-1",
       actionType: "invoice_draft",
       channel: "internal",
       title: `Fakturautkast - ${customerName || "kunde"}`,
       body,
       customerId: customer.id || null,
       orderId: order.id || null,
-      jobId: order.job_id || order.jobId || null,
+      jobId,
       payload: {
         createCustomerIfMissing: true,
         customerName: customerName || null,
         customerEmail: customerEmail || null,
         customerPhone: customerPhone || null,
         organizationNumber: organizationNumber || null,
+        eaccountingCustomerNumber: String(context.eaccountingCustomerNumber || "").trim() || null,
+        invoiceStreet: String(invoiceAddress.street || "").trim() || null,
+        invoiceStreet2: String(invoiceAddress.street2 || "").trim() || null,
+        invoicePostalCode: String(invoiceAddress.postalCode || "").trim() || null,
+        invoiceCity: String(invoiceAddress.city || "").trim() || null,
+        deliveryStreet: String(deliveryAddress.street || "").trim() || null,
+        deliveryStreet2: String(deliveryAddress.street2 || "").trim() || null,
+        deliveryPostalCode: String(deliveryAddress.postalCode || "").trim() || null,
+        deliveryCity: String(deliveryAddress.city || "").trim() || null,
         bookingId: booking.id || null,
+        orderId: order.id || null,
+        jobId,
         jobType: order.type || booking.type || null,
+        invoiceLines,
+        expectedTotalInclVat: Number.isFinite(expectedTotalInclVat) ? expectedTotalInclVat : null,
         billingStatusAfterDraft: "exported",
       },
-      blockers,
-      readyForApproval: blockers.length === 0,
+      blockers: [...new Set(blockers)],
+      readyForApproval: [...new Set(blockers)].length === 0,
       needsReview: true,
     };
   }

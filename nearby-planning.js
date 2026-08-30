@@ -144,6 +144,9 @@
       return mode === "nearest" ? Math.abs(days) : days;
     };
     return rows.sort((left, right) => {
+      const leftPriority = candidatePriorityRank(left);
+      const rightPriority = candidatePriorityRank(right);
+      if (leftPriority !== rightPriority) return leftPriority - rightPriority;
       const leftCategory = categoryRank[left?.kind] ?? 9;
       const rightCategory = categoryRank[right?.kind] ?? 9;
       if (leftCategory !== rightCategory) return leftCategory - rightCategory;
@@ -182,7 +185,20 @@
   function sortCandidates(candidates, mode = "nearby") {
     const categoryRank = { open_job: 0, service: 1 };
     const dueRank = { overdue: 0, soon: 1, later: 2, missing: 3 };
+    const timestamp = (value, missing = Number.POSITIVE_INFINITY) => {
+      const parsed = Date.parse(String(value || ""));
+      return Number.isFinite(parsed) ? parsed : missing;
+    };
     return [...(Array.isArray(candidates) ? candidates : [])].sort((left, right) => {
+      const leftPriority = candidatePriorityRank(left);
+      const rightPriority = candidatePriorityRank(right);
+      if (leftPriority !== rightPriority) return leftPriority - rightPriority;
+      const leftDueAt = timestamp(left?.priorityDueAt || left?.dueDate);
+      const rightDueAt = timestamp(right?.priorityDueAt || right?.dueDate);
+      if (leftDueAt !== rightDueAt) return leftDueAt - rightDueAt;
+      const leftWaitSince = timestamp(left?.priorityWaitSince || left?.createdAt || left?.created_at);
+      const rightWaitSince = timestamp(right?.priorityWaitSince || right?.createdAt || right?.created_at);
+      if (leftWaitSince !== rightWaitSince) return leftWaitSince - rightWaitSince;
       const leftCategory = categoryRank[left?.kind] ?? 9;
       const rightCategory = categoryRank[right?.kind] ?? 9;
       if (leftCategory !== rightCategory) return leftCategory - rightCategory;
@@ -200,6 +216,15 @@
     });
   }
 
+  function candidatePriorityRank(candidate) {
+    const explicit = Number(candidate?.priorityRank);
+    if (Number.isFinite(explicit)) return explicit;
+    const priorityClass = String(candidate?.priorityClass || "").toUpperCase();
+    if (priorityClass === "P0") return 0;
+    if (priorityClass === "P1") return 1;
+    return 2;
+  }
+
   return Object.freeze({
     haversineKm,
     distancePrecision,
@@ -213,6 +238,7 @@
     serviceDueMatches,
     sortServiceWorklist,
     prohibitedAreaPair,
+    candidatePriorityRank,
     sortCandidates,
   });
 });
