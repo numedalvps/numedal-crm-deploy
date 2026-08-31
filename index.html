@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css?v=1.9.4" />
-    <link rel="stylesheet" href="./styles.css?v=20260831-02" />
+    <link rel="stylesheet" href="./styles.css?v=20260831-03" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -625,6 +625,7 @@
                     <select id="routeCampaignChannel">
                       <option value="sms">SMS</option>
                       <option value="email">E-post</option>
+                      <option value="both">E-post og SMS</option>
                     </select>
                   </label>
                   <button id="routeCampaignButton" class="secondary" type="button">Finn servicekunder og lag SMS-utkast</button>
@@ -1364,8 +1365,8 @@
           <select id="completionInstallation"></select>
         </label>
         <div class="form-grid">
-          <label>Utført dato<input id="completionDoneDate" type="date" required /></label>
-          <label>Neste steg
+          <label id="completionDoneDateLabel"><span>Utført dato</span><input id="completionDoneDate" type="date" required /></label>
+          <label id="completionNextActionLabel"><span>Neste steg</span>
             <select id="completionNextAction"></select>
           </label>
           <label id="completionIntervalLabel">Serviceintervall
@@ -1413,15 +1414,46 @@
           <div id="completionPriceTotal" class="completion-price-total"></div>
         </details>
         <section id="completionAttachmentSection" class="completion-attachment-section hidden">
-          <label>Bilder / vedlegg
+          <label><span id="completionAttachmentLabel">Bilder / vedlegg</span>
             <input id="completionAttachments" type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif,application/pdf" multiple />
           </label>
           <div id="completionAttachmentList" class="completion-attachment-list"></div>
         </section>
-        <label>Notat<textarea id="completionNote" rows="3"></textarea></label>
+        <label id="completionNoteLabel"><span>Notat</span><textarea id="completionNote" rows="3"></textarea></label>
         <div class="modal-actions">
           <button class="secondary" id="cancelCompletionButton" type="button">Avbryt</button>
           <button id="completionSubmitButton" type="submit">Fullfør</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="serviceOutreachDialog" class="modal compact-modal service-outreach-dialog">
+      <form id="serviceOutreachForm" method="dialog">
+        <div class="modal-head">
+          <h2>Spør om service</h2>
+          <button id="closeServiceOutreachDialog" type="button" aria-label="Lukk">×</button>
+        </div>
+        <div id="serviceOutreachDialogMessage" class="dialog-message hidden"></div>
+        <div id="serviceOutreachSummary" class="completion-summary"></div>
+        <label>Foreslått servicedag
+          <input id="serviceOutreachDate" type="date" required />
+        </label>
+        <fieldset class="service-outreach-channels">
+          <legend>Lag utkast i</legend>
+          <label class="check-row compact">
+            <input id="serviceOutreachEmail" type="checkbox" />
+            <span>E-post</span>
+          </label>
+          <label class="check-row compact">
+            <input id="serviceOutreachSms" type="checkbox" />
+            <span>SMS</span>
+          </label>
+        </fieldset>
+        <section id="serviceOutreachPreview" class="service-outreach-preview" aria-live="polite"></section>
+        <p class="form-hint">Utkastene knyttes til riktig kunde, anlegg og dato og legges i Til kontroll. Ingenting sendes eller bookes automatisk.</p>
+        <div class="modal-actions">
+          <button class="secondary" id="cancelServiceOutreachButton" type="button">Avbryt</button>
+          <button id="saveServiceOutreachButton" type="submit">Lag utkast</button>
         </div>
       </form>
     </dialog>
@@ -1684,12 +1716,12 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260831-02"></script>
-    <script src="./supabase-adapter.js?v=20260831-02"></script>
-    <script src="./intake-parser.js?v=20260831-02"></script>
-    <script src="./assistant-coordinator.js?v=20260831-02"></script>
-    <script src="./nearby-planning.js?v=20260831-02"></script>
-    <script src="./app-20260831-02.js"></script>
+    <script src="./supabase-config.js?v=20260831-03"></script>
+    <script src="./supabase-adapter.js?v=20260831-03"></script>
+    <script src="./intake-parser.js?v=20260831-03"></script>
+    <script src="./assistant-coordinator.js?v=20260831-03"></script>
+    <script src="./nearby-planning.js?v=20260831-03"></script>
+    <script src="./app-20260831-03.js"></script>
   </body>
 </html>
 

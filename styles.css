@@ -91,6 +91,20 @@ button.danger {
   color: #fff;
 }
 
+button.danger-outline,
+.action-row button.danger-outline {
+  border: 1px solid #f3b8b8;
+  background: #fff;
+  color: #b42318;
+}
+
+button.danger-outline:hover,
+.action-row button.danger-outline:hover {
+  border-color: #dc2626;
+  background: #fff5f5;
+  color: #991b1b;
+}
+
 .hidden {
   display: none !important;
 }
@@ -11384,6 +11398,108 @@ textarea {
   color: var(--muted);
 }
 
+.completion-summary .completion-equipment-label {
+  color: var(--ink);
+  font-size: inherit;
+}
+
+.technician-completion-dialog {
+  width: min(560px, calc(100vw - 24px));
+}
+
+.technician-completion-form {
+  display: grid;
+  gap: 12px;
+}
+
+.technician-completion-form .completion-summary,
+.technician-completion-form .completion-attachment-section {
+  margin: 0;
+}
+
+.technician-completion-form #completionNoteLabel textarea {
+  min-height: 96px;
+}
+
+.technician-completion-form > .modal-actions #completionSubmitButton {
+  min-width: 180px;
+  background: var(--service-dark);
+  font-size: 16px;
+}
+
+.service-outreach-dialog {
+  width: min(640px, calc(100vw - 24px));
+}
+
+.service-outreach-channels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0 0;
+  border: 0;
+  padding: 0;
+}
+
+.service-outreach-channels legend {
+  grid-column: 1 / -1;
+  padding: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.service-outreach-channels .check-row {
+  min-height: 44px;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 11px;
+  background: #f8fafc;
+}
+
+.service-outreach-channels .check-row:has(input:checked) {
+  border-color: #8dc8c0;
+  background: var(--teal-soft);
+  color: var(--teal-dark);
+}
+
+.service-outreach-preview {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.service-outreach-preview details {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 11px;
+  background: #fff;
+}
+
+.service-outreach-preview summary {
+  cursor: pointer;
+  color: var(--teal-dark);
+  font-weight: 850;
+}
+
+.service-outreach-preview strong {
+  display: block;
+  margin-top: 8px;
+  overflow-wrap: anywhere;
+}
+
+.service-outreach-preview pre {
+  max-height: 210px;
+  margin: 8px 0 0;
+  overflow: auto;
+  color: #334155;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .completion-price-details {
   margin-top: 10px;
   border: 1px solid var(--line);
@@ -14248,6 +14364,24 @@ label,
     bottom: -12px;
     margin: 12px -12px -12px;
     padding: 10px 12px 12px;
+  }
+
+  .technician-completion-form > .modal-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+  }
+
+  .technician-completion-form > .modal-actions #completionSubmitButton {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .service-outreach-channels {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .service-outreach-channels legend {
+    grid-column: auto;
   }
 }
 
