@@ -13684,6 +13684,218 @@ label,
   justify-content: flex-start;
 }
 
+/* Desktop workspace: keep list context visible and make long customer cards navigable. */
+.workspace-density-button {
+  min-width: 108px;
+  white-space: nowrap;
+}
+
+.workspace-density-button[aria-pressed="true"] {
+  border-color: #9ac7c0;
+  background: var(--teal-soft);
+  color: var(--teal-dark);
+}
+
+.customer-context-header {
+  display: grid;
+  gap: 8px;
+  margin: -2px -2px 10px;
+  border-bottom: 1px solid var(--line);
+  padding: 2px 2px 10px;
+  background: #fff;
+}
+
+.customer-section-nav {
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line);
+  padding-top: 2px;
+  scrollbar-width: thin;
+}
+
+.customer-section-nav button {
+  flex: 0 0 auto;
+  min-height: 34px;
+  margin-bottom: -1px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  padding: 7px 10px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 750;
+  box-shadow: none;
+}
+
+.customer-section-nav button:hover {
+  background: #f3f7f7;
+  color: var(--teal-dark);
+}
+
+.customer-section-nav button.active {
+  border-bottom-color: var(--teal);
+  color: var(--teal-dark);
+}
+
+.customer-section-anchor {
+  scroll-margin-top: 176px;
+}
+
+@media (min-width: 1101px) {
+  .sidebar {
+    height: 100dvh;
+    overflow-y: auto;
+  }
+
+  #customersView:not(.details-list-open) .customer-layout,
+  #leadsView:not(.details-list-open) .leads-layout,
+  #ordersView .orders-layout {
+    height: calc(100dvh - 118px);
+    min-height: 560px;
+    align-items: stretch;
+  }
+
+  #customersView:not(.details-list-open) .customer-list-panel,
+  #leadsView:not(.details-list-open) .lead-list-panel,
+  #ordersView .order-list-panel {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  #customersView:not(.details-list-open) .customer-list,
+  #leadsView:not(.details-list-open) .lead-list,
+  #ordersView .order-list {
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 2px;
+    scrollbar-gutter: stable;
+  }
+
+  #customersView:not(.details-list-open) .customer-detail,
+  #leadsView:not(.details-list-open) .lead-detail,
+  #ordersView .order-detail {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
+  #customersView:not(.details-list-open) .customer-context-header {
+    position: sticky;
+    top: -14px;
+    z-index: 8;
+    margin: -14px -14px 10px;
+    padding: 14px 14px 0;
+    box-shadow: 0 5px 9px -9px rgba(15, 23, 42, 0.45);
+  }
+
+  body.workspace-density-compact .app {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+
+  body.workspace-density-compact .sidebar {
+    gap: 12px;
+    padding: 12px;
+  }
+
+  body.workspace-density-compact .sidebar nav {
+    gap: 4px;
+  }
+
+  body.workspace-density-compact .sidebar nav button {
+    min-height: 36px;
+    padding-block: 7px;
+  }
+
+  body.workspace-density-compact .main {
+    padding: 12px;
+  }
+
+  body.workspace-density-compact .topbar {
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  body.workspace-density-compact .topbar h1 {
+    font-size: 24px;
+  }
+
+  body.workspace-density-compact .panel {
+    padding: 12px;
+  }
+
+  body.workspace-density-compact .customer-layout,
+  body.workspace-density-compact .leads-layout,
+  body.workspace-density-compact .orders-layout,
+  body.workspace-density-compact .dashboard-grid {
+    gap: 8px;
+  }
+
+  body.workspace-density-compact #customersView:not(.details-list-open) .customer-layout,
+  body.workspace-density-compact #leadsView:not(.details-list-open) .leads-layout,
+  body.workspace-density-compact #ordersView .orders-layout {
+    height: calc(100dvh - 98px);
+  }
+
+  body.workspace-density-compact .customer-list,
+  body.workspace-density-compact .lead-list,
+  body.workspace-density-compact .order-list,
+  body.workspace-density-compact .compact-list,
+  body.workspace-density-compact .compact-action-list,
+  body.workspace-density-compact .job-list {
+    gap: 5px;
+  }
+
+  body.workspace-density-compact .detail-section,
+  body.workspace-density-compact .customer-more-sections {
+    margin-top: 8px;
+  }
+
+  body.workspace-density-compact .detail-section {
+    padding: 10px;
+  }
+
+  body.workspace-density-compact #customersView:not(.details-list-open) .customer-context-header {
+    top: -12px;
+    margin: -12px -12px 8px;
+    padding: 12px 12px 0;
+  }
+
+  body.workspace-density-compact .customer-title h2 {
+    margin-top: 5px;
+    font-size: 22px;
+  }
+
+  body.workspace-density-compact .customer-title p {
+    margin-bottom: 6px;
+  }
+
+  body.workspace-density-compact .customer-key-facts > div {
+    min-height: 50px;
+    padding: 7px 9px;
+  }
+}
+
+@media (max-width: 1100px) {
+  .workspace-density-button {
+    display: none;
+  }
+
+  .customer-context-header {
+    margin-bottom: 8px;
+  }
+
+  .customer-section-anchor {
+    scroll-margin-top: 16px;
+  }
+}
+
 .customer-action-bar .customer-edit-primary {
   border-color: #94a3b8;
   background: #f8fafc;
