@@ -13684,6 +13684,12 @@ label,
   justify-content: flex-start;
 }
 
+.customer-action-bar .customer-edit-primary {
+  border-color: #94a3b8;
+  background: #f8fafc;
+  color: #334155;
+}
+
 .customer-key-facts {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
@@ -13705,6 +13711,14 @@ label,
   background: #fff;
 }
 
+.customer-key-facts > div.confirmed {
+  background: #f0fdf4;
+}
+
+.customer-key-facts > div.needs-review {
+  background: #fff7ed;
+}
+
 .customer-key-facts span {
   color: var(--muted);
   font-size: 11px;
@@ -13718,6 +13732,21 @@ label,
   font-size: 13px;
   font-weight: 650;
   overflow-wrap: anywhere;
+}
+
+.customer-key-fact-action {
+  margin-top: 5px;
+}
+
+.customer-key-fact-action button {
+  min-height: 30px;
+  justify-self: start;
+  padding: 5px 8px;
+  border-color: #fdba74;
+  background: #fff;
+  color: #9a3412;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .customer-work-summary span,
