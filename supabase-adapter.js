@@ -2043,7 +2043,7 @@
       const supabase = await requireClient();
       const completedOn = normalizeDate(options.completedOn || options.completedAt) || localIsoDate(new Date());
       const { data, error } = await withDbTimeout(
-        supabase.rpc("complete_booking_as_admin", {
+        supabase.rpc("complete_booking_with_invoice_disposition_v1", {
           p_booking_id: id,
           p_completed_on: completedOn,
           p_event_type: options.eventType || null,
@@ -2058,8 +2058,29 @@
           p_next_service_due: normalizeDate(options.nextServiceDate),
           p_installation_id: isUuid(options.installationId) ? options.installationId : null,
           p_customer_note_line: options.customerNoteLine || null,
+          p_invoice_disposition: options.invoiceDisposition || "eligible",
+          p_invoice_reason_code: options.invoiceReasonCode || "billable",
+          p_expected_job_updated_at: options.expectedJobUpdatedAt || null,
+          p_client_event_id: isUuid(options.clientEventId) ? options.clientEventId : null,
+          p_operation_key: options.operationKey || null,
         }),
         "fullføre jobb",
+      );
+      if (error) throw error;
+      return data || {};
+    },
+    async setJobInvoiceDisposition(jobId, options = {}) {
+      const supabase = await requireClient();
+      const { data, error } = await withDbTimeout(
+        supabase.rpc("set_job_invoice_disposition_v1", {
+          p_client_event_id: options.clientEventId,
+          p_operation_key: options.operationKey,
+          p_job_id: jobId,
+          p_expected_job_updated_at: options.expectedJobUpdatedAt,
+          p_disposition: options.disposition,
+          p_reason_code: options.reasonCode,
+        }),
+        "lagre faktureringsvalg",
       );
       if (error) throw error;
       return data || {};

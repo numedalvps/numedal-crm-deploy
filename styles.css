@@ -2507,6 +2507,32 @@ textarea {
   background: #f8fafc;
 }
 
+.completion-no-invoice {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 12px;
+  border: 1px solid #b9d9df;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #f3fafb;
+}
+
+.completion-no-invoice legend {
+  padding: 0 4px;
+  color: #315b65;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.completion-no-invoice .checkbox-line,
+.completion-no-invoice > label {
+  margin: 0;
+}
+
+.completion-no-invoice .form-hint {
+  margin: 0;
+}
+
 .ai-save-row {
   display: flex;
   align-items: center;
@@ -9245,6 +9271,12 @@ textarea {
   color: #991b1b !important;
 }
 
+.invoice-pill.no-invoice,
+.order-badge.no-invoice {
+  background: #dff2f4;
+  color: #155e6b !important;
+}
+
 .move-note {
   color: #5b21b6 !important;
   font-weight: 800;
@@ -11739,7 +11771,8 @@ textarea {
 }
 
 @media (max-width: 640px) {
-  .completion-price-controls {
+  .completion-price-controls,
+  .completion-price-controls:not(.lead-status-price-controls) {
     grid-template-columns: 1fr;
   }
 }

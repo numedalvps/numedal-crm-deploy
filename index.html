@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css?v=1.9.4" />
-    <link rel="stylesheet" href="./styles.css?v=20260901-01" />
+    <link rel="stylesheet" href="./styles.css?v=20260901-02" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -1384,6 +1384,24 @@
           <span>Betaling/fakturering er gjort</span>
         </label>
         <p id="completionPaymentHint" class="form-hint">La stå av hvis jobben bare er utført, men ikke fakturert eller betalt ennå.</p>
+        <fieldset id="completionNoInvoiceWrap" class="completion-no-invoice hidden">
+          <legend>Unntak fra fakturering</legend>
+          <label class="checkbox-line">
+            <input id="completionNoInvoice" type="checkbox" />
+            <span>Skal ikke faktureres</span>
+          </label>
+          <label id="completionNoInvoiceReasonWrap" class="hidden">Årsak
+            <select id="completionNoInvoiceReason">
+              <option value="goodwill">Goodwill</option>
+              <option value="free_inspection">Gratis befaring/kontroll</option>
+              <option value="warranty">Garanti eller reklamasjon</option>
+              <option value="included_in_other_work">Inkludert i annet arbeid</option>
+              <option value="customer_not_chargeable">Kunden skal ikke belastes</option>
+              <option value="other">Annet</option>
+            </select>
+          </label>
+          <p id="completionNoInvoiceHint" class="form-hint hidden">Jobben ferdigstilles uten å havne i fakturakøen. Valget og årsaken logges.</p>
+        </fieldset>
         <details id="completionPriceDetails" class="completion-price-details">
           <summary>Prisgrunnlag / tillegg</summary>
           <div class="completion-price-controls">
@@ -1716,12 +1734,12 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260901-01"></script>
-    <script src="./supabase-adapter.js?v=20260901-01"></script>
-    <script src="./intake-parser.js?v=20260901-01"></script>
-    <script src="./assistant-coordinator.js?v=20260901-01"></script>
-    <script src="./nearby-planning.js?v=20260901-01"></script>
-    <script src="./app.js?v=20260901-01"></script>
+    <script src="./supabase-config.js?v=20260901-02"></script>
+    <script src="./supabase-adapter.js?v=20260901-02"></script>
+    <script src="./intake-parser.js?v=20260901-02"></script>
+    <script src="./assistant-coordinator.js?v=20260901-02"></script>
+    <script src="./nearby-planning.js?v=20260901-02"></script>
+    <script src="./app-20260901-02.js"></script>
   </body>
 </html>
 
