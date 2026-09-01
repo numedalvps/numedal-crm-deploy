@@ -424,7 +424,8 @@
 
   function inferIntent(text, options = {}) {
     const n = normalize(text);
-    const explicitAcceptance = /\b(?:aksepterer|akseptert|godtar|godkjent|onsker a bestille|ønsker å bestille|sett oss opp|bekreftet tilbudet)\b/.test(n);
+    const explicitAcceptance = /\b(?:(?:jeg|vi)\s+(?:aksepterer|godtar|godkjenner)|tilbudet\s+(?:er\s+)?(?:akseptert|godkjent)|bekrefter tilbudet|onsker a bestille|sett (?:oss|meg) opp)\b/.test(n)
+      || /^(?:akseptert|godkjent|ja takk)$/.test(n);
     const directPositiveReply = /\b(?:jo fortere jo bedre|sa fort som mulig|gjerne sa fort som mulig|kjor pa|ja takk|vi tar den|det gar vi for|sett i gang|bestill den)\b/.test(n);
     const positiveConfirmation = /\b(?:det hores fornuftig ut|det hores greit ut|det hores bra ut|det ser greit ut|det ser bra ut|det ser fint ut|det passer bra|dette virker fornuftig|dette virker greit)\b/.test(n);
     const installationTimingRequested = /\b(?:nar|hvilken dag|hvilket tidspunkt)\b.{0,80}\b(?:monter|montere|monteres|montering|installer|installere|installeres|installasjon)\b|\b(?:nar kan dette|nar kan den|nar kan dere)\b.{0,80}\b(?:monteres|installeres|gjores)\b/.test(n);
@@ -432,8 +433,19 @@
     const deferred = /\b(?:vil vente|onsker a vente|venter med|vente litt|utsett|utsette|utsettes|utsettelse|sette dette pa vent|ikke na|kommer tilbake|ma tenke|vil tenke|avventer)\b/.test(n);
     const declined = /\b(?:takker nei|ikke aktuelt|onsker ikke|vil ikke bestille|gar ikke videre|dropper dette|godtar ikke|aksepterer ikke|ikke akseptert|ikke godkjent)\b/.test(n);
     const priceQuestion = /\b(?:hva koster|pris pa|pris for|tillegg|ekstra kostnad|inkludert i prisen|med i prisen|prisforbehold|forbehold om pris)\b/.test(n);
+    const hasQuestionCue = /\b(?:hva|hvilken|hvilke|hvordan|hvor|trenger|ma|kan|er det|blir det|folger|inkludert|anbefaler)\b/.test(n)
+      || /^er\b/.test(n);
+    const clarificationTopics = hasQuestionCue ? [
+      /\b(?:pris(?:en|er)?|koster|kostnad|tillegg|rabatt|totalpris|mellomlegg)\b/.test(n) ? "price" : "",
+      /\b(?:modell(?:en|er)?|varmepump(?:e|en|er)?|pump(?:e|en|er)?|kapasitet|effekt|kw|farge(?:n|r)?|sort|svart|hvit|produkt(?:et|er)?|alternativ(?:et|er)?)\b/.test(n) ? "product" : "",
+      /\b(?:elektriker(?:en)?|strom|sikring(?:en|er)?|kurs(?:en|er)?|stikk|stikkontakt(?:en|er)?|kabel(?:en|er)?|ampere)\b/.test(n) ? "electrical" : "",
+      /\b(?:plassering(?:en|er)?|plasseres|innedel(?:en|er)?|utedel(?:en|er)?|vegg(?:en|er)?|gulvstativ|bakkestativ|veggbrakett(?:en|er)?|takras|snodybde)\b/.test(n) ? "placement" : "",
+      /\b(?:standard montering|inkludert|rorgate|kjoring|bom|tilkomst|stillas|arbeid)\b/.test(n) ? "scope" : "",
+    ].filter(Boolean) : [];
+    const needsClarification = Boolean(options.offerReferenced) && clarificationTopics.length > 0;
     const referencedOfferAcceptance = Boolean(options.offerReferenced)
       && !conditionalQuestion
+      && !needsClarification
       && (directPositiveReply || positiveConfirmation || installationTimingRequested);
     const accepted = !declined
       && (explicitAcceptance || (referencedOfferAcceptance && !(deferred && !explicitAcceptance)));
@@ -445,14 +457,21 @@
       declined,
       installationTimingRequested,
       priceReservation: accepted && priceQuestion,
+      needsClarification,
+      clarificationTopics,
+      customerDecisionState: accepted ? "accepted" : declined ? "declined" : deferred || needsClarification ? "waiting_customer_decision" : "undetermined",
+      intentVersion: "2026-09-01.1",
     };
     if (/\b(?:ignorer|slett alle|returner telefonnummeret|tidligere instruksjoner|sett status til vunnet)\b/.test(n)) {
       return { category: "general_history", confidence: "low", ...acceptanceFields, explicitAcceptance: false, warning: "Mulig instruksjon i kildetekst. Behandles kun som kundemelding." };
     }
     if (/\b(?:industristovsuger|stovsuger|leie|utleie|isopro)\b/.test(n)) return { category: "rental", confidence: "high", ...acceptanceFields, explicitAcceptance: false };
     if (/\b(?:blaseisolering|isobygg|isolering|etterisolering|supafil|stubbloft|sagflis|kutterflis|komplett pris inkl rigg|antall m2|tykkelse)\b/.test(n)) return { category: "insulation", confidence: "high", ...acceptanceFields, explicitAcceptance: false };
+    if (declined || (deferred && !explicitAcceptance)) return { category: options.offerReferenced ? "quote_question" : "unknown", confidence: declined ? "high" : "medium", ...acceptanceFields };
+    if (options.offerReferenced && needsClarification && !explicitAcceptance) {
+      return { category: "request_for_quote_clarification", confidence: "high", ...acceptanceFields, explicitAcceptance: false };
+    }
     if (accepted) return { category: "quote_accepted", confidence: explicitAcceptance || directPositiveReply || positiveConfirmation ? "high" : "medium", ...acceptanceFields };
-    if (declined || deferred) return { category: options.offerReferenced ? "quote_question" : "unknown", confidence: declined ? "high" : "medium", ...acceptanceFields };
     if (/\b(?:ny varmepumpe|nyinstallasjon|kjøpe varmepumpe|kjope varmepumpe|bytte varmepumpe|bytt varmepumpa|onsker tilbud|ønsker tilbud|hva koster|pris pa|pris på|komplett pris|bedriftsanlegg|næringsanlegg|naeringsanlegg|kanalmodell|takkassett|flersonekanal)\b/.test(n)) {
       return { category: "quote_request", confidence: "high", ...acceptanceFields };
     }
@@ -469,6 +488,7 @@
     const map = {
       quote_request: "create_lead",
       quote_question: "create_lead",
+      request_for_quote_clarification: "create_follow_up_task",
       site_visit_request: "create_site_visit_draft",
       quote_accepted: "create_follow_up_task",
       service_request: "create_service_request",
@@ -677,6 +697,7 @@
     if (intent.warning) warnings.push({ code: "prompt_injection_possible", message: intent.warning, severity: "critical" });
     if (intent.category === "quote_question") warnings.push({ code: "mounting_not_acceptance", message: "Ordet montering er funnet, men dette er ikke tolket som vunnet salg uten tydelig aksept.", severity: "info" });
     if (intent.deferred || intent.declined) warnings.push({ code: "latest_reply_defers_work", message: "Nyeste kundesvar utsetter eller avslår videre arbeid. Tidligere aksept i sitert historikk skal ikke brukes.", severity: "warning" });
+    if (intent.needsClarification || intent.category === "request_for_quote_clarification") warnings.push({ code: "offer_clarification_required", message: "Kunden ber om avklaringer før endelig beslutning. Tilbudet skal ikke markeres som akseptert.", severity: "warning" });
     if (intent.priceReservation) warnings.push({ code: "accepted_with_price_reservation", message: "Grunnarbeidet er akseptert, men et tillegg eller pris må avklares separat.", severity: "warning" });
     if (sensitive.includes("access_code")) warnings.push({ code: "access_code", message: "Mulig nøkkel-/adgangskode funnet. Lagre bare i riktig felt hvis det faktisk trengs.", severity: "warning" });
     if (sensitive.includes("national_identity_number") || sensitive.includes("bank_information")) warnings.push({ code: "sensitive_data", message: "Mulig sensitiv betalings- eller ID-informasjon funnet. Ikke kopier til vanlige notatfelt.", severity: "critical" });
@@ -705,6 +726,7 @@
     const categoryText = {
       quote_request: "Kunden virker å spørre om pris eller tilbud.",
       quote_question: "Kunden spør om montering/tilbud, men har ikke bekreftet bestilling.",
+      request_for_quote_clarification: "Kunden trenger avklaring av tilbudet før endelig beslutning.",
       quote_accepted: "Teksten inneholder tydelig aksept/bestilling.",
       site_visit_request: "Kunden ønsker befaring.",
       service_request: "Kunden ønsker service.",
@@ -758,6 +780,10 @@
         declined: intent.declined,
         installationTimingRequested: intent.installationTimingRequested,
         priceReservation: intent.priceReservation,
+        needsClarification: intent.needsClarification,
+        clarificationTopics: intent.clarificationTopics,
+        customerDecisionState: intent.customerDecisionState,
+        intentVersion: intent.intentVersion,
       },
       equipment,
       project: project.details,

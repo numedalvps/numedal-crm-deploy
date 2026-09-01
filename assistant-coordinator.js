@@ -120,7 +120,8 @@
       || draft.linkedLeadId
       || /\bNVS-TILBUD-/i.test(sourceText(context)),
     );
-    const directAcceptance = /\b(?:aksepterer|akseptert|godtar|godkjent|bekreftet tilbudet|onsker a bestille|sett oss opp)\b/.test(currentText);
+    const directAcceptance = /\b(?:(?:jeg|vi)\s+(?:aksepterer|godtar|godkjenner)|tilbudet\s+(?:er\s+)?(?:akseptert|godkjent)|bekrefter tilbudet|onsker a bestille|sett (?:oss|meg) opp)\b/.test(currentText)
+      || /^(?:akseptert|godkjent|ja takk)$/.test(currentText);
     const directPositiveReply = /\b(?:jo fortere jo bedre|sa fort som mulig|gjerne sa fort som mulig|kjor pa|ja takk|vi tar den|det gar vi for|sett i gang|bestill den|det passer)\b/.test(currentText);
     const positiveConfirmation = /\b(?:det hores fornuftig ut|det hores greit ut|det hores bra ut|det ser greit ut|det ser bra ut|det ser fint ut|det passer bra|dette virker fornuftig|dette virker greit)\b/.test(currentText);
     const installationTimingRequested = /\b(?:nar|hvilken dag|hvilket tidspunkt)\b.{0,80}\b(?:monter|montere|monteres|montering|installer|installere|installeres|installasjon)\b|\b(?:nar kan dette|nar kan den|nar kan dere)\b.{0,80}\b(?:monteres|installeres|gjores)\b/.test(currentText);
@@ -128,8 +129,19 @@
     const deferred = /\b(?:vil vente|onsker a vente|venter med|vente litt|utsett|utsette|utsettes|utsettelse|sette dette pa vent|ikke na|kommer tilbake|ma tenke|vil tenke|avventer)\b/.test(currentText);
     const declined = /\b(?:takker nei|ikke aktuelt|onsker ikke|vil ikke bestille|gar ikke videre|dropper dette|godtar ikke|aksepterer ikke|ikke akseptert|ikke godkjent)\b/.test(currentText);
     const priceQuestion = /\b(?:hva koster|pris pa|pris for|tillegg|ekstra kostnad|inkludert i prisen|med i prisen|prisforbehold|forbehold om pris)\b/.test(currentText);
+    const hasQuestionCue = /\b(?:hva|hvilken|hvilke|hvordan|hvor|trenger|ma|kan|er det|blir det|folger|inkludert|anbefaler)\b/.test(currentText)
+      || /^er\b/.test(currentText);
+    const clarificationTopics = hasQuestionCue ? [
+      /\b(?:pris(?:en|er)?|koster|kostnad|tillegg|rabatt|totalpris|mellomlegg)\b/.test(currentText) ? "price" : "",
+      /\b(?:modell(?:en|er)?|varmepump(?:e|en|er)?|pump(?:e|en|er)?|kapasitet|effekt|kw|farge(?:n|r)?|sort|svart|hvit|produkt(?:et|er)?|alternativ(?:et|er)?)\b/.test(currentText) ? "product" : "",
+      /\b(?:elektriker(?:en)?|strom|sikring(?:en|er)?|kurs(?:en|er)?|stikk|stikkontakt(?:en|er)?|kabel(?:en|er)?|ampere)\b/.test(currentText) ? "electrical" : "",
+      /\b(?:plassering(?:en|er)?|plasseres|innedel(?:en|er)?|utedel(?:en|er)?|vegg(?:en|er)?|gulvstativ|bakkestativ|veggbrakett(?:en|er)?|takras|snodybde)\b/.test(currentText) ? "placement" : "",
+      /\b(?:standard montering|inkludert|rorgate|kjoring|bom|tilkomst|stillas|arbeid)\b/.test(currentText) ? "scope" : "",
+    ].filter(Boolean) : [];
+    const needsClarification = offerReferenced && clarificationTopics.length > 0;
     const referencedAcceptance = offerReferenced
       && !conditionalQuestion
+      && !needsClarification
       && (directPositiveReply || positiveConfirmation || installationTimingRequested);
     const serviceConfirmation = (
       ["service_request", "installation"].includes(analyzedCategory)
@@ -144,6 +156,7 @@
     if (workAccepted && offerReferenced) category = "quote_accepted";
     else if (workAccepted && analyzedCategory) category = analyzedCategory;
     else if (declined || deferred) category = offerReferenced ? "quote_question" : "general";
+    else if (offerReferenced && needsClarification && !directAcceptance) category = "request_for_quote_clarification";
     else if (/service|rens|vedlikehold/.test(currentText)) category = "service_request";
     else if (/repar|feil|virker ikke|varmer ikke|kjoler ikke/.test(currentText)) category = "repair_request";
     else if (/befaring/.test(currentText)) category = "inspection_request";
@@ -160,6 +173,10 @@
       declined,
       installationTimingRequested,
       priceReservation: workAccepted && priceQuestion,
+      needsClarification,
+      clarificationTopics,
+      customerDecisionState: workAccepted ? "accepted" : declined ? "declined" : deferred || needsClarification ? "waiting_customer_decision" : "undetermined",
+      intentVersion: "2026-09-01.1",
       offerReferenced,
       evaluatedTextSource: latestMessage ? "latest_external_message" : "full_source_fallback",
     };
@@ -1743,6 +1760,7 @@
 
   function replySubject(intent) {
     if (intent.category === "quote_accepted") return "Videre plan for montering";
+    if (intent.category === "request_for_quote_clarification") return "Avklaring av tilbudet";
     if (intent.category === "quote_request") return "Oppfølging av forespørsel og tilbud";
     if (intent.category === "service_request") return "Service på varmepumpe";
     if (intent.category === "installation") return "Videre plan for varmepumpe";
@@ -1769,6 +1787,8 @@
       body = `${greeting}\n\nTakk for bekreftelsen.${addressRequest} Jeg finner et ledig tidspunkt for montering og sender et konkret forslag før avtalen bookes.`;
     } else if (intent.category === "installation") {
       body = `${greeting}\n\nTakk for henvendelsen. Jeg følger opp varmepumpen og monteringen.${addressRequest} Send gjerne bilder av ønsket plassering inne og ute dersom dette ikke allerede er gjort.`;
+    } else if (intent.category === "request_for_quote_clarification") {
+      body = `${greeting}\n\nTakk for spørsmålene. Jeg går gjennom produkt, pris og det praktiske som må avklares før du tar endelig stilling, og følger opp i samme tråd.${addressRequest}`;
     } else if (intent.category === "quote_request") {
       body = `${greeting}\n\nTakk for forespørselen. Jeg lager et oversiktlig tilbud basert på valgt varmepumpe, montering og eventuelle tillegg.${addressRequest} Send gjerne bilder av plasseringen inne og ute hvis dette mangler.`;
     } else if (intent.category === "repair_request") {
