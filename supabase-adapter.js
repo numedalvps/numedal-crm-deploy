@@ -2357,6 +2357,21 @@
       if (error) throw error;
       return Array.isArray(data) ? data : [];
     },
+    async loadServiceCandidatePriorities() {
+      const supabase = await requireClient();
+      const { data, error } = await withDbTimeout(
+        fetchAllRows(() => supabase
+          .from("service_candidate_priority_v1")
+          .select("*")
+          .order("service_priority_rank")
+          .order("effective_next_service_due", { ascending: true, nullsFirst: false })
+          .order("installation_id")),
+        "laste prioritering for servicekunder",
+        30000,
+      );
+      if (error) throw error;
+      return Array.isArray(data) ? data : [];
+    },
     async recordServiceCampaignResponse(memberId, values = {}) {
       const supabase = await requireClient();
       if (!isUuid(memberId)) throw new Error("Ugyldig kunde i serviceutsendingen.");

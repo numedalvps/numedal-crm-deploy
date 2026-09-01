@@ -150,6 +150,11 @@
       const leftCategory = categoryRank[left?.kind] ?? 9;
       const rightCategory = categoryRank[right?.kind] ?? 9;
       if (leftCategory !== rightCategory) return leftCategory - rightCategory;
+      if (mode === "recommended" && left?.kind === "service_need" && right?.kind === "service_need") {
+        const leftServicePriority = Number(left?.servicePriorityRank || 99);
+        const rightServicePriority = Number(right?.servicePriorityRank || 99);
+        if (leftServicePriority !== rightServicePriority) return leftServicePriority - rightServicePriority;
+      }
       if (mode === "area") {
         const areaCompare = String(left?.areaLabel || "").localeCompare(String(right?.areaLabel || ""), "nb");
         if (areaCompare) return areaCompare;
@@ -193,6 +198,11 @@
       const leftPriority = candidatePriorityRank(left);
       const rightPriority = candidatePriorityRank(right);
       if (leftPriority !== rightPriority) return leftPriority - rightPriority;
+      if (left?.kind === "service" && right?.kind === "service") {
+        const leftServicePriority = Number(left?.servicePriorityRank || 99);
+        const rightServicePriority = Number(right?.servicePriorityRank || 99);
+        if (leftServicePriority !== rightServicePriority) return leftServicePriority - rightServicePriority;
+      }
       const leftDueAt = timestamp(left?.priorityDueAt || left?.dueDate);
       const rightDueAt = timestamp(right?.priorityDueAt || right?.dueDate);
       if (leftDueAt !== rightDueAt) return leftDueAt - rightDueAt;

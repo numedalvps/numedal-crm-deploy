@@ -8712,6 +8712,17 @@ textarea {
   color: #1d4ed8;
 }
 
+.route-candidate-badge.evidence,
+.nearby-status.service-evidence {
+  background: #ccfbf1;
+  color: #115e59;
+}
+
+.service-due-correction {
+  color: #9a3412 !important;
+  font-weight: 750;
+}
+
 .route-customer-results .route-candidate-copy > span,
 .route-selected-customers span,
 .route-missing-list span {
