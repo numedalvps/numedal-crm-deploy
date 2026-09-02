@@ -1930,11 +1930,60 @@
       }
       return data.location;
     },
-    async saveInstallation(customerId, installation) {
+    async saveInstallation(customerId, installation, options = {}) {
       const supabase = await requireClient();
       if (!isUuid(customerId)) throw new Error("Ugyldig kunde for varmepumpe/anlegg.");
       const dbInstallation = installationToDb(installation, customerId);
       const id = installation?.id || "";
+      if (!isUuid(id) && options.isNew) {
+        const locationId = installation.location_id || installation.locationId || "";
+        const newInstallationId = options.newInstallationId || "";
+        const clientEventId = options.clientEventId || "";
+        const operationKey = String(options.operationKey || "").trim();
+        const expectedInstallationIds = Array.isArray(options.expectedInstallationIds)
+          ? [...new Set(options.expectedInstallationIds.filter(isUuid))].sort()
+          : [];
+        if (!isUuid(locationId) || !isUuid(newInstallationId) || !isUuid(clientEventId)
+          || !options.expectedCustomerUpdatedAt || !options.expectedLocationUpdatedAt
+          || !/^[A-Za-z0-9][A-Za-z0-9._:-]{7,239}$/.test(operationKey)) {
+          throw new Error("Nytt anlegg mangler et oppdatert kunde- eller adressegrunnlag. Last inn siden på nytt.");
+        }
+        const patch = {
+          label: dbInstallation.label,
+          brand: dbInstallation.brand,
+          model: dbInstallation.model,
+          serial_number: dbInstallation.serial_number,
+          installed_at: dbInstallation.installed_at,
+          last_service_at: dbInstallation.last_service_at,
+          next_service_due: dbInstallation.next_service_due,
+          notes: dbInstallation.notes,
+          service_interval_months: dbInstallation.service_interval_months || 24,
+          inventory_status: options.inventoryStatus || "provisional",
+        };
+        const { data, error } = await withDbTimeout(
+          supabase.rpc("create_installation_v2", {
+            p_client_event_id: clientEventId,
+            p_operation_key: operationKey,
+            p_customer_id: customerId,
+            p_expected_customer_updated_at: options.expectedCustomerUpdatedAt,
+            p_location_id: locationId,
+            p_expected_location_updated_at: options.expectedLocationUpdatedAt,
+            p_expected_installation_ids: expectedInstallationIds,
+            p_new_installation_id: newInstallationId,
+            p_patch: patch,
+          }),
+          "lagre nytt varmepumpeanlegg",
+          30000,
+        );
+        if (error) {
+          if (/function .*create_installation_v2|schema cache/i.test(error.message || "")) {
+            throw new Error("CRM-serveren mangler den sikre anleggsopprettelsen. Last inn siden på nytt.");
+          }
+          throw error;
+        }
+        if (!data?.installation?.id) throw new Error("CRM-serveren returnerte ikke det lagrede anlegget.");
+        return data.installation;
+      }
       const query = isUuid(id)
         ? supabase.from("installations").update(dbInstallation).eq("id", id).select("*").single()
         : supabase.from("installations").insert(dbInstallation).select("*").single();
