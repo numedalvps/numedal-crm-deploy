@@ -1832,6 +1832,109 @@
       }
       return { id: data.id, booking: bookingFromDb(data) };
     },
+    async saveManualJobBooking(booking, options = {}) {
+      const supabase = await requireClient();
+      const customerId = String(booking?.customerId || booking?.customer_id || "");
+      const clientEventId = String(options.clientEventId || "");
+      const operationKey = String(options.operationKey || "").trim();
+      const resourceProfileId = booking?.assigned_to
+        || booking?.assignedTo
+        || booking?.resourceProfileId
+        || booking?.resource_profile_id
+        || "";
+      const scheduledDate = normalizeDate(booking?.date);
+      const scheduledTime = String(booking?.time || "").trim().slice(0, 5);
+      const durationMinutes = Number(booking?.duration || booking?.duration_minutes || 0);
+      if (!isUuid(customerId) || !isUuid(clientEventId)
+        || !/^[A-Za-z0-9][A-Za-z0-9._:-]{7,219}$/.test(operationKey)
+        || !options.expectedCustomerUpdatedAt) {
+        throw new Error("Bookingen mangler et oppdatert kundegrunnlag. Last inn siden på nytt.");
+      }
+      if (!isUuid(resourceProfileId)) {
+        throw new Error("Velg en aktiv CRM-bruker som servicemann.");
+      }
+      if (!scheduledDate || !/^\d{2}:\d{2}$/.test(scheduledTime)) {
+        throw new Error("Velg gyldig dato og klokkeslett.");
+      }
+      if (!Number.isInteger(durationMinutes) || durationMinutes < 15 || durationMinutes > 720 || durationMinutes % 15 !== 0) {
+        throw new Error("Varigheten må være mellom 15 minutter og 12 timer i 15-minutters steg.");
+      }
+
+      const optionalUuid = (value, label) => {
+        const normalized = String(value || "").trim();
+        if (normalized && !isUuid(normalized)) throw new Error(`${label} har en ugyldig id. Last inn siden på nytt.`);
+        return normalized || null;
+      };
+      const bookingId = optionalUuid(options.bookingId, "Bookingen");
+      const orderId = optionalUuid(options.orderId, "Jobben");
+      const jobId = optionalUuid(options.jobId, "Jobbspeilet");
+      const appointmentId = optionalUuid(options.appointmentId, "Kalenderavtalen");
+      const installationId = optionalUuid(booking?.installationId || booking?.installation_id, "Anlegget");
+      const locationId = optionalUuid(booking?.locationId || booking?.location_id, "Anleggsadressen");
+      const leadId = optionalUuid(booking?.leadId || booking?.lead_id, "Salgsmuligheten");
+      const rowVersion = (id, value, label) => {
+        const version = String(value || "").trim();
+        if (id && !version) throw new Error(`${label} mangler radversjon. Last inn siden på nytt.`);
+        if (!id && version) throw new Error(`${label} har en foreldet kobling. Last inn siden på nytt.`);
+        return version || null;
+      };
+      const request = {
+        customer_id: customerId,
+        expected_customer_updated_at: options.expectedCustomerUpdatedAt,
+        booking_id: bookingId,
+        expected_booking_updated_at: rowVersion(bookingId, options.expectedBookingUpdatedAt, "Bookingen"),
+        order_id: orderId,
+        expected_order_updated_at: rowVersion(orderId, options.expectedOrderUpdatedAt, "Jobben"),
+        job_id: jobId,
+        expected_job_updated_at: rowVersion(jobId, options.expectedJobUpdatedAt, "Jobbspeilet"),
+        appointment_id: appointmentId,
+        expected_appointment_updated_at: rowVersion(appointmentId, options.expectedAppointmentUpdatedAt, "Kalenderavtalen"),
+        installation_id: installationId,
+        expected_installation_updated_at: rowVersion(installationId, options.expectedInstallationUpdatedAt, "Anlegget"),
+        location_id: locationId,
+        expected_location_updated_at: rowVersion(locationId, options.expectedLocationUpdatedAt, "Anleggsadressen"),
+        lead_id: leadId,
+        scheduled_date: scheduledDate,
+        scheduled_time: scheduledTime,
+        duration_minutes: durationMinutes,
+        resource_profile_id: resourceProfileId,
+        job_type: jobTypeFor(booking?.type || booking?.job_type || "service"),
+        booking_note: booking?.note || null,
+        order_title: options.orderTitle || "Jobb",
+        order_note: options.orderNote || booking?.note || null,
+      };
+      const { data, error } = await withDbTimeout(
+        supabase.rpc("save_manual_job_booking_v1", {
+          p_client_event_id: clientEventId,
+          p_operation_key: operationKey,
+          p_request: request,
+        }),
+        "lagre booking og jobb samlet",
+        30000,
+      );
+      if (error) {
+        if (isBookingOverlapError(error)) throw new Error(bookingOverlapMessage(error));
+        if (/function .*save_manual_job_booking_v1|schema cache/i.test(error.message || "")) {
+          throw new Error("CRM-serveren mangler trygg bookinglagring. Last inn siden på nytt, eller kontakt administrator.");
+        }
+        throw error;
+      }
+      if (!data?.booking?.id || !data?.order?.id || !data?.job?.id || !data?.appointment?.id) {
+        throw new Error("CRM-serveren returnerte ikke hele den lagrede jobben.");
+      }
+      return {
+        id: data.booking.id,
+        booking: bookingFromDb(data.booking),
+        order: orderFromDb(data.order),
+        job: data.job,
+        appointment: data.appointment,
+        campaignMemberIds: Array.isArray(data.campaignMemberIds) ? data.campaignMemberIds : [],
+        campaignMemberCount: Number(data.campaignMemberCount || 0),
+        alreadyApplied: Boolean(data.alreadyApplied),
+        eventId: data.eventId || null,
+        operationHash: data.operationHash || null,
+      };
+    },
     async moveBookingAsAdmin(id, booking, options = {}) {
       const supabase = await requireClient();
       const resourceProfileId = booking?.assigned_to
@@ -1984,9 +2087,58 @@
         if (!data?.installation?.id) throw new Error("CRM-serveren returnerte ikke det lagrede anlegget.");
         return data.installation;
       }
-      const query = isUuid(id)
-        ? supabase.from("installations").update(dbInstallation).eq("id", id).select("*").single()
-        : supabase.from("installations").insert(dbInstallation).select("*").single();
+      if (isUuid(id)) {
+        const sourceLocationId = String(options.sourceLocationId || "");
+        const targetLocationId = String(installation.location_id || installation.locationId || "");
+        const clientEventId = String(options.clientEventId || "");
+        const operationKey = String(options.operationKey || "").trim();
+        const expectedSourceIds = Array.isArray(options.expectedSourceInstallationIds)
+          ? [...new Set(options.expectedSourceInstallationIds.filter(isUuid))].sort()
+          : [];
+        const expectedTargetIds = Array.isArray(options.expectedTargetInstallationIds)
+          ? [...new Set(options.expectedTargetInstallationIds.filter(isUuid))].sort()
+          : [];
+        if (!isUuid(sourceLocationId) || !isUuid(targetLocationId) || !isUuid(clientEventId)
+          || !/^[A-Za-z0-9][A-Za-z0-9._:-]{7,199}$/.test(operationKey)
+          || !options.expectedCustomerUpdatedAt || !options.expectedSourceLocationUpdatedAt
+          || !options.expectedTargetLocationUpdatedAt || !options.expectedInstallationUpdatedAt) {
+          throw new Error("Anleggsredigeringen mangler et oppdatert kunde-, adresse- eller anleggsgrunnlag. Last inn siden på nytt.");
+        }
+        const patch = { ...dbInstallation };
+        delete patch.customer_id;
+        delete patch.location_id;
+        delete patch.active;
+        delete patch.updated_at;
+        const { data, error } = await withDbTimeout(
+          supabase.rpc("update_installation_v2", {
+            p_client_event_id: clientEventId,
+            p_operation_key: operationKey,
+            p_customer_id: customerId,
+            p_source_location_id: sourceLocationId,
+            p_target_location_id: targetLocationId,
+            p_installation_id: id,
+            p_expected_customer_updated_at: options.expectedCustomerUpdatedAt,
+            p_expected_source_location_updated_at: options.expectedSourceLocationUpdatedAt,
+            p_expected_target_location_updated_at: options.expectedTargetLocationUpdatedAt,
+            p_expected_installation_updated_at: options.expectedInstallationUpdatedAt,
+            p_expected_source_installation_ids: expectedSourceIds,
+            p_expected_target_installation_ids: expectedTargetIds,
+            p_patch: patch,
+            p_active: dbInstallation.active !== false,
+          }),
+          "lagre anleggsredigering med historikk",
+          30000,
+        );
+        if (error) {
+          if (/function .*update_installation_v2|schema cache/i.test(error.message || "")) {
+            throw new Error("CRM-serveren mangler trygg anleggsredigering. Last inn siden på nytt, eller kontakt administrator.");
+          }
+          throw error;
+        }
+        if (!data?.installation?.id) throw new Error("CRM-serveren returnerte ikke det oppdaterte anlegget.");
+        return data.installation;
+      }
+      const query = supabase.from("installations").insert(dbInstallation).select("*").single();
       const { data, error } = await withDbTimeout(query, "lagre varmepumpe/anlegg");
       if (error) throw error;
       return data;
