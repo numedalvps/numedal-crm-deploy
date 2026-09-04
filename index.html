@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css?v=1.9.4" />
-    <link rel="stylesheet" href="./styles.css?v=20260902-02" />
+    <link rel="stylesheet" href="./styles.css?v=20260904-01" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -581,7 +581,7 @@
               </div>
               <div class="route-controls primary route-day-frame">
                 <label>Startsted
-                  <input id="routeOrigin" value="Svene, 3622, Norge" />
+                  <input id="routeOrigin" value="Grettevegen 53, 3622 Svene" />
                 </label>
                 <label>Avreise
                   <input id="routeStartTime" type="time" value="07:15" step="900" />
@@ -774,11 +774,11 @@
                 <span>3</span>
                 <div>
                   <h3>Rute og booking</h3>
-                  <p>Beregn rekkefølge og kjøretider med Google. Bare manuelt valgte kunder som faktisk har bekreftet kan bookes.</p>
+                  <p>Beregn rekkefølge og kjøretider fra kontrollerte anleggsadresser. Bare kunder som faktisk har bekreftet kan bookes.</p>
                 </div>
               </div>
               <div class="route-actions">
-                <button id="routeRefreshButton" type="button">Beregn korteste rute med Google</button>
+                <button id="routeRefreshButton" type="button">Beregn korteste kjørerute</button>
                 <button id="routeEtaDraftButton" class="secondary" type="button">Lag ETA-SMS til kontroll</button>
                 <button id="routeBookDraftButton" class="secondary" type="button">Opprett bookinger og servicejobber</button>
               </div>
@@ -1735,11 +1735,11 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260902-02"></script>
-    <script src="./supabase-adapter.js?v=20260902-02"></script>
-    <script src="./intake-parser.js?v=20260902-02"></script>
-    <script src="./assistant-coordinator.js?v=20260902-02"></script>
-    <script src="./nearby-planning.js?v=20260902-02"></script>
-    <script src="./app-20260902-02.js"></script>
+    <script src="./supabase-config.js?v=20260904-01"></script>
+    <script src="./supabase-adapter.js?v=20260904-01"></script>
+    <script src="./intake-parser.js?v=20260904-01"></script>
+    <script src="./assistant-coordinator.js?v=20260904-01"></script>
+    <script src="./nearby-planning.js?v=20260904-01"></script>
+    <script src="./app-20260904-01.js"></script>
   </body>
 </html>

@@ -1359,13 +1359,13 @@
     if (!stops.length || stops.length > 10) throw new Error("Velg mellom 1 og 10 bekreftede servicekunder.");
     const { data, error } = await withTimeout(
       supabase.functions.invoke("route-planner", { body: payload }),
-      "Google-ruten brukte for lang tid. Kontroller nettet og prøv igjen.",
+      "Ruteberegningen brukte for lang tid. Kontroller nettet og prøv igjen.",
       90000,
     );
-    if (error) throw new Error(await crmAssistantErrorMessage(error, "Google Routes svarte ikke."));
+    if (error) throw new Error(await crmAssistantErrorMessage(error, "Rutetjenesten svarte ikke."));
     if (data?.error) throw new Error(String(data.error));
-    if (!data?.ok || data?.source !== "google_routes_matrix") {
-      throw new Error("CRM mottok ikke en gyldig Google-beregnet rute.");
+    if (!data?.ok || !["google_routes_matrix", "statens_vegvesen_nvdb"].includes(data?.source)) {
+      throw new Error("CRM mottok ikke en gyldig, kontrollert ruteberegning.");
     }
     return data;
   }
@@ -2520,7 +2520,7 @@
       const supabase = await requireClient();
       const { data, error } = await withDbTimeout(
         supabase.rpc("create_verified_service_route", { p_route: payload }),
-        "opprette Google-beregnet servicerute",
+        "opprette kontrollert servicerute",
         30000,
       );
       if (error) {
