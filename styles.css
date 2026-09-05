@@ -8432,6 +8432,18 @@ textarea {
   border-left-color: #2563eb;
 }
 
+.service-campaign-member.date_conflict {
+  border-left-color: #d97706;
+  background: #fffbeb;
+}
+
+.service-campaign-member.date_conflict > header em,
+.service-campaign-metrics .date-conflict {
+  border-color: #fcd34d;
+  background: #fef3c7;
+  color: #92400e;
+}
+
 .service-campaign-member.reply-received {
   border-left-color: #d97706;
   background: #fffbeb;
