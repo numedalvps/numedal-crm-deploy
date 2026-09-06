@@ -8432,6 +8432,18 @@ textarea {
   border-left-color: #2563eb;
 }
 
+.service-campaign-member.accepted_pending_schedule {
+  border-left-color: #0f766e;
+  background: #f0fdfa;
+}
+
+.service-campaign-member.accepted_pending_schedule > header em,
+.service-campaign-metrics .needs-scheduling {
+  border-color: #99f6e4;
+  background: #ccfbf1;
+  color: #115e59;
+}
+
 .service-campaign-member.date_conflict {
   border-left-color: #d97706;
   background: #fffbeb;
