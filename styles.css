@@ -7029,6 +7029,117 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.customer-history-panel {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.customer-history-count,
+.customer-history-explanation,
+.customer-history-provenance {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.customer-history-count {
+  white-space: nowrap;
+}
+
+.customer-history-panel .section-title-row {
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+
+.customer-history-panel article,
+.customer-history-panel article > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.customer-history-panel article {
+  gap: 10px;
+  padding: 14px;
+}
+
+.customer-history-dates {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 18px;
+  margin: 8px 0;
+}
+
+.customer-history-dates dt {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+
+.customer-history-dates dd {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.customer-history-provenance {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  padding-top: 8px;
+  margin-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.customer-history-provenance span {
+  font-weight: 400;
+}
+
+.customer-history-more > summary {
+  min-height: 44px;
+  padding: 10px 0;
+  color: var(--teal);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.customer-history-more > summary:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 3px;
+}
+
+.customer-history-more .customer-history-expanded,
+.customer-history-more[open] .customer-history-collapsed {
+  display: none;
+}
+
+.customer-history-more[open] .customer-history-expanded {
+  display: inline;
+}
+
+.customer-history-panel .expandable-text:not([open]) .expandable-expanded-label {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  .customer-history-dates {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .customer-history-panel article {
+    padding: 12px;
+  }
+
+  .customer-history-panel .invoice-list article {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .customer-history-panel .invoice-list article > a {
+    justify-self: start;
+  }
+}
+
 .timeline-note.expandable-text {
   border: 0;
   padding: 0;
