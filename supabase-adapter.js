@@ -1872,6 +1872,11 @@
       const installationId = optionalUuid(booking?.installationId || booking?.installation_id, "Anlegget");
       const locationId = optionalUuid(booking?.locationId || booking?.location_id, "Anleggsadressen");
       const leadId = optionalUuid(booking?.leadId || booking?.lead_id, "Salgsmuligheten");
+      const campaignMemberId = optionalUuid(options.campaignMemberId, "Servicesvaret");
+      const campaignMemberRevision = Number(options.expectedCampaignMemberRevision);
+      if (campaignMemberId && (!Number.isSafeInteger(campaignMemberRevision) || campaignMemberRevision < 1)) {
+        throw new Error("Servicesvaret mangler en gyldig revisjon. Oppdater servicesvarene før booking.");
+      }
       const rowVersion = (id, value, label) => {
         const version = String(value || "").trim();
         if (id && !version) throw new Error(`${label} mangler radversjon. Last inn siden på nytt.`);
@@ -1903,15 +1908,26 @@
         order_title: options.orderTitle || "Jobb",
         order_note: options.orderNote || booking?.note || null,
       };
-      const { data, error } = await withDbTimeout(
-        supabase.rpc("save_manual_job_booking_v1", {
-          p_client_event_id: clientEventId,
-          p_operation_key: operationKey,
-          p_request: request,
-        }),
-        "lagre booking og jobb samlet",
-        30000,
-      );
+      if (campaignMemberId) {
+        request.campaign_member_id = campaignMemberId;
+        request.expected_campaign_member_revision = campaignMemberRevision;
+      }
+      let response;
+      try {
+        response = await withDbTimeout(
+          supabase.rpc("save_manual_job_booking_v1", {
+            p_client_event_id: clientEventId,
+            p_operation_key: operationKey,
+            p_request: request,
+          }),
+          "lagre booking og jobb samlet",
+          30000,
+        );
+      } catch (error) {
+        error.bookingOutcomeUncertain = true;
+        throw error;
+      }
+      const { data, error } = response;
       if (error) {
         if (isBookingOverlapError(error)) throw new Error(bookingOverlapMessage(error));
         if (/function .*save_manual_job_booking_v1|schema cache/i.test(error.message || "")) {
@@ -1920,7 +1936,9 @@
         throw error;
       }
       if (!data?.booking?.id || !data?.order?.id || !data?.job?.id || !data?.appointment?.id) {
-        throw new Error("CRM-serveren returnerte ikke hele den lagrede jobben.");
+        const incomplete = new Error("CRM-serveren returnerte ikke hele den lagrede jobben.");
+        incomplete.bookingOutcomeUncertain = true;
+        throw incomplete;
       }
       return {
         id: data.booking.id,
