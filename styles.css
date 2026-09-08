@@ -732,6 +732,103 @@ small {
   margin-bottom: 12px;
 }
 
+.dashboard-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  margin-bottom: 12px;
+}
+
+.dashboard-workspace > .panel {
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.upcoming-work-panel .section-head {
+  align-items: flex-start;
+  flex-direction: row;
+  flex-wrap: nowrap;
+}
+
+.upcoming-work-panel .section-head p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.upcoming-work-panel .job-group h3 {
+  margin-top: 10px;
+}
+
+.upcoming-work-panel .job-group > div {
+  display: grid;
+  gap: 8px;
+}
+
+.upcoming-job {
+  display: grid;
+  font: inherit;
+  width: 100%;
+  min-height: 92px;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--teal);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.upcoming-job:hover,
+.upcoming-job:focus-visible {
+  background: var(--teal-soft);
+  border-color: var(--teal);
+}
+
+.upcoming-job-meta,
+.upcoming-job-address {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.upcoming-job-warning {
+  color: #9a3412;
+  font-size: 12px;
+}
+
+.google-insights-summary {
+  min-height: 44px;
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.google-insights-summary > span {
+  display: inline-grid;
+  gap: 3px;
+  vertical-align: middle;
+}
+
+.google-insights-summary small {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.google-insights-body {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 1050px) {
+  .dashboard-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .google-insights-panel {
   margin-bottom: 12px;
   overflow: hidden;
@@ -6793,6 +6890,97 @@ textarea {
   gap: 8px;
 }
 
+.customer-installation-groups {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+
+.customer-installation-group {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  background: #f8fafb;
+}
+
+.customer-installation-group-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin-bottom: 14px;
+}
+
+.customer-installation-group-heading > div {
+  flex: 1 1 200px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.customer-installation-group-heading h4 {
+  margin: 0 0 5px;
+  color: var(--teal);
+  font-size: 17px;
+}
+
+.customer-installation-group-heading p,
+.customer-installation-empty {
+  margin: 0 0 5px;
+  line-height: 1.5;
+}
+
+.customer-installation-group-heading small,
+.customer-installation-empty {
+  color: var(--muted);
+}
+
+.customer-installation-group-heading > button,
+.customer-installation-more > summary {
+  min-height: 44px;
+}
+
+.customer-installation-more {
+  margin-top: 12px;
+}
+
+.customer-installation-more > summary {
+  width: fit-content;
+  max-width: 100%;
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--teal);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.customer-installation-more[open] > summary {
+  margin-bottom: 14px;
+}
+
+.customer-installation-more > summary:focus-visible {
+  outline: 3px solid var(--teal);
+  outline-offset: 3px;
+}
+
+.customer-installation-more:not([open]) > summary .installation-show-fewer,
+.customer-installation-more[open] > summary .installation-show-all {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .customer-installation-group {
+    padding: 10px;
+  }
+
+  .customer-installation-group-heading > button {
+    width: 100%;
+  }
+}
+
 .equipment-heading {
   display: inline-flex;
   align-items: center;
@@ -11606,6 +11794,64 @@ textarea {
   font-size: inherit;
 }
 
+.booking-field-help {
+  display: block;
+  width: 100%;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+.workflow-details {
+  min-width: 0;
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #fff;
+}
+
+.workflow-details > summary {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 3px 8px;
+  min-height: 60px;
+  padding: 11px 13px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.workflow-details > summary::-webkit-details-marker { display: none; }
+.workflow-details > summary::before { content: "▸"; grid-row: 1 / 3; }
+.workflow-details[open] > summary::before { content: "▾"; }
+.workflow-details > summary > strong { font-size: 14px; }
+.workflow-details > summary > span { grid-column: 2; color: var(--muted); font-size: 13px; font-weight: 400; line-height: 1.45; overflow-wrap: anywhere; }
+.workflow-details[open] > summary { border-bottom: 1px solid var(--line); }
+.workflow-details-body { padding: 12px; }
+.workflow-details-body > :first-child { margin-top: 0; }
+.booking-calendar-details > .booking-month { margin: 0; padding: 12px; }
+.booking-review-controls:has(> .hidden):not(:has(> :not(.hidden))) { display: none; }
+
+.completion-core-fields {
+  display: grid;
+  grid-template-columns: minmax(160px, 0.5fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  margin-top: 12px;
+}
+
+.completion-core-fields #completionNoteLabel { margin-top: 0; }
+.completion-core-fields textarea { min-height: 88px; }
+.completion-billing-details .completion-no-invoice { margin-top: 12px; }
+.completion-billing-details .completion-price-details { margin-bottom: 0; }
+
+@media (max-width: 640px) {
+  .completion-core-fields { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .workflow-details > summary { padding: 11px; }
+  .workflow-details-body { padding: 11px; }
+  .booking-calendar-details > .booking-month { padding: 10px; }
+}
+
 .technician-completion-dialog {
   width: min(560px, calc(100vw - 24px));
 }
@@ -13709,7 +13955,8 @@ label {
   }
 
   .start-worklist button {
-    min-height: 88px;
+    min-height: 52px;
+    padding: 10px 12px;
   }
 
   .order-bulk-actions {

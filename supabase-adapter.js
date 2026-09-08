@@ -1853,6 +1853,36 @@
         leadId: data.job.lead_id || "", lead_id: data.job.lead_id || "",
       } : null };
     },
+    async loadManualBookingContext({ customerId, bookingId, orderId, campaignMemberId } = {}) {
+      if (!isUuid(customerId) || [bookingId, orderId, campaignMemberId].some((id) => id && !isUuid(id))) throw new Error("Velg eksakt kunde og booking før oppfrisking.");
+      const supabase = await requireClient();
+      const read = async (query) => {
+        const { data, error } = await withDbTimeout(query, "hente oppdatert bookinggrunnlag");
+        if (error) throw error;
+        return data;
+      };
+      const [booking, linkedOrders, appointments, members] = await Promise.all([
+        bookingId ? read(supabase.from("bookings").select("*").eq("id", bookingId).single()) : null,
+        bookingId ? read(supabase.from("orders").select("id").contains("booking_ids", [bookingId])) : [],
+        bookingId ? read(supabase.from("appointments").select("*").eq("source_table", "bookings").eq("source_id", bookingId).neq("status", "cancelled")) : [],
+        campaignMemberId ? read(supabase.from("service_campaign_members").select("*").eq("id", campaignMemberId).single()) : null,
+      ]);
+      if ((bookingId && (!booking || booking.customer_id !== customerId || linkedOrders.length > 1 || appointments.length > 1))
+        || (orderId && bookingId && linkedOrders[0]?.id !== orderId)) throw new Error("Bookingen er fjernet, flyttet eller har flere koblinger. Kontroller jobblisten; utkastet er beholdt.");
+      const context = await this.loadManualOrderContext(customerId, orderId || linkedOrders[0]?.id || null);
+      const sameScope = (row) => row && row.customer_id === customerId
+        && (row.installation_id || null) === (context.job?.installation_id || null)
+        && (row.location_id || null) === (context.job?.location_id || null);
+      const memberInstallation = members && context.installations.find((row) => row.id === members.installation_id && row.customer_id === customerId);
+      const memberLocation = members && context.locations.find((row) => row.id === members.location_id && row.customer_id === customerId);
+      const validMemberScope = members && members.customer_id === customerId && memberInstallation && memberLocation
+        && memberInstallation.location_id === memberLocation.id && (!context.job || sameScope(members));
+      if ((booking && context.job && !sameScope(booking)) || (appointments[0] && (appointments[0].job_id !== context.job?.id || !sameScope(appointments[0])))
+        || (members && (!validMemberScope || (members.booking_id && members.booking_id !== bookingId)))) throw new Error("Booking, jobb og anlegg må ha samme tilknytning. Kontroller grunnlaget; utkastet er beholdt.");
+      return { ...context, booking: booking ? { ...bookingFromDb(booking), orderId: context.order?.id || "",
+        leadId: context.job?.lead_id || "", lead_id: context.job?.lead_id || "" } : null,
+      appointment: appointments[0] || null, campaignMembers: members ? [{ ...members, member_id: members.id }] : [] };
+    },
     async loadManualCustomerContext(customerId) {
       if (!isUuid(customerId)) throw new Error("Fant ikke kunden som skal oppdateres.");
       const supabase = await requireClient();

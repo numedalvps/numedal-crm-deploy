@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css?v=1.9.4" />
-    <link rel="stylesheet" href="./styles.css?v=20260908-08" />
+    <link rel="stylesheet" href="./styles.css?v=20260908-09" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -91,6 +91,7 @@
         <p id="syncStatus" class="sync-status"></p>
 
         <section id="dashboardView" class="view">
+          <div class="dashboard-workspace">
           <section class="panel start-worklist-panel">
             <div class="section-head">
               <div>
@@ -100,10 +101,24 @@
             </div>
             <div id="startWorklist" class="start-worklist"></div>
           </section>
-          <section id="googleInsightsPanel" class="panel google-insights-panel" aria-labelledby="googleInsightsTitle">
+          <section class="panel upcoming-work-panel" aria-labelledby="nextJobsTitle">
+            <div class="section-head">
+              <div>
+                <h2 id="nextJobsTitle">Neste avtaler</h2>
+                <p id="nextJobsSummary">Dagens og kommende avtaler.</p>
+              </div>
+              <button data-view-jump="planning" class="secondary" type="button">Åpne plan</button>
+            </div>
+            <div id="nextJobs" class="job-list"></div>
+          </section>
+          </div>
+          <details id="googleInsightsPanel" class="panel google-insights-panel" aria-labelledby="googleInsightsTitle">
+            <summary class="google-insights-summary">
+              <span><strong id="googleInsightsTitle">Nettside og Google</strong><small>Søk, trafikk og henvendelser</small></span>
+            </summary>
+            <div class="google-insights-body">
             <div class="section-head google-insights-head">
               <div>
-                <h2 id="googleInsightsTitle">Nettside og Google</h2>
                 <p>Google-søk og henvendelser fra nettsiden. Velg periode eller bla bakover.</p>
               </div>
               <div class="google-insights-links">
@@ -114,7 +129,8 @@
             <div id="googleInsightsContent" class="google-insights-content" aria-live="polite">
               <div class="empty-state compact">Laster statistikk...</div>
             </div>
-          </section>
+            </div>
+          </details>
           <details class="dashboard-extra-actions">
             <summary>Servicefiltre</summary>
             <div class="dashboard-extra-body">
@@ -129,13 +145,6 @@
           <details id="dashboardQueueDetails" class="dashboard-queue-details">
             <summary>Se oppgavelister <span>jobber, påminnelser, service og faktura</span></summary>
             <div class="dashboard-grid">
-            <section class="panel">
-              <div class="section-head">
-                <h2>Neste jobber</h2>
-                <button data-view-jump="planning" type="button">Åpne plan</button>
-              </div>
-              <div id="nextJobs" class="job-list"></div>
-            </section>
             <section class="panel">
               <div class="section-head">
                 <h2>Må flyttes</h2>
@@ -1355,6 +1364,10 @@
           <button id="closeBookingDialog" type="button" aria-label="Lukk">×</button>
         </div>
         <div id="bookingDialogMessage" class="dialog-message hidden"></div>
+        <div class="booking-review-controls">
+          <button id="refreshManualBooking" class="secondary hidden" type="button">Hent oppdaterte opplysninger</button>
+          <div id="manualBookingLatest" class="hidden"></div>
+        </div>
         <div class="form-grid">
           <label class="form-wide booking-customer-picker">Kunde
             <input id="bookingCustomerSearch" type="search" placeholder="Søk navn, telefon, adresse, sted" autocomplete="off" />
@@ -1362,10 +1375,10 @@
             <div id="bookingCustomerResults" class="booking-customer-results"></div>
           </label>
           <label class="form-wide">Anlegg
-            <select id="bookingInstallationSelect">
+            <select id="bookingInstallationSelect" aria-describedby="bookingInstallationHint">
               <option value="">Ikke valgt / gjelder hele kunden</option>
             </select>
-            <small id="bookingInstallationHint" class="compact-help"></small>
+            <small id="bookingInstallationHint" class="booking-field-help"></small>
           </label>
           <label>Dato<input id="bookingDate" type="date" required /></label>
           <label>Tid<input id="bookingTime" type="time" value="09:00" step="900" required /></label>
@@ -1397,7 +1410,13 @@
             </select>
           </label>
         </div>
-        <section class="booking-month">
+        <label class="form-wide">Hva skal gjøres?
+          <textarea id="bookingNote" rows="3" placeholder="Beskriv feilen, kontrollen eller arbeidet som skal utføres."></textarea>
+          <span class="form-hint">Dette gjelder bare denne jobben. Valgt anlegg, adresse og adkomst legges til automatisk.</span>
+        </label>
+        <details id="bookingCalendarDetails" class="workflow-details booking-calendar-details">
+          <summary><strong>Se kalender og dagsplan</strong><span id="bookingCalendarSummary"></span></summary>
+          <section class="booking-month">
           <div class="booking-month-head">
             <button id="bookingMonthPrev" class="secondary" type="button">Forrige</button>
             <strong id="bookingMonthLabel"></strong>
@@ -1412,11 +1431,8 @@
           </div>
           <div id="bookingMonthGrid" class="booking-month-grid"></div>
           <div id="bookingDayAgenda" class="booking-day-agenda"></div>
-        </section>
-        <label class="form-wide">Hva skal gjøres?
-          <textarea id="bookingNote" rows="3" placeholder="Beskriv feilen, kontrollen eller arbeidet som skal utføres."></textarea>
-          <span class="form-hint">Dette gjelder bare denne jobben. Valgt anlegg, adresse og adkomst legges til automatisk.</span>
-        </label>
+          </section>
+        </details>
         <div class="modal-actions">
           <button class="secondary" id="deleteBookingButton" type="button">Fjern avtale</button>
           <button type="submit">Lagre avtale</button>
@@ -1435,8 +1451,19 @@
         <label id="completionInstallationLabel" class="completion-installation hidden">Gjelder varmepumpe/anlegg
           <select id="completionInstallation"></select>
         </label>
-        <div class="form-grid">
+        <div class="completion-core-fields">
           <label id="completionDoneDateLabel"><span>Utført dato</span><input id="completionDoneDate" type="date" required /></label>
+          <label id="completionNoteLabel"><span>Hva ble gjort?</span><textarea id="completionNote" rows="3" placeholder="Beskriv utført arbeid og eventuelle avvik."></textarea></label>
+        </div>
+        <section id="completionAttachmentSection" class="completion-attachment-section hidden">
+          <label><span id="completionAttachmentLabel">Bilder / vedlegg</span>
+            <input id="completionAttachments" type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif,application/pdf" multiple />
+          </label>
+          <div id="completionAttachmentList" class="completion-attachment-list"></div>
+        </section>
+        <details id="completionFollowupDetails" class="workflow-details completion-followup-details">
+          <summary><strong>Oppfølging</strong><span id="completionFollowupSummary"></span></summary>
+          <div class="workflow-details-body form-grid">
           <label id="completionNextActionLabel"><span>Neste steg</span>
             <select id="completionNextAction"></select>
           </label>
@@ -1449,7 +1476,11 @@
           <label id="completionNextDateLabel">Neste service
             <input id="completionNextDate" type="date" />
           </label>
-        </div>
+          </div>
+        </details>
+        <details id="completionBillingDetails" class="workflow-details completion-billing-details">
+          <summary><strong>Fakturering og tillegg</strong><span id="completionBillingSummary"></span></summary>
+          <div class="workflow-details-body">
         <label id="completionPaymentDoneLabel" class="checkbox-line completion-payment">
           <input id="completionPaymentDone" type="checkbox" />
           <span>Betaling/fakturering er gjort</span>
@@ -1502,13 +1533,8 @@
           <textarea id="completionPriceLines" rows="4" placeholder="Tillegg eller prisgrunnlag som bør kontrolleres før faktura."></textarea>
           <div id="completionPriceTotal" class="completion-price-total"></div>
         </details>
-        <section id="completionAttachmentSection" class="completion-attachment-section hidden">
-          <label><span id="completionAttachmentLabel">Bilder / vedlegg</span>
-            <input id="completionAttachments" type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif,application/pdf" multiple />
-          </label>
-          <div id="completionAttachmentList" class="completion-attachment-list"></div>
-        </section>
-        <label id="completionNoteLabel"><span>Notat</span><textarea id="completionNote" rows="3"></textarea></label>
+          </div>
+        </details>
         <div class="modal-actions">
           <button class="secondary" id="cancelCompletionButton" type="button">Avbryt</button>
           <button id="completionSubmitButton" type="submit">Fullfør</button>
@@ -1805,11 +1831,11 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260908-08"></script>
-    <script src="./supabase-adapter.js?v=20260908-08"></script>
-    <script src="./intake-parser.js?v=20260908-08"></script>
-    <script src="./assistant-coordinator.js?v=20260908-08"></script>
-    <script src="./nearby-planning.js?v=20260908-08"></script>
-    <script src="./app-20260908-08.js"></script>
+    <script src="./supabase-config.js?v=20260908-09"></script>
+    <script src="./supabase-adapter.js?v=20260908-09"></script>
+    <script src="./intake-parser.js?v=20260908-09"></script>
+    <script src="./assistant-coordinator.js?v=20260908-09"></script>
+    <script src="./nearby-planning.js?v=20260908-09"></script>
+    <script src="./app-20260908-09.js"></script>
   </body>
 </html>
