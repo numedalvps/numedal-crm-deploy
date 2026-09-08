@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css?v=1.9.4" />
-    <link rel="stylesheet" href="./styles.css?v=20260908-01" />
+    <link rel="stylesheet" href="./styles.css?v=20260908-02" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -945,11 +945,13 @@
           <button id="closeCustomerDialog" type="button" aria-label="Lukk">×</button>
         </div>
         <div id="customerDialogMessage" class="dialog-message hidden"></div>
+        <button id="refreshManualCustomer" class="secondary hidden" type="button">Hent oppdaterte opplysninger</button>
+        <div id="manualCustomerLatest" class="dialog-message hidden"></div>
         <div class="form-grid">
           <label>Navn<input id="formName" required /></label>
           <label>Telefon<input id="formPhone" /></label>
           <label>E-post<input id="formEmail" /></label>
-          <label>Adresse<input id="formStreet" /></label>
+          <label>Kundens hovedadresse<input id="formStreet" /></label>
           <label>Postnr<input id="formZip" /></label>
           <label>Sted<input id="formCity" /></label>
           <input id="formTag" type="hidden" />
@@ -962,26 +964,25 @@
           <div class="form-advanced-body">
             <div class="form-grid">
               <label>Org.nr / referanse<input id="formOrg" /></label>
-              <label>Adkomst/nøkkelboks<input id="formAccess" /></label>
+              <label>Registrert adkomst<input id="formAccess" readonly /><small>Endres under Adkomst på kundekortet.</small></label>
               <label class="form-wide">Andre kontaktpersoner<textarea id="formContactPeople" rows="3" placeholder="Navn | telefon | e-post | rolle"></textarea></label>
               <label class="check-row form-wide"><input id="formDifferentPostal" type="checkbox" /> Annen post-/bostedsadresse</label>
               <label class="postal-extra hidden">Postadresse<input id="formPostalStreet" /></label>
               <label class="postal-extra hidden">Postnr. post<input id="formPostalZip" /></label>
               <label class="postal-extra hidden">Poststed<input id="formPostalCity" /></label>
-              <label>GPS-koordinater<input id="formGps" placeholder="Valgfritt, f.eks. hyttekoordinater" /></label>
-              <label>Google Maps-lenke<input id="formGoogleMaps" /></label>
+              <label class="hidden">Eldre koordinater<input id="formGps" readonly /></label>
+              <label class="hidden">Eldre kartlenke<input id="formGoogleMaps" readonly /></label>
               <label class="check-row"><input id="formInsulation" type="checkbox" /> Blåseisolering / Isobygg</label>
             </div>
             <label>Tags<textarea id="formTags" rows="2" placeholder="Prioritert servicekunde; Vegglifjell nord; Vegglifjell sør; Blåseisolering"></textarea></label>
             <div id="formTagCatalog" class="tag-catalog"></div>
             <label>Notat<textarea id="formNote" rows="3"></textarea></label>
-            </div>
-          </details>
+          </div>
         </details>
         <details class="form-advanced-details legacy-customer-fields">
           <summary>Eldre serviceinfo på kundekortet</summary>
           <div class="form-advanced-body">
-            <p class="form-hint">Bruk normalt «Lagre + legg til anlegg». Feltene her beholdes for eldre importerte kundekort.</p>
+            <p class="form-hint">Historiske samleopplysninger. Rediger hver fysisk pumpe under «Rediger anlegg».</p>
             <div class="form-grid">
               <label>Merke<input id="formBrand" /></label>
               <label>Modell<input id="formModel" /></label>
@@ -994,6 +995,7 @@
         </details>
         <div class="modal-actions">
           <button class="secondary" id="deleteCustomerButton" type="button">Sett inaktiv</button>
+          <button class="secondary" id="cancelCustomerDialog" type="button">Avbryt</button>
           <button class="secondary" id="saveCustomerAndInstallationButton" type="submit">Lagre + legg til anlegg</button>
           <button type="submit">Lagre kunde</button>
         </div>
@@ -1007,6 +1009,8 @@
           <button id="closeInstallationDialog" type="button" aria-label="Lukk">×</button>
         </div>
         <div id="installationDialogMessage" class="dialog-message hidden"></div>
+        <button id="refreshManualInstallation" class="secondary hidden" type="button">Hent oppdaterte opplysninger</button>
+        <div id="manualInstallationLatest" class="dialog-message hidden"></div>
         <div class="form-grid">
           <label>Kunde<input id="installationCustomerName" disabled /></label>
           <label>Navn på anlegg<input id="installationLabel" placeholder="F.eks. Hovedhus, Hytte, Stue, Kjeller" required /></label>
@@ -1044,6 +1048,27 @@
           <button class="secondary" id="cancelInstallationDialog" type="button">Avbryt</button>
           <button type="submit">Lagre anlegg</button>
         </div>
+      </form>
+    </dialog>
+
+    <dialog id="customerLocationDialog" class="modal compact-modal">
+      <form id="customerLocationForm" method="dialog">
+        <div class="modal-head"><h2 id="customerLocationTitle">Rediger anleggssted</h2><button id="closeCustomerLocationDialog" type="button" aria-label="Lukk">×</button></div>
+        <p id="customerLocationContext" class="form-hint"></p>
+        <div id="customerLocationMessage" class="dialog-message hidden" aria-live="polite"></div>
+        <button id="refreshManualLocation" class="secondary hidden" type="button">Hent oppdaterte opplysninger</button>
+        <div id="manualLocationLatest" class="dialog-message hidden"></div>
+        <div class="form-grid">
+          <label>Navn på stedet<input id="customerLocationName" required placeholder="F.eks. Bolig eller Hytte" /></label>
+          <label>Type sted<select id="customerLocationType"><option value="unknown">Ukjent</option><option value="home">Bolig</option><option value="cabin">Hytte</option><option value="business">Næring</option><option value="other">Annet</option></select></label>
+          <label class="form-wide">Anleggsadresse<input id="customerLocationAddress" /></label>
+          <label>Postnr<input id="customerLocationZip" /></label>
+          <label>Sted<input id="customerLocationCity" /></label>
+          <label class="check-row form-wide"><input id="customerLocationPrimary" type="checkbox" /> Hovedsted for anlegg</label>
+        </div>
+        <label>Veibeskrivelse<textarea id="customerLocationDirections" rows="3"></textarea></label>
+        <p class="form-hint">Dette er stedet der pumpene står. Kundens kontakt- og postadresse endres separat.</p>
+        <div class="modal-actions"><button id="cancelCustomerLocationDialog" class="secondary" type="button">Avbryt</button><button type="submit">Lagre anleggssted</button></div>
       </form>
     </dialog>
 
@@ -1117,6 +1142,8 @@
           <button id="closeLeadStatusDialog" type="button" aria-label="Lukk">×</button>
         </div>
         <div id="leadStatusDialogMessage" class="dialog-message hidden"></div>
+        <button id="refreshManualAcceptance" class="secondary hidden" type="button">Hent oppdaterte opplysninger</button>
+        <div id="manualAcceptanceLatest" class="dialog-message hidden"></div>
         <div class="lead-status-summary">
           <strong id="leadStatusCustomerName"></strong>
           <span id="leadStatusLabelText"></span>
@@ -1169,14 +1196,27 @@
             </select>
             <small id="leadStatusInstallationHint" class="lead-status-installation-hint"></small>
           </label>
-          <fieldset class="lead-status-next-step">
+          <label>Anleggssted
+            <select id="leadStatusLocation" aria-label="Anleggssted"></select>
+            <small id="leadStatusLocationHint" class="form-hint"></small>
+          </label>
+          <div id="leadStatusNewLocation" class="form-grid hidden">
+            <p class="form-hint form-wide">Skriv det faktiske anleggsstedet. Eventuelle opplysninger fra saken er et forslag som må bekreftes.</p>
+            <label>Navn på stedet<input id="leadStatusNewLocationName" placeholder="F.eks. Bolig eller Hytte" /></label>
+            <label>Anleggsadresse<input id="leadStatusNewLocationAddress" /></label>
+            <label>Postnr<input id="leadStatusNewLocationZip" /></label>
+            <label>Sted<input id="leadStatusNewLocationCity" /></label>
+            <label class="form-wide">Veibeskrivelse<textarea id="leadStatusNewLocationDirections" rows="2"></textarea></label>
+            <label class="check-row form-wide"><input id="leadStatusNewLocationConfirmed" type="checkbox" /> Dette er anleggsstedet kunden har bekreftet.</label>
+          </div>
+          <fieldset class="lead-status-next-step hidden">
             <legend>Neste steg</legend>
             <label class="check-row">
               <input id="leadStatusCreateOrder" type="checkbox" checked />
               <span><strong>Opprett jobb</strong><small>Bruk avtalt varegrunnlag på jobben.</small></span>
             </label>
             <label class="check-row">
-              <input id="leadStatusBookAfter" type="checkbox" checked />
+              <input id="leadStatusBookAfter" type="checkbox" />
               <span><strong>Velg tid etterpå</strong><small>Åpner kalenderen når jobben er lagret.</small></span>
             </label>
           </fieldset>
@@ -1735,11 +1775,11 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260908-01"></script>
-    <script src="./supabase-adapter.js?v=20260908-01"></script>
-    <script src="./intake-parser.js?v=20260908-01"></script>
-    <script src="./assistant-coordinator.js?v=20260908-01"></script>
-    <script src="./nearby-planning.js?v=20260908-01"></script>
-    <script src="./app-20260908-01.js"></script>
+    <script src="./supabase-config.js?v=20260908-02"></script>
+    <script src="./supabase-adapter.js?v=20260908-02"></script>
+    <script src="./intake-parser.js?v=20260908-02"></script>
+    <script src="./assistant-coordinator.js?v=20260908-02"></script>
+    <script src="./nearby-planning.js?v=20260908-02"></script>
+    <script src="./app-20260908-02.js"></script>
   </body>
 </html>

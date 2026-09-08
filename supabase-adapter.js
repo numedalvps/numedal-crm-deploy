@@ -1370,6 +1370,48 @@
     return data;
   }
 
+  async function withManualWriteTimeout(query, label, timeoutMs = 30000) {
+    try {
+      const response = await withDbTimeout(query, label, timeoutMs);
+      if (response.error && manualResponseOutcomeUncertain(response)) response.error.manualOutcomeUncertain = true;
+      return response;
+    }
+    catch (error) { error.manualOutcomeUncertain = true; throw error; }
+  }
+
+  function manualResponseOutcomeUncertain(response) {
+    const code = String(response?.error?.code || "");
+    if (/^[0-9A-Z]{5}$/.test(code)) return false;
+    return [0, 408, 502, 503, 504].includes(Number(response?.status ?? -1))
+      || /fetch|network|timeout|timed out|forbindelse|nettbrudd|gateway/i.test(response?.error?.message || "");
+  }
+
+  async function manualReceiptRpc(name, request, options, entities) {
+    if (!isUuid(options.clientEventId) || !/^[A-Za-z0-9][A-Za-z0-9._:-]{7,239}$/.test(String(options.operationKey || ""))) {
+      throw new Error("Lagringen mangler et gyldig grunnlag. Åpne skjemaet på nytt.");
+    }
+    const supabase = await requireClient();
+    let response;
+    try {
+      response = await withDbTimeout(supabase.rpc(name, {
+        p_client_event_id: options.clientEventId, p_operation_key: options.operationKey, p_request: request,
+      }), "lagre og kontrollere endringen", 30000);
+    } catch (error) {
+      error.manualOutcomeUncertain = true;
+      throw error;
+    }
+    if (response.error) {
+      if (manualResponseOutcomeUncertain(response)) response.error.manualOutcomeUncertain = true;
+      throw response.error;
+    }
+    if (!response.data || entities.some((entity) => !response.data[entity]?.id)) {
+      const error = new Error("Lagringssvaret var ufullstendig. Kontroller den samme lagringen igjen.");
+      error.manualOutcomeUncertain = true;
+      throw error;
+    }
+    return response.data;
+  }
+
   async function invokeEaccountingFunction(functionName, body, timeoutMs = 30000) {
     const allowedFunctions = new Set(["eaccounting-auth", "eaccounting-draft"]);
     if (!allowedFunctions.has(functionName)) throw new Error("Ugyldig eAccounting-funksjon.");
@@ -1735,29 +1777,67 @@
       return syncJobForOrder(supabase, id, { ...order, id });
     },
     async overrideJobPriority(jobId, options = {}) {
-      const supabase = await requireClient();
       if (!isUuid(jobId)) throw new Error("Ugyldig jobb.");
-      const priorityClass = String(options.priorityClass || "").toUpperCase();
-      const clear = Boolean(options.clear);
-      const reason = String(options.reason || "").trim();
-      const expectedUpdatedAt = options.expectedUpdatedAt || null;
+      return manualReceiptRpc("override_job_priority_v2", {
+        job_id: jobId,
+        priority_class: options.clear ? null : String(options.priorityClass || "").toUpperCase(),
+        clear: Boolean(options.clear), reason: String(options.reason || "").trim(),
+        expected_job_updated_at: options.expectedUpdatedAt || null,
+      }, options, ["job"]);
+    },
+    async loadManualJobPriority(jobId) {
+      if (!isUuid(jobId)) throw new Error("Fant ikke jobben som skal oppdateres.");
+      const supabase = await requireClient();
       const { data, error } = await withDbTimeout(
-        supabase.rpc("override_job_priority_v1", {
-          p_job_id: jobId,
-          p_priority_class: clear ? null : priorityClass,
-          p_reason: reason,
-          p_expected_job_updated_at: expectedUpdatedAt,
-          p_clear: clear,
-        }),
-        clear ? "fjerne prioritetsstyring" : "endre jobbprioritet",
-      );
+        supabase.from("job_priority_worklist_v1").select("*").eq("id", jobId).single(), "hente oppdatert jobbprioritet");
       if (error) throw error;
-      const { data: refreshed, error: refreshError } = await withDbTimeout(
-        supabase.from("job_priority_worklist_v1").select("*").eq("id", jobId).single(),
-        "laste oppdatert jobbprioritet",
-      );
-      if (refreshError) throw refreshError;
-      return { event: data, job: refreshed };
+      if (!data || data.id !== jobId || !data.updated_at) throw new Error("Fant ikke oppdatert grunnlag for jobben.");
+      return data;
+    },
+    async saveManualCustomer(request, options = {}) {
+      const result = await manualReceiptRpc("save_manual_customer_v1", request, options, ["customer"]);
+      return { ...result, customer: customerFromDb(result.customer) };
+    },
+    async saveManualCustomerLocation(request, options = {}) {
+      return manualReceiptRpc("save_manual_customer_location_v1", request, options, ["location"]);
+    },
+    async acceptLeadUnscheduledJob(request, options = {}) {
+      const result = await manualReceiptRpc("accept_lead_unscheduled_job_v1", request, options, ["customer", "lead", "order", "job"]);
+      return { ...result, customer: customerFromDb(result.customer), order: orderFromDb(result.order) };
+    },
+    async loadManualCustomerContext(customerId) {
+      if (!isUuid(customerId)) throw new Error("Fant ikke kunden som skal oppdateres.");
+      const supabase = await requireClient();
+      const results = await Promise.all([
+        supabase.from("customers").select("*").eq("id", customerId).single(),
+        supabase.from("customer_locations").select("*").eq("customer_id", customerId),
+        supabase.from("installations").select("*").eq("customer_id", customerId),
+      ].map((query) => withDbTimeout(query, "hente oppdaterte kundeopplysninger")));
+      for (const result of results) if (result.error) throw result.error;
+      return { customer: customerFromDb(results[0].data), locations: results[1].data || [], installations: results[2].data || [] };
+    },
+    async loadManualAcceptanceContext({ leadId, customerId, sourceActivityId, jobId } = {}) {
+      if (!isUuid(leadId)) throw new Error("Fant ikke saken som skal oppdateres.");
+      const supabase = await requireClient();
+      const read = async (query) => {
+        const result = await withDbTimeout(query, "hente oppdatert tilbud og jobb");
+        if (result.error) throw result.error;
+        return result.data;
+      };
+      const lead = await read(supabase.from("leads").select("*").eq("id", leadId).single());
+      const linkedCustomerId = lead.existing_customer_id || lead.converted_customer_id || customerId;
+      const [context, recentActivities, sourceActivity, jobs] = await Promise.all([
+        isUuid(linkedCustomerId) ? this.loadManualCustomerContext(linkedCustomerId) : { customer: null, locations: [], installations: [] },
+        read(supabase.from("activities").select("*").eq("lead_id", leadId).order("occurred_at", { ascending: false }).limit(200)),
+        isUuid(sourceActivityId) ? read(supabase.from("activities").select("*").eq("id", sourceActivityId).maybeSingle()) : null,
+        read(jobId ? supabase.from("job_priority_worklist_v1").select("*").eq("id", jobId)
+          : supabase.from("job_priority_worklist_v1").select("*").eq("lead_id", leadId).neq("work_status", "cancelled")),
+      ]);
+      const job = (jobs || []).find((row) => row.source_table === "orders") || null;
+      const order = job ? await read(supabase.from("orders").select("*").eq("id", job.source_id).single()) : null;
+      const activityRows = [...(recentActivities || [])];
+      if (sourceActivity && !activityRows.some((row) => row.id === sourceActivity.id)) activityRows.push(sourceActivity);
+      return { ...context, lead, activities: activityRows, job, order: order ? orderFromDb(order) : null };
     },
     async deleteOrder(id) {
       const supabase = await requireClient();
@@ -2081,7 +2161,7 @@
           service_interval_months: dbInstallation.service_interval_months || 24,
           inventory_status: options.inventoryStatus || "provisional",
         };
-        const { data, error } = await withDbTimeout(
+        const { data, error } = await withManualWriteTimeout(
           supabase.rpc("create_installation_v2", {
             p_client_event_id: clientEventId,
             p_operation_key: operationKey,
@@ -2102,7 +2182,7 @@
           }
           throw error;
         }
-        if (!data?.installation?.id) throw new Error("CRM-serveren returnerte ikke det lagrede anlegget.");
+        if (!data?.installation?.id) throw Object.assign(new Error("CRM-serveren returnerte ikke det lagrede anlegget."), { manualOutcomeUncertain: true });
         return data.installation;
       }
       if (isUuid(id)) {
@@ -2127,7 +2207,7 @@
         delete patch.location_id;
         delete patch.active;
         delete patch.updated_at;
-        const { data, error } = await withDbTimeout(
+        const { data, error } = await withManualWriteTimeout(
           supabase.rpc("update_installation_v2", {
             p_client_event_id: clientEventId,
             p_operation_key: operationKey,
@@ -2153,11 +2233,11 @@
           }
           throw error;
         }
-        if (!data?.installation?.id) throw new Error("CRM-serveren returnerte ikke det oppdaterte anlegget.");
+        if (!data?.installation?.id) throw Object.assign(new Error("CRM-serveren returnerte ikke det oppdaterte anlegget."), { manualOutcomeUncertain: true });
         return data.installation;
       }
       const query = supabase.from("installations").insert(dbInstallation).select("*").single();
-      const { data, error } = await withDbTimeout(query, "lagre varmepumpe/anlegg");
+      const { data, error } = await withManualWriteTimeout(query, "lagre varmepumpe/anlegg");
       if (error) throw error;
       return data;
     },
@@ -3650,4 +3730,3 @@
     },
   };
 })();
-
