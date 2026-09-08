@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css?v=1.9.4" />
-    <link rel="stylesheet" href="./styles.css?v=20260908-07" />
+    <link rel="stylesheet" href="./styles.css?v=20260908-08" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -1104,12 +1104,16 @@
           <button id="closeOrderDialog" type="button" aria-label="Lukk">×</button>
         </div>
         <div id="orderDialogMessage" class="dialog-message hidden"></div>
+        <button id="refreshManualOrder" class="secondary hidden" type="button">Hent oppdaterte opplysninger</button>
+        <div id="manualOrderLatest" class="dialog-message hidden"></div>
         <div class="form-grid">
           <label>Kunde<input id="orderCustomerName" disabled /></label>
           <label>Type
             <select id="orderType">
               <option value="service">Service</option>
               <option value="reparasjon">Servicearbeid / timejobb</option>
+              <option value="reklamasjon">Reklamasjon</option>
+              <option value="utleie">Utleie</option>
               <option value="befaring">Befaring</option>
               <option value="installasjon">Installasjon</option>
               <option value="blaseisolering">Blåseisolering</option>
@@ -1118,6 +1122,7 @@
           </label>
           <label class="form-wide">Gjelder varmepumpe/anlegg
             <select id="orderInstallationSelect"></select>
+            <span id="orderScopeHint" class="form-hint hidden">Anlegg og type følger den eksisterende avtalen. Du kan redigere tittel og arbeidsbeskrivelse her.</span>
           </label>
           <label class="form-wide">Tittel<input id="orderTitleInput" required /></label>
           <label class="check-row form-wide"><input id="orderBookNow" type="checkbox" /> Book jobben i kalender etterpå</label>
@@ -1800,11 +1805,11 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260908-07"></script>
-    <script src="./supabase-adapter.js?v=20260908-07"></script>
-    <script src="./intake-parser.js?v=20260908-07"></script>
-    <script src="./assistant-coordinator.js?v=20260908-07"></script>
-    <script src="./nearby-planning.js?v=20260908-07"></script>
-    <script src="./app-20260908-07.js"></script>
+    <script src="./supabase-config.js?v=20260908-08"></script>
+    <script src="./supabase-adapter.js?v=20260908-08"></script>
+    <script src="./intake-parser.js?v=20260908-08"></script>
+    <script src="./assistant-coordinator.js?v=20260908-08"></script>
+    <script src="./nearby-planning.js?v=20260908-08"></script>
+    <script src="./app-20260908-08.js"></script>
   </body>
 </html>

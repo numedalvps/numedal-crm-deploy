@@ -11290,6 +11290,13 @@ textarea {
   font-weight: 800;
 }
 
+.manual-order-server-values {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 12rem;
+  overflow-y: auto;
+}
+
 .dialog-message.error {
   border: 1px solid #fecaca;
   background: #fef2f2;

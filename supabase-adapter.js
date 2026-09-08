@@ -746,6 +746,35 @@
     return `${safeAttachmentFilename(owner, "unlinked")}/${date}/${randomId()}-${finalName}`;
   }
 
+  async function completionAttachmentIdentity(file, links) {
+    if (!links.completionUploadId) return null;
+    if (!isUuid(links.completionUploadId) || links.source_kind !== "jobb_fullforing"
+      || !isUuid(links.customer_id) || !isUuid(links.job_id)) {
+      throw new Error("Fullføringsvedlegget mangler en gyldig jobbtilknytning.");
+    }
+    const bytes = await file.arrayBuffer();
+    const hash = [...new Uint8Array(await window.crypto.subtle.digest("SHA-256", bytes))]
+      .map((value) => value.toString(16).padStart(2, "0")).join("");
+    return { id: links.completionUploadId,
+      path: `${links.customer_id}/completion/${links.completionUploadId}-${hash}-${safeAttachmentFilename(file.name || "vedlegg")}` };
+  }
+
+  async function readCompletionAttachment(supabase, identity, expected, assertCurrent = null) {
+    assertCurrent?.();
+    const { data, error } = await supabase.from("crm_attachments").select("*").eq("id", identity.id).maybeSingle();
+    assertCurrent?.();
+    if (error) throw error;
+    if (!data) return null;
+    const fields = ["customer_id", "job_id", "installation_id", "lead_id", "intake_id", "website_submission_id",
+      "source_kind", "storage_bucket", "storage_path", "original_filename", "mime_type", "size_bytes", "title", "note", "source_order"];
+    if (data.deleted_at || fields.some((key) => (data[key] ?? null) !== (expected[key] ?? null))) {
+      const conflict = new Error("Vedleggets lagringsnøkkel tilhører et annet innhold eller en annen jobb.");
+      conflict.code = "40001";
+      throw conflict;
+    }
+    return data;
+  }
+
   function jobTypeFor(value) {
     const type = String(value || "service").toLowerCase();
     if (type === "servicearbeid") return "reparasjon";
@@ -1805,6 +1834,25 @@
       const result = await manualReceiptRpc("accept_lead_unscheduled_job_v1", request, options, ["customer", "lead", "order", "job"]);
       return { ...result, customer: customerFromDb(result.customer), order: orderFromDb(result.order) };
     },
+    async saveManualOrder(request, options = {}) {
+      const result = await manualReceiptRpc("save_manual_order_v1", request, options, ["order", "job", "serviceEvent"]);
+      return { ...result, order: { ...orderFromDb(result.order), jobId: result.job.id, job_id: result.job.id,
+        leadId: result.job.lead_id || "", lead_id: result.job.lead_id || "" } };
+    },
+    async loadManualOrderContext(customerId, orderId = null) {
+      if (!isUuid(customerId) || (orderId && !isUuid(orderId))) throw new Error("Velg en gyldig kunde og jobb før oppfrisking.");
+      const supabase = await requireClient();
+      const { data, error } = await withDbTimeout(supabase.rpc("load_manual_order_context_v1", {
+        p_customer_id: customerId, p_order_id: orderId || null,
+      }), "laste gjeldende jobb og anlegg");
+      if (error) throw error;
+      if (!data?.customer?.id || !Array.isArray(data.locations) || !Array.isArray(data.installations)
+        || (orderId && (!data.order?.id || !data.job?.id))) throw new Error("Jobbgrunnlaget var ufullstendig. Last inn på nytt.");
+      return { ...data, customer: customerFromDb(data.customer), order: data.order ? {
+        ...orderFromDb(data.order), jobId: data.job.id, job_id: data.job.id,
+        leadId: data.job.lead_id || "", lead_id: data.job.lead_id || "",
+      } : null };
+    },
     async loadManualCustomerContext(customerId) {
       if (!isUuid(customerId)) throw new Error("Fant ikke kunden som skal oppdateres.");
       const supabase = await requireClient();
@@ -2340,6 +2388,33 @@
           if (updateJobError) throw updateJobError;
         }
       }
+    },
+    async loadCompletionContext(bookingId, jobId) {
+      if (!isUuid(bookingId) || !isUuid(jobId)) throw new Error("Jobben mangler en entydig kobling. Oppdater jobblisten.");
+      const supabase = await requireClient();
+      const [bookingResult, jobResult] = await Promise.all([
+        withDbTimeout(supabase.from("bookings").select("*").eq("id", bookingId).single(), "hente booking"),
+        withDbTimeout(supabase.from("job_priority_worklist_v1").select("*").eq("id", jobId).single(), "hente jobb"),
+      ]);
+      if (bookingResult.error) throw bookingResult.error;
+      if (jobResult.error) throw jobResult.error;
+      const booking = bookingResult.data, job = jobResult.data;
+      if (!booking || !job || booking.id !== bookingId || job.id !== jobId || booking.customer_id !== job.customer_id
+        || (booking.installation_id || null) !== (job.installation_id || null) || (booking.location_id || null) !== (job.location_id || null)) {
+        throw new Error("Booking og jobb har ikke samme tilknytning. Kontroller jobblisten.");
+      }
+      return { booking: bookingFromDb(booking), job };
+    },
+    async completeTechnicianBooking(id, options = {}) {
+      const completedAt = /^\d{4}-\d{2}-\d{2}$/.test(options.completedAt || "")
+        ? localBookingTimestamp(options.completedAt, "00:00") : options.completedAt;
+      const result = await manualReceiptRpc("complete_technician_booking_v1", {
+        booking_id: id, job_id: options.jobId,
+        expected_booking_updated_at: options.expectedBookingUpdatedAt || null,
+        expected_job_updated_at: options.expectedJobUpdatedAt || null,
+        completed_at: completedAt, note: options.note || null,
+      }, options, ["booking", "job"]);
+      return { ...result, booking: bookingFromDb(result.booking) };
     },
     async completeBookingAsAdmin(id, options = {}) {
       const supabase = await requireClient();
@@ -3591,20 +3666,16 @@
       if (!customerId && !leadId && !installationId && !jobId && !intakeId && !websiteSubmissionId) {
         throw new Error("Vedlegget må kobles til innboks, nettskjema, kunde, lead, jobb eller anlegg.");
       }
-      const path = attachmentPath(file, {
+      const completionIdentity = await completionAttachmentIdentity(file, links);
+      const assertCurrent = completionIdentity && typeof links.completionAssertCurrent === "function" ? links.completionAssertCurrent : null;
+      assertCurrent?.();
+      const path = completionIdentity?.path || attachmentPath(file, {
         customer_id: customerId,
         lead_id: leadId,
         intake_id: intakeId,
       });
-      const { error: uploadError } = await supabase.storage
-        .from("crm-attachments")
-        .upload(path, file, {
-          cacheControl: "3600",
-          contentType: file.type || "application/octet-stream",
-          upsert: false,
-        });
-      if (uploadError) throw uploadError;
       const row = {
+        ...(completionIdentity ? { id: completionIdentity.id } : {}),
         customer_id: customerId,
         lead_id: leadId,
         installation_id: installationId,
@@ -3621,12 +3692,33 @@
         size_bytes: file.size || null,
         source_order: Number(links.source_order ?? links.sourceOrder ?? 0) || 0,
       };
+      if (completionIdentity) {
+        const existing = await readCompletionAttachment(supabase, completionIdentity, row, assertCurrent);
+        if (existing) return existing;
+      }
+      const { error: uploadError } = await supabase.storage
+        .from("crm-attachments")
+        .upload(path, file, {
+          cacheControl: "3600",
+          contentType: file.type || "application/octet-stream",
+          upsert: false,
+        });
+      assertCurrent?.();
+      if (uploadError && !(completionIdentity && (String(uploadError.statusCode || uploadError.status) === "409"
+        || /already exists|duplicate/i.test(uploadError.message || "")))) throw uploadError;
       const { data, error } = await supabase
         .from("crm_attachments")
         .insert(row)
         .select("*")
         .single();
+      assertCurrent?.();
       if (error) {
+        if (completionIdentity) {
+          const existing = await readCompletionAttachment(supabase, completionIdentity, row, assertCurrent);
+          if (existing) return existing;
+          // Keep the deterministic object for retry; the row may have committed after a lost response.
+          throw error;
+        }
         await supabase.storage.from("crm-attachments").remove([path]).catch(() => {});
         throw error;
       }
