@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css?v=1.9.4" />
-    <link rel="stylesheet" href="./styles.css?v=20260908-02" />
+    <link rel="stylesheet" href="./styles.css?v=20260908-03" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -194,6 +194,7 @@
             <section class="panel customer-list-panel">
               <div class="list-panel-toolbar">
                 <h2>Kunder</h2>
+                <button id="newCustomerButton" type="button">Ny kunde</button>
                 <div class="list-view-switch" data-list-mode-scope="customers" role="group" aria-label="Visning av kundelisten">
                   <button class="active" data-list-mode="cards" type="button" aria-pressed="true" title="Vis kundene som kort.">Kort</button>
                   <button data-list-mode="details" type="button" aria-pressed="false" title="Vis kundene i en detaljert tabell.">Detaljer</button>
@@ -938,27 +939,40 @@
       </form>
     </dialog>
 
-    <dialog id="customerDialog" class="modal">
+    <dialog id="customerDialog" class="modal manual-editor" aria-labelledby="customerDialogTitle">
       <form id="customerForm" method="dialog">
         <div class="modal-head">
           <h2 id="customerDialogTitle">Kundekort</h2>
           <button id="closeCustomerDialog" type="button" aria-label="Lukk">×</button>
         </div>
-        <div id="customerDialogMessage" class="dialog-message hidden"></div>
+        <div id="customerDialogMessage" class="dialog-message hidden" role="status" aria-live="polite"></div>
         <button id="refreshManualCustomer" class="secondary hidden" type="button">Hent oppdaterte opplysninger</button>
         <div id="manualCustomerLatest" class="dialog-message hidden"></div>
-        <div class="form-grid">
-          <label>Navn<input id="formName" required /></label>
-          <label>Telefon<input id="formPhone" /></label>
-          <label>E-post<input id="formEmail" /></label>
-          <label>Kundens hovedadresse<input id="formStreet" /></label>
-          <label>Postnr<input id="formZip" /></label>
-          <label>Sted<input id="formCity" /></label>
-          <input id="formTag" type="hidden" />
+        <div class="manual-form-columns">
+          <fieldset class="manual-form-section">
+            <legend>Kontaktopplysninger</legend>
+            <p class="manual-section-help">Navn må fylles ut. Resten kan legges til senere.</p>
+            <div class="form-grid">
+              <label class="form-wide">Navn<input id="formName" required autocomplete="name" /></label>
+              <label>Telefon<input id="formPhone" type="tel" autocomplete="tel" /></label>
+              <label>E-post<input id="formEmail" inputmode="email" autocomplete="email" autocapitalize="none" spellcheck="false" /></label>
+            </div>
+          </fieldset>
+          <fieldset class="manual-form-section">
+            <legend>Kundens hovedadresse</legend>
+            <p id="customerMainAddressHelp" class="manual-section-help">Stedet der pumpen står registreres separat på anlegget.</p>
+            <div class="form-grid">
+              <label class="form-wide">Gateadresse<input id="formStreet" autocomplete="street-address" aria-describedby="customerMainAddressHelp" /></label>
+              <label>Postnr<input id="formZip" inputmode="numeric" autocomplete="postal-code" /></label>
+              <label>Sted<input id="formCity" autocomplete="address-level2" /></label>
+            </div>
+          </fieldset>
+        </div>
+        <input id="formTag" type="hidden" />
+        <div class="manual-customer-options form-grid">
           <label class="check-row"><input id="formIsCustomer" type="checkbox" /> Er kunde</label>
           <label class="check-row"><input id="formPaysCash" type="checkbox" /> Betaling på stedet</label>
         </div>
-        <p class="form-hint">Adresse her er kundens hovedadresse. Hytte eller annet monteringssted registreres på varmepumpen/anlegget.</p>
         <details class="form-advanced-details">
           <summary>Flere kundeopplysninger</summary>
           <div class="form-advanced-body">
@@ -966,10 +980,10 @@
               <label>Org.nr / referanse<input id="formOrg" /></label>
               <label>Registrert adkomst<input id="formAccess" readonly /><small>Endres under Adkomst på kundekortet.</small></label>
               <label class="form-wide">Andre kontaktpersoner<textarea id="formContactPeople" rows="3" placeholder="Navn | telefon | e-post | rolle"></textarea></label>
-              <label class="check-row form-wide"><input id="formDifferentPostal" type="checkbox" /> Annen post-/bostedsadresse</label>
-              <label class="postal-extra hidden">Postadresse<input id="formPostalStreet" /></label>
-              <label class="postal-extra hidden">Postnr. post<input id="formPostalZip" /></label>
-              <label class="postal-extra hidden">Poststed<input id="formPostalCity" /></label>
+              <label class="check-row form-wide"><input id="formDifferentPostal" type="checkbox" /> Egen postadresse</label>
+              <label class="postal-extra hidden form-wide">Postadresse<input id="formPostalStreet" autocomplete="section-postal street-address" /></label>
+              <label class="postal-extra hidden">Postnr. post<input id="formPostalZip" inputmode="numeric" autocomplete="section-postal postal-code" /></label>
+              <label class="postal-extra hidden">Poststed<input id="formPostalCity" autocomplete="section-postal address-level2" /></label>
               <label class="hidden">Eldre koordinater<input id="formGps" readonly /></label>
               <label class="hidden">Eldre kartlenke<input id="formGoogleMaps" readonly /></label>
               <label class="check-row"><input id="formInsulation" type="checkbox" /> Blåseisolering / Isobygg</label>
@@ -993,82 +1007,93 @@
             <label>Servicehistorikk<textarea id="formServiceDates" rows="2" placeholder="2024-05-10; 2026-05-10"></textarea></label>
           </div>
         </details>
-        <div class="modal-actions">
-          <button class="secondary" id="deleteCustomerButton" type="button">Sett inaktiv</button>
+        <div class="manual-archive-row">
+          <button class="secondary danger-outline" id="deleteCustomerButton" type="button">Sett inaktiv</button>
+          <span>Kundekortet arkiveres. Historikken beholdes.</span>
+        </div>
+        <div class="modal-actions manual-editor-actions">
           <button class="secondary" id="cancelCustomerDialog" type="button">Avbryt</button>
           <button class="secondary" id="saveCustomerAndInstallationButton" type="submit">Lagre + legg til anlegg</button>
-          <button type="submit">Lagre kunde</button>
+          <button class="manual-save-primary" type="submit">Lagre kunde</button>
         </div>
       </form>
     </dialog>
 
-    <dialog id="installationDialog" class="modal">
+    <dialog id="installationDialog" class="modal manual-editor" aria-labelledby="installationDialogTitle">
       <form id="installationForm" method="dialog">
         <div class="modal-head">
           <h2 id="installationDialogTitle">Varmepumpe / anlegg</h2>
           <button id="closeInstallationDialog" type="button" aria-label="Lukk">×</button>
         </div>
-        <div id="installationDialogMessage" class="dialog-message hidden"></div>
+        <div id="installationDialogMessage" class="dialog-message hidden" role="status" aria-live="polite"></div>
         <button id="refreshManualInstallation" class="secondary hidden" type="button">Hent oppdaterte opplysninger</button>
         <div id="manualInstallationLatest" class="dialog-message hidden"></div>
-        <div class="form-grid">
-          <label>Kunde<input id="installationCustomerName" disabled /></label>
-          <label>Navn på anlegg<input id="installationLabel" placeholder="F.eks. Hovedhus, Hytte, Stue, Kjeller" required /></label>
-          <label>Eksisterende anleggsadresse
-            <select id="installationLocationSelect"></select>
-          </label>
-          <label>Serviceintervall
-            <select id="installationServiceInterval">
-              <option value="12">1 år</option>
-              <option value="24" selected>2 år</option>
-              <option value="36">3 år</option>
-              <option value="0">Manuelt / ikke fast</option>
-            </select>
-          </label>
-          <label>Serviceområde
-            <select id="installationServiceArea">
-              <option value="">Må avklares</option>
-            </select>
-          </label>
-          <label class="installation-location-field">Adressenavn<input id="installationLocationName" placeholder="F.eks. Hjemme, Hytte Blefjell" /></label>
-          <label class="installation-location-field">Anleggsadresse<input id="installationAddress" /></label>
-          <label class="installation-location-field">Postnr<input id="installationZip" /></label>
-          <label class="installation-location-field">Sted<input id="installationCity" /></label>
-          <label>Merke<input id="installationBrand" /></label>
-          <label>Modell<input id="installationModel" /></label>
-          <label>Serienummer<input id="installationSerial" /></label>
-          <label>Installert<input id="installationInstalledAt" type="date" /></label>
-          <label>Siste service<input id="installationLastServiceAt" type="date" /></label>
-          <label>Neste service<input id="installationNextServiceDue" type="date" /></label>
-          <label class="check-row form-wide"><input id="installationActive" type="checkbox" checked /> Aktiv varmepumpe/anlegg</label>
-        </div>
-        <label>Notat<textarea id="installationNotes" rows="3" placeholder="F.eks. servicekunde - ikke levert av oss, leverandør Megaflis/Coop, plassering eller særlige hensyn."></textarea></label>
-        <p class="form-hint">Bruk eget anlegg for hytte, ekstra pumpe hjemme eller pumper med ulik servicefrist.</p>
-        <div class="modal-actions">
+        <fieldset class="manual-form-section">
+          <legend>Én fysisk varmepumpe / ett anlegg</legend>
+          <p id="installationIdentityHelp" class="manual-section-help">Gi pumpen et navn som skiller den fra andre, for eksempel «Bolig · stue».</p>
+          <div class="form-grid">
+            <label>Kunde<input id="installationCustomerName" disabled /></label>
+            <label>Navn på anlegg<input id="installationLabel" placeholder="F.eks. Bolig · stue eller Hytte · kjeller" required aria-describedby="installationIdentityHelp" /></label>
+            <label>Merke<input id="installationBrand" /></label>
+            <label>Modell<input id="installationModel" /></label>
+            <label>Serienummer<input id="installationSerial" /></label>
+            <label>Installert<input id="installationInstalledAt" type="date" /></label>
+            <label class="check-row form-wide"><input id="installationActive" type="checkbox" checked aria-describedby="installationActiveHint" /> Aktiv varmepumpe/anlegg</label>
+            <p id="installationActiveHint" class="manual-section-help form-wide">Fjerner du avhukingen, arkiveres anlegget når du lagrer. Historikken beholdes. Gjenaktivering er ikke tilgjengelig her.</p>
+          </div>
+        </fieldset>
+        <fieldset class="manual-form-section manual-site-section">
+          <legend>Hvor står anlegget?</legend>
+          <p id="installationSiteHelp" class="manual-section-help">Flere pumper kan dele samme anleggssted. Velg et eksisterende sted, eller registrer et nytt.</p>
+          <div class="form-grid">
+            <label class="form-wide">Anleggssted<select id="installationLocationSelect" aria-describedby="installationSiteHelp"></select></label>
+            <button id="installationUseCustomerAddress" class="secondary manual-address-shortcut hidden" type="button" title="Bare hvis pumpen står på kundens hovedadresse">Bruk kundens hovedadresse</button>
+            <label class="installation-location-field form-wide">Navn på stedet<input id="installationLocationName" placeholder="F.eks. Bolig eller Hytte Blefjell" /></label>
+            <label class="installation-location-field form-wide">Anleggsadresse<input id="installationAddress" autocomplete="section-installation street-address" /></label>
+            <label class="installation-location-field">Postnr<input id="installationZip" inputmode="numeric" autocomplete="section-installation postal-code" /></label>
+            <label class="installation-location-field">Sted<input id="installationCity" autocomplete="section-installation address-level2" /></label>
+            <label class="form-wide">Serviceområde<select id="installationServiceArea"><option value="">Må avklares</option></select><small>Kontrolleres under «Sjekk før booking» på kundekortet.</small></label>
+          </div>
+        </fieldset>
+        <fieldset class="manual-form-section">
+          <legend>Service og notater</legend>
+          <p class="manual-section-help">Datoene gjelder bare denne pumpen. La ukjente datoer stå tomme.</p>
+          <div class="form-grid">
+            <label class="form-wide">Serviceintervall<select id="installationServiceInterval"><option value="12">1 år</option><option value="24" selected>2 år</option><option value="36">3 år</option><option value="0">Manuelt / ikke fast</option></select></label>
+            <label>Siste service<input id="installationLastServiceAt" type="date" /></label>
+            <label>Neste service<input id="installationNextServiceDue" type="date" /></label>
+            <label class="form-wide">Notat<textarea id="installationNotes" rows="3" placeholder="Plassering, leverandør eller andre opplysninger om denne pumpen."></textarea></label>
+          </div>
+        </fieldset>
+        <div class="modal-actions manual-editor-actions">
           <button class="secondary" id="cancelInstallationDialog" type="button">Avbryt</button>
-          <button type="submit">Lagre anlegg</button>
+          <button class="manual-save-primary" type="submit">Lagre anlegg</button>
         </div>
       </form>
     </dialog>
 
-    <dialog id="customerLocationDialog" class="modal compact-modal">
+    <dialog id="customerLocationDialog" class="modal compact-modal manual-editor" aria-labelledby="customerLocationTitle">
       <form id="customerLocationForm" method="dialog">
         <div class="modal-head"><h2 id="customerLocationTitle">Rediger anleggssted</h2><button id="closeCustomerLocationDialog" type="button" aria-label="Lukk">×</button></div>
-        <p id="customerLocationContext" class="form-hint"></p>
+        <p id="customerLocationContext" class="manual-scope-notice"></p>
         <div id="customerLocationMessage" class="dialog-message hidden" aria-live="polite"></div>
         <button id="refreshManualLocation" class="secondary hidden" type="button">Hent oppdaterte opplysninger</button>
         <div id="manualLocationLatest" class="dialog-message hidden"></div>
-        <div class="form-grid">
-          <label>Navn på stedet<input id="customerLocationName" required placeholder="F.eks. Bolig eller Hytte" /></label>
-          <label>Type sted<select id="customerLocationType"><option value="unknown">Ukjent</option><option value="home">Bolig</option><option value="cabin">Hytte</option><option value="business">Næring</option><option value="other">Annet</option></select></label>
-          <label class="form-wide">Anleggsadresse<input id="customerLocationAddress" /></label>
-          <label>Postnr<input id="customerLocationZip" /></label>
-          <label>Sted<input id="customerLocationCity" /></label>
-          <label class="check-row form-wide"><input id="customerLocationPrimary" type="checkbox" /> Hovedsted for anlegg</label>
-        </div>
-        <label>Veibeskrivelse<textarea id="customerLocationDirections" rows="3"></textarea></label>
-        <p class="form-hint">Dette er stedet der pumpene står. Kundens kontakt- og postadresse endres separat.</p>
-        <div class="modal-actions"><button id="cancelCustomerLocationDialog" class="secondary" type="button">Avbryt</button><button type="submit">Lagre anleggssted</button></div>
+        <fieldset class="manual-form-section manual-site-section">
+          <legend>Det fysiske anleggsstedet</legend>
+          <p id="customerLocationAddressHelp" class="manual-section-help">Ny eller endret adresse må ha gateadresse, postnummer og sted. Kundens hoved- og postadresse endres separat.</p>
+          <div class="form-grid">
+            <label>Navn på stedet<input id="customerLocationName" required placeholder="F.eks. Bolig eller Hytte" /></label>
+            <label>Type sted<select id="customerLocationType"><option value="unknown">Ukjent</option><option value="home">Bolig</option><option value="cabin">Hytte</option><option value="business">Næring</option><option value="other">Annet</option></select></label>
+            <button id="customerLocationUseCustomerAddress" class="secondary manual-address-shortcut hidden" type="button" title="Bare hvis pumpen står på kundens hovedadresse">Bruk kundens hovedadresse</button>
+            <label class="form-wide">Anleggsadresse<input id="customerLocationAddress" autocomplete="section-site street-address" aria-describedby="customerLocationAddressHelp" /></label>
+            <label>Postnr<input id="customerLocationZip" inputmode="numeric" autocomplete="section-site postal-code" /></label>
+            <label>Sted<input id="customerLocationCity" autocomplete="section-site address-level2" /></label>
+            <label class="check-row form-wide"><input id="customerLocationPrimary" type="checkbox" /> Hovedsted for anlegg</label>
+            <label class="form-wide">Veibeskrivelse<textarea id="customerLocationDirections" rows="3" placeholder="Hjelp servicemannen med å finne fram til dette stedet."></textarea></label>
+          </div>
+        </fieldset>
+        <div class="modal-actions manual-editor-actions"><button id="cancelCustomerLocationDialog" class="secondary" type="button">Avbryt</button><button class="manual-save-primary" type="submit">Lagre anleggssted</button></div>
       </form>
     </dialog>
 
@@ -1775,11 +1800,11 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260908-02"></script>
-    <script src="./supabase-adapter.js?v=20260908-02"></script>
-    <script src="./intake-parser.js?v=20260908-02"></script>
-    <script src="./assistant-coordinator.js?v=20260908-02"></script>
-    <script src="./nearby-planning.js?v=20260908-02"></script>
-    <script src="./app-20260908-02.js"></script>
+    <script src="./supabase-config.js?v=20260908-03"></script>
+    <script src="./supabase-adapter.js?v=20260908-03"></script>
+    <script src="./intake-parser.js?v=20260908-03"></script>
+    <script src="./assistant-coordinator.js?v=20260908-03"></script>
+    <script src="./nearby-planning.js?v=20260908-03"></script>
+    <script src="./app-20260908-03.js"></script>
   </body>
 </html>

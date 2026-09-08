@@ -462,7 +462,7 @@
     if ("indoor_serial_number" in installation || "indoorSerialNumber" in installation) row.indoor_serial_number = installation.indoor_serial_number || installation.indoorSerialNumber || null;
     if ("outdoor_serial_number" in installation || "outdoorSerialNumber" in installation) row.outdoor_serial_number = installation.outdoor_serial_number || installation.outdoorSerialNumber || null;
     if ("service_interval_months" in installation || "serviceIntervalMonths" in installation) {
-      const months = Number(installation.service_interval_months || installation.serviceIntervalMonths || 0);
+      const months = Number(installation.service_interval_months ?? installation.serviceIntervalMonths ?? 24);
       row.service_interval_months = Number.isFinite(months) && months >= 0 ? months : 24;
     }
     if ("active" in installation) row.active = installation.active !== false;
@@ -2158,7 +2158,7 @@
           last_service_at: dbInstallation.last_service_at,
           next_service_due: dbInstallation.next_service_due,
           notes: dbInstallation.notes,
-          service_interval_months: dbInstallation.service_interval_months || 24,
+          service_interval_months: dbInstallation.service_interval_months ?? 24,
           inventory_status: options.inventoryStatus || "provisional",
         };
         const { data, error } = await withManualWriteTimeout(
@@ -2196,9 +2196,9 @@
         const expectedTargetIds = Array.isArray(options.expectedTargetInstallationIds)
           ? [...new Set(options.expectedTargetInstallationIds.filter(isUuid))].sort()
           : [];
-        if (!isUuid(sourceLocationId) || !isUuid(targetLocationId) || !isUuid(clientEventId)
+        if ((sourceLocationId && !isUuid(sourceLocationId)) || !isUuid(targetLocationId) || !isUuid(clientEventId)
           || !/^[A-Za-z0-9][A-Za-z0-9._:-]{7,199}$/.test(operationKey)
-          || !options.expectedCustomerUpdatedAt || !options.expectedSourceLocationUpdatedAt
+          || !options.expectedCustomerUpdatedAt || (sourceLocationId && !options.expectedSourceLocationUpdatedAt)
           || !options.expectedTargetLocationUpdatedAt || !options.expectedInstallationUpdatedAt) {
           throw new Error("Anleggsredigeringen mangler et oppdatert kunde-, adresse- eller anleggsgrunnlag. Last inn siden på nytt.");
         }
@@ -2207,16 +2207,19 @@
         delete patch.location_id;
         delete patch.active;
         delete patch.updated_at;
+        if (Array.isArray(options.changedFields)) {
+          for (const key of Object.keys(patch)) if (!options.changedFields.includes(key)) delete patch[key];
+        }
         const { data, error } = await withManualWriteTimeout(
           supabase.rpc("update_installation_v2", {
             p_client_event_id: clientEventId,
             p_operation_key: operationKey,
             p_customer_id: customerId,
-            p_source_location_id: sourceLocationId,
+            p_source_location_id: sourceLocationId || null,
             p_target_location_id: targetLocationId,
             p_installation_id: id,
             p_expected_customer_updated_at: options.expectedCustomerUpdatedAt,
-            p_expected_source_location_updated_at: options.expectedSourceLocationUpdatedAt,
+            p_expected_source_location_updated_at: options.expectedSourceLocationUpdatedAt || null,
             p_expected_target_location_updated_at: options.expectedTargetLocationUpdatedAt,
             p_expected_installation_updated_at: options.expectedInstallationUpdatedAt,
             p_expected_source_installation_ids: expectedSourceIds,

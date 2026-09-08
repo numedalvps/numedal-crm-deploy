@@ -15464,3 +15464,275 @@ label,
   }
 }
 
+/* Manual customer, site and equipment work: keep scope visible while editing. */
+html:has(.manual-editor[open]) {
+  overflow: hidden;
+}
+
+#customersView .list-panel-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+#customersView .list-panel-toolbar .list-view-switch {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+#customersView .list-panel-toolbar button,
+#customerDetail .customer-section-nav button {
+  min-height: 44px;
+}
+
+#customerList {
+  align-content: start;
+  grid-auto-rows: max-content;
+}
+
+#customerDetail .customer-section-nav {
+  min-height: 47px;
+  overflow-y: hidden;
+}
+
+.manual-editor form {
+  scroll-padding-block: 90px 140px;
+  overscroll-behavior: contain;
+}
+
+.manual-editor .modal-head {
+  border-top: 4px solid var(--teal);
+}
+
+.manual-form-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.manual-form-section {
+  min-width: 0;
+  margin: 0 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px 16px;
+  background: #fff;
+}
+
+.manual-form-columns > .manual-form-section {
+  margin-bottom: 0;
+}
+
+.manual-form-section legend {
+  max-width: 100%;
+  padding-inline: 6px;
+  color: var(--teal-dark);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.manual-editor .manual-section-help {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.manual-editor .form-grid {
+  gap: 12px;
+}
+
+.manual-editor .form-grid > label {
+  min-width: 0;
+  margin-top: 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.manual-editor input:not([type="checkbox"]):not([type="hidden"]),
+.manual-editor select,
+.manual-editor textarea {
+  min-width: 0;
+  min-height: 44px;
+  font-size: 14px;
+}
+
+.manual-editor input:disabled {
+  color: #475569;
+  background: var(--soft);
+  opacity: 1;
+}
+
+.manual-editor input:user-invalid,
+.manual-editor select:user-invalid {
+  border-color: #b91c1c;
+  box-shadow: 0 0 0 1px #b91c1c;
+}
+
+.manual-editor .check-row {
+  min-height: 44px;
+}
+
+.manual-editor .manual-customer-options {
+  margin-bottom: 14px;
+}
+
+.manual-site-section {
+  border-color: #b7d9d4;
+  background: #f8fcfb;
+}
+
+.manual-address-shortcut {
+  grid-column: 1 / -1;
+  justify-self: start;
+  min-height: 44px;
+  white-space: normal;
+  text-align: left;
+}
+
+.manual-scope-notice {
+  margin: 0 0 16px;
+  border-left: 3px solid var(--teal);
+  padding: 10px 12px;
+  background: var(--teal-soft);
+  color: var(--teal-dark);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.manual-editor .form-message:not(.hidden) {
+  margin-bottom: 14px;
+  scroll-margin-block: 90px 140px;
+  line-height: 1.5;
+}
+
+.manual-archive-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.manual-archive-row:has(#deleteCustomerButton.hidden) {
+  display: none;
+}
+
+.manual-editor form > .manual-editor-actions {
+  align-items: center;
+  box-shadow: 0 -5px 16px rgb(31 41 55 / 5%);
+}
+
+.manual-editor-actions > button {
+  min-height: 44px;
+}
+
+.manual-editor-actions > .manual-save-primary {
+  min-width: 145px;
+}
+
+#customerEquipmentSection .installation-list {
+  gap: 14px;
+}
+
+#customerEquipmentSection .installation-card {
+  gap: 9px;
+  border-radius: 10px;
+  padding: 14px;
+  background: #fff;
+}
+
+#customerEquipmentSection .installation-card.metadata-ghost {
+  background: #fff7ed;
+}
+
+#customerEquipmentSection .installation-card .installation-card-head {
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+#customerEquipmentSection .installation-card-title {
+  flex: 1 1 180px;
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+#customerEquipmentSection .installation-card > small {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+#customerEquipmentSection .installation-card .installation-actions {
+  justify-content: flex-start;
+  gap: 8px;
+  margin-top: 5px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+#customerEquipmentSection .installation-actions button,
+#customerEquipmentSection .installation-actions > .inline-more-actions > summary {
+  min-height: 44px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+@media (max-width: 640px) {
+  .manual-form-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .manual-form-section {
+    padding: 10px 12px 14px;
+  }
+
+  .manual-editor input:not([type="checkbox"]):not([type="hidden"]),
+  .manual-editor select,
+  .manual-editor textarea {
+    font-size: 16px;
+  }
+
+  .manual-editor form > .manual-editor-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+
+  .manual-editor-actions > .manual-save-primary {
+    min-width: 0;
+  }
+
+  #customerDialog .manual-editor-actions:has(#saveCustomerAndInstallationButton:not(.hidden)) > .manual-save-primary {
+    grid-column: 1 / -1;
+  }
+
+  #customerEquipmentSection .installation-card {
+    padding: 12px;
+  }
+
+  #customerEquipmentSection .installation-card .installation-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #customerEquipmentSection .installation-actions > * {
+    min-width: 0;
+    width: 100%;
+  }
+
+  #customerEquipmentSection .installation-actions > [data-book-customer] {
+    grid-column: 1 / -1;
+  }
+}
