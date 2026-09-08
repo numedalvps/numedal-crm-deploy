@@ -3327,6 +3327,7 @@
         "hente assistentforslag før oppdatering",
       );
       if (existingActionError) throw existingActionError;
+      if (existingAction?.action_type === "inbound_triage") throw new Error("Bruk kontrollert intern avklaring for denne kilden.");
       const existingPayload = existingAction?.payload_json || {};
       const existingEvidence = existingAction?.evidence_json || {};
       const isHistoricalAction = existingAction?.source_kind === "historical_sms"
@@ -3462,6 +3463,59 @@
         throw new Error("E-postutkastet er endret i en annen fane. Last inn kontrollkøen på nytt.");
       }
       if (error) throw error;
+      return data;
+    },
+    async reviewInboundTriage(id, options = {}) {
+      const request = options.request || {};
+      const intents = new Set(["displayed", "assign_owner", "resolve", "reject"]);
+      const keys = new Set(["intent", "expected_status", "expected_updated_at", "expected_revision", "expected_content_hash", "expected_source_ref", "expected_intake_updated_at", "expected_source_hash",
+        ...(request.intent === "assign_owner" ? ["owner_profile_id"] : []),
+        ...(["resolve", "reject"].includes(request.intent) ? ["reason_code", "reviewer_note"] : [])]);
+      if (!isUuid(id) || !isUuid(options.clientEventId)
+        || !/^[A-Za-z0-9][A-Za-z0-9._:-]{7,199}$/.test(String(options.operationKey || ""))
+        || !intents.has(request.intent) || Object.keys(request).some((key) => !keys.has(key))
+        || !["needs_review", "completed", "rejected"].includes(request.expected_status)
+        || !Number.isSafeInteger(request.expected_revision) || request.expected_revision < 1
+        || !/^[0-9a-f]{64}$/.test(String(request.expected_content_hash || ""))
+        || !/^[0-9a-f]{64}$/.test(String(request.expected_source_hash || ""))
+        || !/^google-messages-observed:v1:[0-9a-f]{64}$/.test(String(request.expected_source_ref || ""))
+        || ![request.expected_updated_at, request.expected_intake_updated_at].every((value) => typeof value === "string" && Number.isFinite(Date.parse(value)))
+        || (request.intent === "assign_owner" && !isUuid(request.owner_profile_id))
+        || (["resolve", "reject"].includes(request.intent) && !(request.intent === "resolve"
+          ? ["already_done", "no_longer_needed", "other"] : ["duplicate", "no_longer_needed", "unsafe_action", "other"]).includes(request.reason_code))
+        || ("reviewer_note" in request && (typeof request.reviewer_note !== "string" || request.reviewer_note.length > 1000))) {
+        const error = new Error("Avklaringen mangler gyldig versjon, kilde eller beslutning. Hent oppdatert avklaring.");
+        error.code = "22023";
+        throw error;
+      }
+      const supabase = await requireClient();
+      const { data, error } = await withDbTimeout(supabase.rpc("review_inbound_triage_v1", {
+        p_action_id: id, p_client_event_id: options.clientEventId,
+        p_operation_key: options.operationKey, p_request: request,
+      }), "registrere intern avklaring");
+      if (error) throw error;
+      const action = data?.action;
+      const source = data?.source;
+      if (!action || action.id !== id || action.action_type !== "inbound_triage" || action.channel !== "internal"
+        || action.source_kind !== "google_messages_unlinked_inbound_v1" || action.source_ref !== request.expected_source_ref
+        || !["needs_review", "completed", "rejected"].includes(action.status)
+        || !Number.isSafeInteger(action.review_revision) || action.review_revision < 1
+        || !/^[0-9a-f]{64}$/.test(String(action.review_content_hash || ""))
+        || !isUuid(data.reviewId) || !isUuid(data.eventId)
+        || ["recipient", "linked_customer_id", "linked_lead_id", "linked_job_id", "linked_order_id", "approved_at", "approved_by", "executed_at", "external_id"].some((key) => action[key] != null)
+        || data?.intake?.id !== action.source_intake_id || data?.intake?.source_hash !== action.payload_json?.source_hash
+        || data?.intake?.source_hash !== request.expected_source_hash
+        || data?.intake?.updated_at !== action.payload_json?.intake_updated_at
+        || (request.intent !== "displayed" && source != null)
+        || (request.intent === "displayed" && (!source || typeof source.body !== "string"
+          || !/^\d{4}-\d{2}-\d{2}$/.test(String(source.received_local_date || ""))
+          || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(String(source.received_local_time || ""))
+          || source.collector_timezone !== "Europe/Oslo" || source.timezone_authority !== "collector_context_only"
+          || source.time_precision !== "minute" || source.provider_timestamp_verified !== false))) {
+        const invalid = new Error("Mottatt kvittering kunne ikke kontrolleres. Kontroller forrige forsøk.");
+        invalid.triageOutcomeUncertain = true;
+        throw invalid;
+      }
       return data;
     },
     async reviewAssistantAction(id, review = {}) {
