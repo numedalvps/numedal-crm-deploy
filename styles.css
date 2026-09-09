@@ -6369,6 +6369,25 @@ textarea {
   background: #fff;
 }
 
+.browser-invoice-observations {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #c8d8da;
+  border-radius: 10px;
+  background: #f5faf9;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.browser-invoice-observations p { margin: 0; font-size: 12px; line-height: 1.5; }
+.browser-invoice-observations article { display: grid; gap: 8px; }
+.browser-invoice-observations dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 0; }
+.browser-invoice-observations dt { font-size: 11px; color: var(--muted); }
+.browser-invoice-observations dd { margin: 2px 0 0; font-size: 12px; }
+.browser-invoice-observations details { min-width: 0; font-size: 12px; }
+.browser-invoice-observations summary { cursor: pointer; }
+.billing-queue-card > .browser-invoice-observations { grid-column: 1 / -1; }
+
 .customer-pulse-grid article > span {
   color: var(--muted);
   font-size: 12px;

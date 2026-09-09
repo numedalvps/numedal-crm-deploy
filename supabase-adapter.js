@@ -2915,6 +2915,40 @@
     async getEaccountingConnectionStatus() {
       return invokeEaccountingFunction("eaccounting-auth", { action: "status" });
     },
+    async listBrowserInvoiceObservations({ actionIds = [], jobIds = [] } = {}) {
+      const validIds = (ids) => Array.isArray(ids) && ids.length <= 100 && ids.every((id) => typeof id === "string" && isUuid(id)) && new Set(ids.map((id) => id.toLowerCase())).size === ids.length;
+      if (!validIds(actionIds) || !validIds(jobIds)) throw new Error("Ugyldig jobb- eller fakturavalg for kontroll av eAccounting.");
+      actionIds = actionIds.map((id) => id.toLowerCase());
+      jobIds = jobIds.map((id) => id.toLowerCase());
+      if (!actionIds.length && !jobIds.length) return { observations: [] };
+      const supabase = await requireClient();
+      const { data, error } = await withDbTimeout(supabase.rpc("list_browser_invoice_observations_v1", {
+        p_action_ids: actionIds, p_job_ids: jobIds,
+      }), "kontrollere eksisterende fakturadokumenter");
+      if (error) throw error;
+      const keys = ["id", "action_id", "job_id", "customer_id", "order_id", "provider", "document_kind", "provider_document_id", "document_number", "document_date", "observed_at", "recorded_at", "recorded_by", "recorded_by_name", "source_kind", "draft_reconciled", "duplicate_creation_blocked", "current_mismatch", "verification_level", "expected_vat_known", "expected_currency_known"];
+      const timestamp = (value) => typeof value === "string" && Number.isFinite(Date.parse(value));
+      if (!data || Object.keys(data).some((key) => key !== "observations") || !Array.isArray(data.observations)
+        || new Set(data.observations.map((row) => row?.id)).size !== data.observations.length
+        || data.observations.some((row) => !row || Object.keys(row).some((key) => !keys.includes(key))
+          || ![row.id, row.action_id, row.job_id, row.customer_id, row.recorded_by].every(isUuid)
+          || (row.order_id != null && !isUuid(row.order_id))
+          || (!actionIds.includes(row.action_id) && !jobIds.includes(row.job_id))
+          || row.provider !== "visma_eaccounting" || row.source_kind !== "eaccounting_browser_observation_v1"
+          || !["draft", "issued_invoice"].includes(row.document_kind)
+          || typeof row.provider_document_id !== "string" || !row.provider_document_id.trim() || row.provider_document_id.length > 200
+          || (row.document_number != null && (typeof row.document_number !== "string" || row.document_number.length > 200))
+          || (row.document_date != null && (typeof row.document_date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(row.document_date)))
+          || !timestamp(row.observed_at) || !timestamp(row.recorded_at)
+          || (row.recorded_by_name != null && typeof row.recorded_by_name !== "string")
+          || !["existence_only", "matched_lines"].includes(row.verification_level)
+          || typeof row.expected_vat_known !== "boolean" || typeof row.expected_currency_known !== "boolean"
+          || (row.verification_level === "existence_only" && row.draft_reconciled !== false)
+          || typeof row.draft_reconciled !== "boolean" || typeof row.current_mismatch !== "boolean" || row.duplicate_creation_blocked !== true)) {
+        throw new Error("Kontrollen av eksisterende fakturadokumenter kunne ikke bekreftes. Oppretting er sperret til opplysningene er hentet på nytt.");
+      }
+      return data;
+    },
     async getEaccountingDraftStatus() {
       return invokeEaccountingFunction("eaccounting-draft", { action: "status" });
     },
