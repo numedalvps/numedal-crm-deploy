@@ -1408,6 +1408,39 @@
     catch (error) { error.manualOutcomeUncertain = true; throw error; }
   }
 
+  function internalDataReviewContextIsValid(context, customerId) {
+    const object = (value) => value && typeof value === "object" && !Array.isArray(value);
+    const keys = (value, allowed) => object(value) && Object.keys(value).every((key) => allowed.includes(key));
+    const hash = (value) => typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
+    const ids = (value) => Array.isArray(value) && value.every(isUuid) && new Set(value).size === value.length;
+    if (!keys(context, ["contextHash", "scope", "current", "proposed", "evidence"]) || ("contextHash" in context && !hash(context.contextHash))) return false;
+    const { scope, current, proposed, evidence } = context;
+    if (!keys(scope, ["customer_id", "location_ids", "installation_ids", "sources"]) || scope.customer_id !== customerId
+      || !ids(scope.location_ids) || !ids(scope.installation_ids)
+      || !keys(scope.sources, ["invoice_metadata_ids", "service_event_ids"])
+      || !ids(scope.sources.invoice_metadata_ids) || !ids(scope.sources.service_event_ids)
+      || !keys(current, ["customer", "locations", "installations"])
+      || !keys(current.customer, ["id", "name", "updated_at", "row_hash"]) || current.customer.id !== customerId || !hash(current.customer.row_hash)
+      || !Array.isArray(current.locations) || !Array.isArray(current.installations)
+      || !keys(proposed, ["finding_code", "summary"]) || !["inventory_mismatch", "source_conflict", "missing_information", "review_required"].includes(proposed.finding_code)
+      || typeof proposed.summary !== "string" || proposed.summary.length > 600
+      || !keys(evidence, ["invoices", "service_events"]) || !Array.isArray(evidence.invoices) || !Array.isArray(evidence.service_events)) return false;
+    const rowsValid = (rows, allowed) => rows.every((row) => keys(row, allowed) && isUuid(row.id) && row.customer_id === customerId && hash(row.row_hash))
+      && new Set(rows.map((row) => row.id)).size === rows.length;
+    if (!rowsValid(current.locations, ["id", "customer_id", "location_name", "address", "postal_code", "city", "is_primary", "updated_at", "row_hash"])
+      || !rowsValid(current.installations, ["id", "customer_id", "location_id", "label", "brand", "model", "serial_number", "installed_at", "last_service_at", "next_service_due", "service_interval_months", "active", "removed_at", "inventory_status", "updated_at", "row_hash", "location_integrity"])
+      || current.installations.some((row) => !["exact", "unallocated", "invalid"].includes(row.location_integrity)
+        || (row.location_integrity === "exact" && !current.locations.some((location) => location.id === row.location_id)))
+      || scope.location_ids.some((id) => !current.locations.some((row) => row.id === id))
+      || scope.installation_ids.some((id) => !current.installations.some((row) => row.id === id))
+      || !rowsValid(evidence.invoices, ["id", "customer_id", "source", "invoice_number", "invoice_date", "created_at", "updated_at", "row_hash", "date_kind", "date_precision"])
+      || evidence.invoices.some((row) => row.date_kind !== "invoice_date" || row.date_precision !== (row.invoice_date == null ? null : "day"))
+      || !rowsValid(evidence.service_events, ["id", "customer_id", "installation_id", "event_type", "event_date", "performed_at", "performed_date_oslo", "next_service_due", "source_system", "source_ref_hash", "created_at", "updated_at", "row_hash", "immutable_history", "review_only"])
+      || evidence.service_events.some((row) => row.review_only !== true || (row.performed_at == null && row.performed_date_oslo != null))) return false;
+    return evidence.invoices.length === scope.sources.invoice_metadata_ids.length && evidence.invoices.every((row) => scope.sources.invoice_metadata_ids.includes(row.id))
+      && evidence.service_events.length === scope.sources.service_event_ids.length && evidence.service_events.every((row) => scope.sources.service_event_ids.includes(row.id));
+  }
+
   function manualResponseOutcomeUncertain(response) {
     const code = String(response?.error?.code || "");
     if (/^[0-9A-Z]{5}$/.test(code)) return false;
@@ -3256,6 +3289,7 @@
       const idempotencyKey = String(action.idempotency_key || action.idempotencyKey || "").trim();
       const sourceKind = String(action.source_kind || action.sourceKind || "").trim();
       const safetyPayload = action.payload_json || action.payload || {};
+      if (sourceKind === "crm_internal_data_review" || Object.prototype.hasOwnProperty.call(safetyPayload, "reviewContract")) throw new Error("Bruk kontrollert intern datakontroll.");
       const safetyEvidence = action.evidence_json || action.evidence || {};
       const hasHistoricalAccessMarker = hasHistoricalSmsActionMarker(safetyPayload, safetyEvidence);
       if (!allowedTypes.has(actionType)) throw new Error("Ugyldig type assistentforslag.");
@@ -3433,6 +3467,8 @@
       );
       if (existingActionError) throw existingActionError;
       if (existingAction?.action_type === "inbound_triage") throw new Error("Bruk kontrollert intern avklaring for denne kilden.");
+      if ([existingAction?.source_kind, patch.source_kind, patch.sourceKind].includes("crm_internal_data_review")
+        || [existingAction?.payload_json, patch.payload_json, patch.payload].some((payload) => payload && Object.prototype.hasOwnProperty.call(payload, "reviewContract"))) throw new Error("Bruk kontrollert intern datakontroll.");
       const existingPayload = existingAction?.payload_json || {};
       const existingEvidence = existingAction?.evidence_json || {};
       const isHistoricalAction = existingAction?.source_kind === "historical_sms"
@@ -3568,6 +3604,65 @@
         throw new Error("E-postutkastet er endret i en annen fane. Last inn kontrollkøen på nytt.");
       }
       if (error) throw error;
+      return data;
+    },
+    async reviewInternalDataReview(id, options = {}) {
+      const request = options.request || {};
+      const intents = ["displayed", "assign_owner", "resolve", "reject", "revise"];
+      const keys = ["intent", "expected_status", "expected_updated_at", "expected_revision", "expected_content_hash", "expected_source_ref", "expected_context_hash",
+        ...(request.intent !== "displayed" ? ["displayed_review_id"] : []), ...(["resolve", "reject"].includes(request.intent) ? ["reason_code"] : []), ...(request.intent === "revise" ? ["snapshot"] : [])];
+      const hash = (value) => typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
+      const snapshot = request.snapshot;
+      const only = (value, allowed) => value && typeof value === "object" && !Array.isArray(value) && Object.keys(value).every((key) => allowed.includes(key));
+      const ids = (value) => Array.isArray(value) && value.every(isUuid) && new Set(value).size === value.length;
+      const validSnapshot = request.intent !== "revise" || (only(snapshot, ["review_kind", "customer_id", "scope", "sources", "expected_context_hash", "proposed"])
+        && ["customer_scope", "installation_inventory", "service_history"].includes(snapshot.review_kind) && isUuid(snapshot.customer_id) && hash(snapshot.expected_context_hash)
+        && only(snapshot.scope, ["location_ids", "installation_ids"]) && ids(snapshot.scope.location_ids) && ids(snapshot.scope.installation_ids)
+        && only(snapshot.sources, ["invoice_metadata_ids", "service_event_ids"]) && ids(snapshot.sources.invoice_metadata_ids) && ids(snapshot.sources.service_event_ids)
+        && only(snapshot.proposed, ["finding_code", "summary"]) && ["inventory_mismatch", "source_conflict", "missing_information", "review_required"].includes(snapshot.proposed.finding_code)
+        && typeof snapshot.proposed.summary === "string" && snapshot.proposed.summary.length <= 600);
+      if (!isUuid(id) || !isUuid(options.clientEventId) || !/^[A-Za-z0-9][A-Za-z0-9._:-]{7,199}$/.test(String(options.operationKey || ""))
+        || !intents.includes(request.intent) || !validSnapshot || Object.keys(request).some((key) => !keys.includes(key))
+        || !["needs_review", "completed", "rejected"].includes(request.expected_status)
+        || !Number.isSafeInteger(request.expected_revision) || request.expected_revision < 1
+        || !hash(request.expected_content_hash) || !hash(request.expected_context_hash)
+        || !/^internal-data-review:v1:[a-f0-9]{64}$/.test(String(request.expected_source_ref || ""))
+        || typeof request.expected_updated_at !== "string" || !Number.isFinite(Date.parse(request.expected_updated_at))
+        || (request.intent !== "displayed" && !isUuid(request.displayed_review_id))
+        || (request.intent === "resolve" && request.reason_code !== "reviewed_no_change")
+        || (request.intent === "reject" && !["duplicate", "no_longer_needed", "invalid_evidence"].includes(request.reason_code))) {
+        throw Object.assign(new Error("Datakontrollen mangler gyldig versjon eller beslutning. Hent oppdatert grunnlag."), { code: "22023" });
+      }
+      const supabase = await requireClient();
+      let response;
+      try { response = await withDbTimeout(supabase.rpc("review_internal_data_review_v1", {
+        p_action_id: id, p_client_event_id: options.clientEventId, p_operation_key: options.operationKey, p_request: request,
+      }), "registrere intern datakontroll"); }
+      catch (error) { error.internalReviewOutcomeUncertain = true; throw error; }
+      if (response.error) {
+        if (manualResponseOutcomeUncertain(response)) response.error.internalReviewOutcomeUncertain = true;
+        throw response.error;
+      }
+      const data = response.data, action = data?.action;
+      if (!action || action.id !== id || action.action_type !== "customer_enrichment" || action.channel !== "internal"
+        || action.source_kind !== "crm_internal_data_review" || action.payload_json?.reviewContract !== "internal_data_review_v1"
+        || !["customer_scope", "installation_inventory", "service_history"].includes(action.payload_json.reviewKind)
+        || action.source_ref !== request.expected_source_ref || !hash(action.review_content_hash)
+        || !Number.isSafeInteger(action.review_revision) || action.review_revision < request.expected_revision
+        || !isUuid(action.linked_customer_id) || !isUuid(action.payload_json.versionId)
+        || (action.payload_json.owner_profile_id != null && !isUuid(action.payload_json.owner_profile_id))
+        || !["needs_review", "completed", "rejected"].includes(action.status)
+        || ["recipient", "approved_at", "approved_by", "executed_at", "external_id"].some((key) => action[key] != null)
+        || !isUuid(data.reviewId) || !isUuid(data.eventId) || typeof data.alreadyApplied !== "boolean"
+        || !hash(data.contextHash) || data.contextHash !== action.payload_json.contextHash
+        || typeof data.sourceStale !== "boolean" || typeof data.currentMismatch !== "boolean"
+        || (data.observedContextHash != null && (!hash(data.observedContextHash) || request.intent !== "displayed" || data.currentMismatch))
+        || (request.intent !== "displayed" && data.context != null)
+        || (data.currentMismatch && data.context != null)
+        || (request.intent === "displayed" && !data.currentMismatch && (data.contextHash !== request.expected_context_hash
+          || !internalDataReviewContextIsValid(data.context, action.linked_customer_id)))) {
+        throw Object.assign(new Error("Kontrollkvitteringen kunne ikke bekreftes. Kontroller forrige forsøk."), { internalReviewOutcomeUncertain: true });
+      }
       return data;
     },
     async reviewInboundTriage(id, options = {}) {

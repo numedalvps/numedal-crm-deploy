@@ -4336,6 +4336,26 @@ textarea {
   margin-top: 8px;
 }
 
+.internal-data-review { min-width: 0; overflow-wrap: anywhere; }
+.internal-data-review h3 { margin: 22px 0 10px; font-size: 15px; }
+.internal-data-review h4 { margin: 0 0 8px; font-size: 14px; }
+.internal-review-site, .internal-review-evidence, .internal-review-finding {
+  margin: 12px 0; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel);
+}
+.internal-review-entity { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.internal-review-selected { display: inline-block; margin: 4px 0 4px 8px; padding: 3px 7px; border-radius: 6px; font-size: 11px; background: #e7f2eb; color: #285b40; }
+.internal-review-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px 18px; margin: 12px 0; }
+.internal-review-facts > div { min-width: 0; }
+.internal-review-facts dt { color: var(--muted); font-size: 11px; }
+.internal-review-facts dd { margin: 3px 0 0; font-size: 13px; }
+.internal-review-proposal { white-space: pre-wrap; }
+.internal-data-review .mini-action-row { align-items: stretch; }
+@media (max-width: 600px) {
+  .internal-review-facts { grid-template-columns: 1fr; }
+  .internal-data-review .mini-action-row > button { flex: 1 1 100%; white-space: normal; }
+  .internal-review-site, .internal-review-evidence, .internal-review-finding { padding: 11px; }
+}
+
 .assistant-action-draft-editor label {
   display: grid;
   gap: 4px;
