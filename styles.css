@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   --ink: #1f2937;
   --muted: #5f6b7a;
   --line: #d5dde5;
@@ -16139,4 +16139,31 @@ html:has(.manual-editor[open]) {
   #customerEquipmentSection .installation-actions > [data-book-customer] {
     grid-column: 1 / -1;
   }
+}
+
+.invoice-basis-review { min-width: 0; }
+.invoice-basis-review h3 { margin: 0 0 .65rem; font-size: 1rem; }
+.invoice-basis-review p { margin: .5rem 0; }
+.invoice-basis-instruction, .invoice-basis-comparison > section, .invoice-basis-prior { margin: .8rem 0; padding: .85rem; border: 1px solid var(--line, #d5e0e5); border-radius: 10px; background: #fff; min-width: 0; }
+.invoice-basis-instruction { background: #f5f9fb; }
+.invoice-basis-source-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.invoice-basis-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; }
+.invoice-basis-comparison > section { margin: 0; }
+.invoice-basis-comparison .invoice-basis-proposed { border-color: #8dcbd0; background: #f4fbfa; }
+.invoice-basis-facts { margin: .5rem 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+.invoice-basis-facts div, .invoice-basis-facts dd { min-width: 0; overflow-wrap: anywhere; }
+.invoice-basis-facts dt { font-size: .75rem; color: #536777; }
+.invoice-basis-facts dd { margin: .15rem 0 0; font-size: .85rem; }
+.invoice-basis-lines { margin: .7rem 0; padding: 0; list-style: none; }
+.invoice-basis-lines li { border-top: 1px solid #dce6e9; padding: .65rem 0; overflow-wrap: anywhere; }
+.invoice-basis-review details { overflow-wrap: anywhere; }
+.invoice-basis-review summary { cursor: pointer; }
+.invoice-basis-tools { margin: .5rem 0 .8rem; }
+.invoice-basis-tools .mini-action-row { margin-top: .6rem; }
+@media (min-width: 1000px) {
+  .crm-assistant-panel.review-mode:has(.invoice-basis-review [data-invoice-basis-context]) { width: min(880px, 80vw); }
+}
+@media (max-width: 600px) {
+  .invoice-basis-comparison { grid-template-columns: minmax(0, 1fr); }
+  .invoice-basis-instruction, .invoice-basis-comparison > section, .invoice-basis-prior { padding: .7rem; }
 }

@@ -1,4 +1,4 @@
-﻿(function () {
+(function () {
   const config = window.NUMEDAL_SUPABASE || {};
   const appEnv = config.appEnv || config.APP_ENV || "production";
   const browserImportEnabled = appEnv === "development" && config.enableBrowserImport === true;
@@ -1439,6 +1439,50 @@
       || evidence.service_events.some((row) => row.review_only !== true || (row.performed_at == null && row.performed_date_oslo != null))) return false;
     return evidence.invoices.length === scope.sources.invoice_metadata_ids.length && evidence.invoices.every((row) => scope.sources.invoice_metadata_ids.includes(row.id))
       && evidence.service_events.length === scope.sources.service_event_ids.length && evidence.service_events.every((row) => scope.sources.service_event_ids.includes(row.id));
+  }
+
+  function invoiceBasisContextIsValid(context) {
+    const only = (value, keys) => value && typeof value === "object" && !Array.isArray(value) && Object.keys(value).every((key) => keys.includes(key));
+    const text = (value) => typeof value === "string";
+    const number = (value) => typeof value === "number" && Number.isFinite(value);
+    const stamp = (value) => text(value) && Number.isFinite(Date.parse(value));
+    const currency = (value) => value == null || (text(value) && /^[A-Z]{3}$/.test(value));
+    const hash = (value) => text(value) && /^[a-f0-9]{64}$/.test(value);
+    const lineKeys = ["articleNumber", "description", "quantity", "unitPriceInclVat", "discountPercent", "lineTotalInclVat", "vatRate"];
+    const lines = (values, legacy = false) => Array.isArray(values) && values.length <= 200 && values.every((line) => only(line, legacy ? [...lineKeys, "sourceProductId"] : lineKeys)
+      && ["articleNumber", "description"].every((key) => text(line[key]) || (legacy && line[key] == null))
+      && ["quantity", "unitPriceInclVat", "discountPercent", "lineTotalInclVat"].every((key) => number(line[key]) || (legacy && line[key] == null))
+      && (line.vatRate == null || number(line.vatRate)) && (line.sourceProductId == null || text(line.sourceProductId)));
+    if (!only(context, ["prior_basis", "provider", "instruction", "proposed"])) return false;
+    const { prior_basis: prior, provider, instruction, proposed } = context;
+    if (!only(proposed, ["lines", "expectedTotalInclVat", "currency"]) || !lines(proposed.lines) || !proposed.lines.length
+      || !number(proposed.expectedTotalInclVat) || !currency(proposed.currency)) return false;
+    if (prior != null && (!only(prior, ["action_id", "status", "source_kind", "source_ref", "lines", "expectedTotalInclVat", "currency"])
+      || !isUuid(prior.action_id) || !text(prior.status) || (prior.lines != null && !lines(prior.lines, true))
+      || (prior.expectedTotalInclVat != null && !number(prior.expectedTotalInclVat)) || !currency(prior.currency))) return false;
+    if (!only(instruction, ["kind", "source_transport", "thread_id", "turn_id", "turn_started_at", "source_timestamp_kind", "timestamp_precision", "message_sent_at", "original_message_created_at", "observed_item_id", "instruction_text", "representation", "observed_at", "attested_by_actor_id", "attested_by_name", "operator_attested", "instruction_hash"])
+      || instruction.kind !== "operator_attested_codex_turn" || instruction.source_transport !== "codex_app.read_thread"
+      || typeof instruction.thread_id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(instruction.thread_id) || !text(instruction.turn_id) || !instruction.turn_id
+      || !Number.isSafeInteger(instruction.turn_started_at) || instruction.source_timestamp_kind !== "codex_turn_started_at" || instruction.timestamp_precision !== "seconds"
+      || instruction.message_sent_at !== null || instruction.original_message_created_at !== null || (instruction.observed_item_id != null && !text(instruction.observed_item_id))
+      || !text(instruction.instruction_text) || instruction.representation !== "codex_user_text_utf8_v1" || !stamp(instruction.observed_at)
+      || !isUuid(instruction.attested_by_actor_id) || (instruction.attested_by_name != null && !text(instruction.attested_by_name))
+      || instruction.operator_attested !== true || !hash(instruction.instruction_hash)) return false;
+    if (!only(provider, ["provider", "tenant", "provider_document_id", "document_kind", "provider_customer_id", "customer_identity", "reference", "document_number", "document_date", "observed_at", "lines", "currency", "net_total", "vat_total", "rounding_amount", "gross_total", "provider_ui_verified"])
+      || provider.provider !== "visma_eaccounting" || provider.document_kind !== "draft" || !isUuid(provider.provider_document_id) || !isUuid(provider.provider_customer_id)
+      || !only(provider.tenant, ["kind", "value"]) || !["organization_number", "provider_company_id"].includes(provider.tenant.kind) || !text(provider.tenant.value)
+      || !only(provider.customer_identity, ["organization_number", "email", "phone"]) || !Object.values(provider.customer_identity).every(text)
+      || !only(provider.reference, ["kind", "value", "operator_confirmed"]) || !["crm_action_reference", "exact_job_reference", "operator_reviewed_pairing"].includes(provider.reference.kind)
+      || provider.reference.operator_confirmed !== true || (provider.reference.value != null && !text(provider.reference.value))
+      || (provider.document_number != null && !text(provider.document_number)) || (provider.document_date != null && !/^\d{4}-\d{2}-\d{2}$/.test(provider.document_date))
+      || !stamp(provider.observed_at) || !currency(provider.currency) || provider.currency == null || provider.provider_ui_verified !== true
+      || ![provider.net_total, provider.vat_total, provider.rounding_amount, provider.gross_total].every(number)
+      || !Array.isArray(provider.lines) || !provider.lines.length || provider.lines.length > 200
+      || provider.lines.some((line, index) => !only(line, ["position", "article_number", "description", "quantity", "price_basis", "unit_price_ex_vat", "discount", "net_amount", "vat_rate", "vat_amount"])
+        || line.position !== index + 1 || !text(line.article_number) || !text(line.description) || line.price_basis !== "ex_vat"
+        || ![line.quantity, line.unit_price_ex_vat, line.net_amount].every(number) || (line.vat_rate != null && !number(line.vat_rate)) || (line.vat_amount != null && !number(line.vat_amount))
+        || !only(line.discount, ["mode", "value"]) || !["percent", "amount_ex_vat"].includes(line.discount.mode) || !number(line.discount.value))) return false;
+    return true;
   }
 
   function manualResponseOutcomeUncertain(response) {
@@ -2915,6 +2959,72 @@
     async getEaccountingConnectionStatus() {
       return invokeEaccountingFunction("eaccounting-auth", { action: "status" });
     },
+    async listInvoiceBasisStates({ actionIds = [], jobIds = [] } = {}) {
+      const validIds = (ids) => Array.isArray(ids) && ids.length <= 100 && ids.every(isUuid)
+        && new Set(ids.map((id) => id.toLowerCase())).size === ids.length;
+      if (!validIds(actionIds) || !validIds(jobIds)) throw new Error("Ugyldig jobb eller fakturagrunnlag for kontroll.");
+      if (!actionIds.length && !jobIds.length) return { states: [] };
+      const requestedActions = actionIds.map((id) => id.toLowerCase()), requestedJobs = jobIds.map((id) => id.toLowerCase());
+      const supabase = await requireClient();
+      const { data, error } = await withDbTimeout(supabase.rpc("list_invoice_basis_states_v1", {
+        p_action_ids: requestedActions, p_job_ids: requestedJobs,
+      }), "hente fakturagrunnlagets kontrollstatus");
+      if (error) throw error;
+      const hash = (value) => typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
+      const fields = ["action_id", "job_id", "customer_id", "order_id", "claim_id", "provider_document_id", "version_id", "context_hash", "instruction_hash", "status", "source_stale", "current_mismatch", "duplicate_creation_blocked"];
+      if (!data || Object.keys(data).some((key) => key !== "states") || !Array.isArray(data.states)
+        || data.states.some((row) => !row || Object.keys(row).some((key) => !fields.includes(key))
+          || ![row.action_id, row.job_id, row.customer_id, row.claim_id, row.provider_document_id, row.version_id].every(isUuid)
+          || (row.order_id != null && !isUuid(row.order_id)) || !hash(row.context_hash) || !hash(row.instruction_hash)
+          || !["needs_review", "approved", "rejected", "completed"].includes(row.status)
+          || typeof row.source_stale !== "boolean" || typeof row.current_mismatch !== "boolean" || row.duplicate_creation_blocked !== true
+          || (!requestedActions.includes(row.action_id) && !requestedJobs.includes(row.job_id)))) {
+        throw new Error("Fakturagrunnlagets kontrollstatus kunne ikke bekreftes.");
+      }
+      return data;
+    },
+    async reviewInvoiceBasis(id, options = {}) {
+      const request = options.request || {}, intent = request.intent;
+      const hash = (value) => typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
+      const keys = ["intent", "expected_status", "expected_updated_at", "expected_revision", "expected_content_hash", "expected_source_ref", "expected_basis_version_id", "expected_basis_context_hash",
+        ...(intent !== "displayed" ? ["displayed_review_id"] : []), ...(intent === "approve" ? ["confirmed_instruction_hash"] : []), ...(intent === "reject" ? ["reason_code", "reviewer_note"] : [])];
+      if (!isUuid(id) || !isUuid(options.clientEventId) || !/^[A-Za-z0-9][A-Za-z0-9._:-]{7,199}$/.test(String(options.operationKey || ""))
+        || !["displayed", "approve", "reject"].includes(intent) || Object.keys(request).some((key) => !keys.includes(key))
+        || !["needs_review", "approved", "rejected", "completed"].includes(request.expected_status)
+        || typeof request.expected_updated_at !== "string" || !Number.isFinite(Date.parse(request.expected_updated_at))
+        || !Number.isSafeInteger(request.expected_revision) || request.expected_revision < 1 || !hash(request.expected_content_hash)
+        || !isUuid(request.expected_source_ref) || !isUuid(request.expected_basis_version_id) || !hash(request.expected_basis_context_hash)
+        || (intent !== "displayed" && !isUuid(request.displayed_review_id)) || (intent === "approve" && !hash(request.confirmed_instruction_hash))
+        || (intent === "reject" && (! ["incorrect_basis", "not_authorized", "duplicate", "other"].includes(request.reason_code)
+          || (request.reviewer_note != null && (typeof request.reviewer_note !== "string" || request.reviewer_note.length > 1000))))) {
+        throw Object.assign(new Error("Fakturakontrollen mangler gyldig versjon eller beslutning."), { code: "22023" });
+      }
+      const supabase = await requireClient();
+      let response;
+      try { response = await withDbTimeout(supabase.rpc("review_invoice_basis_v1", {
+        p_action_id: id, p_client_event_id: options.clientEventId, p_operation_key: options.operationKey, p_request: request,
+      }), "registrere kontroll av fakturagrunnlag"); }
+      catch (error) { error.invoiceBasisOutcomeUncertain = true; throw error; }
+      if (response.error) { if (manualResponseOutcomeUncertain(response)) response.error.invoiceBasisOutcomeUncertain = true; throw response.error; }
+      const data = response.data, action = data?.action, payload = action?.payload_json;
+      if (!action || action.id !== id || action.action_type !== "invoice_draft" || action.channel !== "internal"
+        || action.source_kind !== "invoice_basis_revision_v1" || action.source_ref !== request.expected_source_ref
+        || action.linked_job_id !== request.expected_source_ref || !isUuid(action.linked_customer_id)
+        || payload?.invoiceBasisContract !== "invoice_basis_v1" || !isUuid(payload.invoiceBasisVersionId) || !hash(payload.invoiceBasisContextHash)
+        || !["needs_review", "approved", "rejected", "completed"].includes(action.status)
+        || !Number.isSafeInteger(action.review_revision) || action.review_revision < request.expected_revision || !hash(action.review_content_hash)
+        || !isUuid(data.reviewId) || !isUuid(data.eventId) || typeof data.alreadyApplied !== "boolean"
+        || data.basisVersionId !== payload.invoiceBasisVersionId || data.basisContextHash !== payload.invoiceBasisContextHash
+        || typeof data.sourceStale !== "boolean" || typeof data.currentMismatch !== "boolean"
+        || (intent !== "displayed" && data.context != null) || (data.currentMismatch && data.context != null)
+        || (intent === "displayed" && !data.currentMismatch && (data.basisVersionId !== request.expected_basis_version_id
+          || action.status !== request.expected_status || action.updated_at !== request.expected_updated_at
+          || action.review_revision !== request.expected_revision || action.review_content_hash !== request.expected_content_hash
+          || data.basisContextHash !== request.expected_basis_context_hash || !invoiceBasisContextIsValid(data.context)))) {
+        throw Object.assign(new Error("Kontrollkvitteringen kunne ikke bekreftes. Kontroller forrige forsøk."), { invoiceBasisOutcomeUncertain: true });
+      }
+      return data;
+    },
     async listBrowserInvoiceObservations({ actionIds = [], jobIds = [] } = {}) {
       const validIds = (ids) => Array.isArray(ids) && ids.length <= 100 && ids.every((id) => typeof id === "string" && isUuid(id)) && new Set(ids.map((id) => id.toLowerCase())).size === ids.length;
       if (!validIds(actionIds) || !validIds(jobIds)) throw new Error("Ugyldig jobb- eller fakturavalg for kontroll av eAccounting.");
@@ -3323,6 +3433,7 @@
       const idempotencyKey = String(action.idempotency_key || action.idempotencyKey || "").trim();
       const sourceKind = String(action.source_kind || action.sourceKind || "").trim();
       const safetyPayload = action.payload_json || action.payload || {};
+      if (sourceKind === "invoice_basis_revision_v1" || ["invoiceBasisContract", "invoiceBasisVersionId", "invoiceBasisContextHash"].some((key) => Object.prototype.hasOwnProperty.call(safetyPayload, key))) throw new Error("Bruk fakturagrunnlagets egen kontroll.");
       if (sourceKind === "crm_internal_data_review" || Object.prototype.hasOwnProperty.call(safetyPayload, "reviewContract")) throw new Error("Bruk kontrollert intern datakontroll.");
       const safetyEvidence = action.evidence_json || action.evidence || {};
       const hasHistoricalAccessMarker = hasHistoricalSmsActionMarker(safetyPayload, safetyEvidence);
@@ -3500,6 +3611,8 @@
         "hente assistentforslag før oppdatering",
       );
       if (existingActionError) throw existingActionError;
+      if ([existingAction?.source_kind, patch.source_kind, patch.sourceKind].includes("invoice_basis_revision_v1")
+        || [existingAction?.payload_json, patch.payload_json, patch.payload].some((payload) => payload && ["invoiceBasisContract", "invoiceBasisVersionId", "invoiceBasisContextHash"].some((key) => Object.prototype.hasOwnProperty.call(payload, key)))) throw new Error("Bruk fakturagrunnlagets egen kontroll.");
       if (existingAction?.action_type === "inbound_triage") throw new Error("Bruk kontrollert intern avklaring for denne kilden.");
       if ([existingAction?.source_kind, patch.source_kind, patch.sourceKind].includes("crm_internal_data_review")
         || [existingAction?.payload_json, patch.payload_json, patch.payload].some((payload) => payload && Object.prototype.hasOwnProperty.call(payload, "reviewContract"))) throw new Error("Bruk kontrollert intern datakontroll.");
