@@ -139,7 +139,9 @@
     "test:sms-diagnostics": "node --test tests/sms-bridge-diagnostics.test.js",
     "test:sms-diagnostics-sql": "node tools/run-local-sql-tests.mjs tests/sms-bridge-self-test-integration.sql",
     "test:delegated-service-scheduling": "node --test tests/delegated-service-scheduling-ui.test.mjs",
-    "test:delegated-service-scheduling-sql": "node tools/run-local-sql-tests.mjs tests/delegated-service-scheduling-integration.sql"
+    "test:delegated-service-scheduling-sql": "node tools/run-local-sql-tests.mjs tests/delegated-service-scheduling-integration.sql",
+    "test:service-reply-alternative-sql": "node tools/run-local-sql-tests.mjs tests/service-alternative-invitation-integration.sql tests/service-alias-alternative-invitation-integration.sql",
+    "test:service-reply-alternative-concurrency": "node tests/service-alternative-invitation-concurrency.test.mjs --local && node tests/service-alias-alternative-invitation-concurrency.test.mjs --local && node tests/service-reply-email-identity-customer-concurrency.test.mjs --local"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
