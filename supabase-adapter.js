@@ -3854,9 +3854,9 @@
         || !intents.has(request.intent) || Object.keys(request).some((key) => !keys.has(key))
         || !["needs_review", "completed", "rejected"].includes(request.expected_status)
         || !Number.isSafeInteger(request.expected_revision) || request.expected_revision < 1
-        || !/^[0-9a-f]{64}$/.test(String(request.expected_content_hash || ""))
-        || !/^[0-9a-f]{64}$/.test(String(request.expected_source_hash || ""))
-        || !/^google-messages-observed:v1:[0-9a-f]{64}$/.test(String(request.expected_source_ref || ""))
+        || typeof request.expected_content_hash !== "string" || !/^[0-9a-f]{64}$/.test(request.expected_content_hash)
+        || typeof request.expected_source_hash !== "string" || !/^[0-9a-f]{64}$/.test(request.expected_source_hash)
+        || typeof request.expected_source_ref !== "string" || !/^(?:google-messages-observed:v1:|email:)[0-9a-f]{64}$/.test(request.expected_source_ref)
         || ![request.expected_updated_at, request.expected_intake_updated_at].every((value) => typeof value === "string" && Number.isFinite(Date.parse(value)))
         || (request.intent === "assign_owner" && !isUuid(request.owner_profile_id))
         || (["resolve", "reject"].includes(request.intent) && !(request.intent === "resolve"
@@ -3874,22 +3874,60 @@
       if (error) throw error;
       const action = data?.action;
       const source = data?.source;
+      const supplierEmail = request.expected_source_ref.startsWith("email:");
+      const sourceKind = supplierEmail ? "supplier_email_internal_review_v1" : "google_messages_unlinked_inbound_v1";
+      const emailSchema = "supplier-email-internal-review-v1";
+      const smsSchema = "google-messages-unlinked-inbound-v1";
+      const classes = new Set(["supplier_operational", "supplier_format_unverified"]);
+      const sourceKeys = supplierEmail
+        ? ["schema", "producer", "parser_version", "classification", "format_marker", "from", "from_email", "to", "subject", "message_id", "thread_id", "rfc_message_id", "received_at", "provider", "idempotency_key_source", "message_text", "actor_kind", "lead_format_activated", "body"]
+        : ["schema", "thread_id", "message_id", "sender_e164", "source_url", "body_sha256", "body_canonicalization", "received_local_date", "received_local_time", "collector_timezone", "timezone_authority", "time_precision", "provider_timestamp_verified", "provider_id_persistence_verified", "inbound_verified", "matching_message_ids_verified", "body"];
+      const sourceObject = source && typeof source === "object" && !Array.isArray(source);
+      const sourceFieldsValid = sourceObject && Object.keys(source).every((key) => sourceKeys.includes(key))
+        && typeof source.body === "string";
+      const emailSourceValid = sourceFieldsValid && sourceKeys.every((key) => Object.hasOwn(source, key))
+        && source.schema === emailSchema && source.producer === "email-intake" && source.parser_version === "supplier-lead-3"
+        && classes.has(source.classification) && source.classification === action?.payload_json?.supplier_message_class
+        && source.format_marker === null && source.actor_kind === "system" && source.lead_format_activated === false
+        && ["from", "from_email", "to", "subject", "message_id", "thread_id", "rfc_message_id", "provider"].every((key) => typeof source[key] === "string" && source[key].length <= 2000 && !/[\r\n]/.test(source[key]))
+        && /^[^\s@<>]+@(?:[a-z0-9-]+\.)*(?:ventistal\.no|tjenestetorget\.no|varmepumpe\.no|leadkit\.no|leadkit\.com|leadmail\.no)$/.test(source.from_email)
+        && typeof source.idempotency_key_source === "string" && Boolean(source.idempotency_key_source)
+        && (!source.message_id || source.idempotency_key_source === source.message_id)
+        && typeof source.message_text === "string" && source.message_text.length <= 100000
+        && Boolean(source.body.trim()) && source.body.length <= 100000
+        && (source.received_at === null || (typeof source.received_at === "string" && Number.isFinite(Date.parse(source.received_at)) && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(source.received_at)));
+      const smsSourceValid = sourceFieldsValid
+        && (!Object.hasOwn(source, "schema") || source.schema === smsSchema)
+        && /^\d{4}-\d{2}-\d{2}$/.test(String(source.received_local_date || ""))
+        && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(String(source.received_local_time || ""))
+        && source.collector_timezone === "Europe/Oslo" && source.timezone_authority === "collector_context_only"
+        && source.time_precision === "minute" && source.provider_timestamp_verified === false;
       if (!action || action.id !== id || action.action_type !== "inbound_triage" || action.channel !== "internal"
-        || action.source_kind !== "google_messages_unlinked_inbound_v1" || action.source_ref !== request.expected_source_ref
+        || action.source_kind !== sourceKind || action.source_ref !== request.expected_source_ref
         || !["needs_review", "completed", "rejected"].includes(action.status)
         || !Number.isSafeInteger(action.review_revision) || action.review_revision < 1
         || !/^[0-9a-f]{64}$/.test(String(action.review_content_hash || ""))
+        || ![action.updated_at, data?.intake?.updated_at].every((value) => typeof value === "string" && Number.isFinite(Date.parse(value)))
         || !isUuid(data.reviewId) || !isUuid(data.eventId)
-        || ["recipient", "linked_customer_id", "linked_lead_id", "linked_job_id", "linked_order_id", "approved_at", "approved_by", "executed_at", "external_id"].some((key) => action[key] != null)
+        || ["recipient", "linked_customer_id", "linked_lead_id", "linked_job_id", "linked_order_id", "approved_at", "approved_by", "executed_at", "external_id", "not_before", "expires_at"].some((key) => action[key] != null)
+        || !isUuid(action.source_intake_id) || action.payload_json?.workflow_lane !== "internal"
+        || (action.payload_json?.owner_profile_id != null && !isUuid(action.payload_json.owner_profile_id))
+        || (Object.hasOwn(action, "approval_required") && action.approval_required !== true)
+        || (Object.hasOwn(action.payload_json, "autoSendEligible") && action.payload_json.autoSendEligible !== false)
+        || (Object.hasOwn(action.payload_json, "doNotExecuteAutomatically") && action.payload_json.doNotExecuteAutomatically !== true)
+        || (supplierEmail && (action.approval_required !== true || action.payload_json.source_variant !== emailSchema
+          || !classes.has(action.payload_json.supplier_message_class) || action.payload_json.autoSendEligible !== false || action.payload_json.doNotExecuteAutomatically !== true
+          || action.evidence_json?.actor_kind !== "system" || action.evidence_json?.producer !== "email-intake"
+          || action.evidence_json?.lead_format_activated !== false || action.evidence_json?.source_hash !== request.expected_source_hash))
+        || (!supplierEmail && ((action.payload_json.source_variant != null && action.payload_json.source_variant !== smsSchema)
+          || action.payload_json.supplier_message_class != null || action.evidence_json?.producer === "email-intake"))
         || data?.intake?.id !== action.source_intake_id || data?.intake?.source_hash !== action.payload_json?.source_hash
         || data?.intake?.source_hash !== request.expected_source_hash
         || data?.intake?.updated_at !== action.payload_json?.intake_updated_at
         || (request.intent !== "displayed" && source != null)
-        || (request.intent === "displayed" && (!source || typeof source.body !== "string"
-          || !/^\d{4}-\d{2}-\d{2}$/.test(String(source.received_local_date || ""))
-          || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(String(source.received_local_time || ""))
-          || source.collector_timezone !== "Europe/Oslo" || source.timezone_authority !== "collector_context_only"
-          || source.time_precision !== "minute" || source.provider_timestamp_verified !== false))) {
+        || (request.intent === "displayed" && (action.status !== request.expected_status || action.updated_at !== request.expected_updated_at
+          || action.review_revision !== request.expected_revision || action.review_content_hash !== request.expected_content_hash
+          || data.intake.updated_at !== request.expected_intake_updated_at || !(supplierEmail ? emailSourceValid : smsSourceValid)))) {
         const invalid = new Error("Mottatt kvittering kunne ikke kontrolleres. Kontroller forrige forsøk.");
         invalid.triageOutcomeUncertain = true;
         throw invalid;
