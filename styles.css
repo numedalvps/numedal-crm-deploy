@@ -7564,6 +7564,100 @@ textarea {
   line-height: 1.45;
 }
 
+.sms-bridge-settings {
+  margin-top: 0;
+  min-width: 0;
+}
+
+.sms-bridge-connection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: 8px;
+  padding: 12px;
+  background: #f5f9fb;
+}
+
+.sms-bridge-connection p {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sms-bridge-connection button {
+  flex-shrink: 0;
+}
+
+.sms-bridge-test-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 1fr);
+  gap: 20px;
+  margin-top: 16px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+
+.sms-bridge-preview h4 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.sms-bridge-preview p {
+  margin: 0 0 10px;
+  line-height: 1.5;
+}
+
+.sms-bridge-help {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.sms-bridge-test-controls {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.sms-bridge-test-controls label {
+  margin: 0;
+}
+
+.sms-bridge-test-controls .sms-bridge-own-number {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--ink);
+}
+
+.sms-bridge-own-number input {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+}
+
+.sms-bridge-settings button {
+  min-height: 44px;
+}
+
+@media (max-width: 640px) {
+  .sms-bridge-test-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .sms-bridge-connection {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .sms-bridge-test-controls input[type="tel"] {
+    font-size: 16px;
+  }
+}
+
 .eaccounting-integration-section .section-head {
   align-items: flex-start;
 }

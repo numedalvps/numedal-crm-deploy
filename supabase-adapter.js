@@ -3753,6 +3753,33 @@
       if (error) throw error;
       return data;
     },
+    async createSmsBridgeTest(options = {}) {
+      if (!isUuid(options.clientEventId) || options.confirmOwnNumber !== true
+        || !/^\+[1-9]\d{7,14}$/.test(String(options.recipient || ""))) throw new Error("Bekreft ditt eget gyldige testnummer.");
+      const supabase = await requireClient();
+      const { data, error } = await withDbTimeout(supabase.rpc("create_sms_bridge_test_v1", {
+        p_client_event_id: options.clientEventId,
+        p_recipient: options.recipient,
+        p_confirm_own_number: true,
+      }), "opprette kontrollert test-SMS");
+      if (error) throw error;
+      return data;
+    },
+    async displaySmsBridgeTest(action, options = {}) {
+      if (!isUuid(action?.id) || !isUuid(options.clientEventId)
+        || action.source_kind !== "sms_bridge_self_test_v1" || !action.updated_at
+        || !Number.isSafeInteger(action.review_revision) || action.review_revision < 1
+        || !/^[a-f0-9]{64}$/.test(String(action.review_content_hash || ""))) throw new Error("Test-SMS mangler en gyldig kontrollversjon.");
+      const supabase = await requireClient();
+      const { data, error } = await withDbTimeout(supabase.rpc("display_sms_bridge_test_v1", {
+        p_action_id: action.id, p_client_event_id: options.clientEventId,
+        p_expected_status: action.status, p_expected_updated_at: action.updated_at,
+        p_expected_revision: action.review_revision, p_expected_content_hash: action.review_content_hash,
+        p_expected_source_ref: action.source_ref,
+      }), "registrere visning av test-SMS");
+      if (error) throw error;
+      return data;
+    },
     async reviewInternalDataReview(id, options = {}) {
       const request = options.request || {};
       const intents = ["displayed", "assign_owner", "resolve", "reject", "revise"];
