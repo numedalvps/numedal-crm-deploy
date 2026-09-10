@@ -2827,9 +2827,13 @@
         if (!areaKey) return [];
         query = query.eq("campaign_area_key", areaKey);
         if (["sms", "email"].includes(channel)) query = query.eq("campaign_channel", channel);
-        query = serviceDate
-          ? query.eq("effective_service_date", serviceDate)
-          : query.is("effective_service_date", null);
+        if (serviceDate) {
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(serviceDate) || serviceDate.startsWith("0000-")
+            || !Number.isFinite(Date.parse(`${serviceDate}T12:00:00Z`))
+            || new Date(`${serviceDate}T12:00:00Z`).toISOString().slice(0, 10) !== serviceDate) throw new Error("Ugyldig servicedato.");
+          // allowed_dates is JSONB, so containment uses a JSON array, not a PostgreSQL array literal.
+          query = query.or(`effective_service_date.eq.${serviceDate},and(scheduling_delegation_status.eq.valid,scheduling_date_and_time_delegated.eq.true,scheduling_delegation_allowed_dates.cs.${JSON.stringify([serviceDate])},booking_id.is.null)`);
+        } else query = query.is("effective_service_date", null);
       }
       const { data, error } = await withDbTimeout(
         query
