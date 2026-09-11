@@ -3360,6 +3360,74 @@
       if (data?.error || data?.ok !== true) throw new Error(data?.error || "E-postavklaringen ble ikke lagret.");
       return data;
     },
+    async intakeCustomerLeadRegistrationContext(intakeId) {
+      if (!isUuid(intakeId)) throw Object.assign(new Error("Ugyldig innbokspost."), { code: "22023" });
+      const supabase = await requireClient();
+      const { data, error } = await withDbTimeout(supabase.rpc("intake_customer_lead_registration_context_v1", { p_intake_id: intakeId }), "kontrollere innbokskilden");
+      if (error) throw error;
+      if (!data || (data.intake_id != null && data.intake_id !== intakeId) || typeof data.eligible !== "boolean" || typeof data.reason_code !== "string"
+        || (data.eligible && (data.intake_id !== intakeId || !/^[a-f0-9]{64}$/.test(data.context_hash || "") || !Number.isFinite(Date.parse(data.intake_updated_at))))) {
+        throw Object.assign(new Error("CRM returnerte ikke et gyldig registreringsgrunnlag."), { code: "22023" });
+      }
+      return data;
+    },
+    async registerIntakeCustomerLead(intakeId, options = {}) {
+      const request = options.request;
+      const only = (value, keys) => value && typeof value === "object" && !Array.isArray(value)
+        && Object.keys(value).length === keys.length && keys.every((key) => Object.prototype.hasOwnProperty.call(value, key));
+      const customerKeys = ["name", "phone", "email", "visit_street", "visit_zip", "visit_city", "source", "brand", "model_or_note", "tags", "local_note"];
+      const finalKeys = ["action", "type", "name", "phone", "email", "street", "zip", "city", "tags", "brand", "model", "note", "keepOriginal"];
+      const event = request?.service_event;
+      if (!isUuid(intakeId) || !isUuid(options.clientEventId) || !/^[A-Za-z0-9][A-Za-z0-9._:-]{7,199}$/.test(String(options.operationKey || ""))
+        || !/^[a-f0-9]{64}$/.test(String(options.expectedContextHash || ""))
+        || !only(request, ["customer", "lead", "service_event", "final_json", "parser"])
+        || !only(request.customer, customerKeys) || customerKeys.some((key) => typeof request.customer[key] !== "string")
+        || !request.customer.name.trim() || !only(request.lead, ["product_interest", "status"])
+        || typeof request.lead.product_interest !== "string" || !["follow_up", "quote_needed"].includes(request.lead.status)
+        || !only(event, ["event_date", "event_type", "note"]) || !/^\d{4}-\d{2}-\d{2}$/.test(event.event_date || "")
+        || normalizeDate(event.event_date) !== event.event_date || event.event_type !== "Hurtigregistrering - oppfølging" || typeof event.note !== "string"
+        || !only(request.final_json, finalKeys) || finalKeys.filter((key) => key !== "keepOriginal").some((key) => typeof request.final_json[key] !== "string")
+        || request.final_json.action !== "create_customer" || request.final_json.type !== "lead" || request.final_json.keepOriginal !== false || typeof request.parser !== "string") {
+        throw Object.assign(new Error("Registreringen mangler gyldige, kontrollerte felt."), { code: "22023" });
+      }
+      const supabase = await requireClient();
+      const operationHash = [...new Uint8Array(await window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(options.operationKey)))].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+      let response;
+      try {
+        response = await withDbTimeout(supabase.rpc("register_intake_customer_lead_v1", {
+          p_client_event_id: options.clientEventId, p_operation_key: options.operationKey,
+          p_intake_id: intakeId, p_expected_context_hash: options.expectedContextHash, p_request: request,
+        }), "registrere kundekort og salgsmulighet", 30000);
+      } catch (error) { error.intakeRegistrationOutcomeUncertain = true; throw error; }
+      if (response.error) {
+        if (manualResponseOutcomeUncertain(response)) response.error.intakeRegistrationOutcomeUncertain = true;
+        throw response.error;
+      }
+      const data = response.data;
+      const outcomes = ["associated", "skipped_terminal", "skipped_attempted", "no_eligible_action", "ambiguous", "skipped_identity_mismatch", "skipped_other_blockers", "skipped_existing_authority"];
+      if (data?.outcome === "committed" && isUuid(data.registration_id) && data.client_event_id === options.clientEventId
+        && data.operation_key_hash === operationHash && typeof data.already_applied === "boolean" && data.current_matches === false) return data;
+      if (!data || data.outcome !== "committed" || !isUuid(data.registration_id) || data.client_event_id !== options.clientEventId
+        || data.operation_key_hash !== operationHash || typeof data.already_applied !== "boolean" || typeof data.current_matches !== "boolean"
+        || !isUuid(data.customer?.id) || !isUuid(data.lead?.id) || data.lead.existing_customer_id !== data.customer.id || data.lead.status !== request.lead.status
+        || data.intake?.id !== intakeId || data.intake.status !== "committed"
+        || data.intake.linked_customer_id !== data.customer.id || data.intake.linked_lead_id !== data.lead.id
+        || !isUuid(data.service_event?.id) || data.service_event.customer_id !== data.customer.id
+        || data.service_event.event_date !== request.service_event.event_date || data.service_event.event_type !== request.service_event.event_type
+        || (data.service_event.note || "") !== request.service_event.note || data.service_event.performed_at != null || data.service_event.installation_id != null
+        || !isUuid(data.activity?.id) || data.activity.customer_id !== data.customer.id || data.activity.lead_id !== data.lead.id
+        || !Array.isArray(data.attachments) || data.attachments.some((row) => !isUuid(row.id) || row.intake_id !== intakeId || row.customer_id !== data.customer.id || row.lead_id !== data.lead.id)
+        || !outcomes.includes(data.identity_outcome) || typeof data.identity_reason !== "string" || !Array.isArray(data.actions)
+        || (data.identity_outcome === "associated" ? (data.actions.length !== 1 || !isUuid(data.review_id)) : (data.actions.length !== 0 || data.review_id != null))
+        || data.actions.some((row) => !isUuid(row.id) || row.source_intake_id !== intakeId || row.source_kind !== "crm_assistant_email_triage"
+          || row.action_type !== "email_reply" || row.channel !== "email" || row.status !== "needs_review"
+          || row.linked_customer_id !== data.customer.id || row.linked_lead_id != null
+          || ["linked_job_id", "linked_order_id", "linked_quote_id", "approved_at", "approved_by", "executed_at", "external_id"].some((key) => row[key] != null)
+          || !Number.isSafeInteger(row.review_revision) || row.review_revision < 1 || !/^[a-f0-9]{64}$/.test(row.review_content_hash || ""))) {
+        throw Object.assign(new Error("Lagringen svarte uten en gyldig samlet kvittering. Prøv samme registrering igjen for å kontrollere resultatet."), { intakeRegistrationOutcomeUncertain: true });
+      }
+      return { ...data, customer: customerFromDb(data.customer) };
+    },
     async saveIntakeDraft(values) {
       const supabase = await requireClient();
       const raw = String(values?.raw || values?.text || "").trim();
