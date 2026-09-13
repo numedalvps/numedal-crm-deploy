@@ -3505,6 +3505,9 @@
       const idempotencyKey = String(action.idempotency_key || action.idempotencyKey || "").trim();
       const sourceKind = String(action.source_kind || action.sourceKind || "").trim();
       const safetyPayload = action.payload_json || action.payload || {};
+      if (["google_messages_unlinked_inbound_v1", "supplier_email_internal_review_v1", "system_email_internal_review_v1"].includes(sourceKind)
+        || ["google-messages-unlinked-inbound-v1", "supplier-email-internal-review-v1", "system-email-internal-review-v1"].includes(safetyPayload.source_variant)
+        || Object.prototype.hasOwnProperty.call(safetyPayload, "system_message_class")) throw new Error("Bruk kontrollert intern avklaring for denne kilden.");
       if (sourceKind === "invoice_basis_revision_v1" || ["invoiceBasisContract", "invoiceBasisVersionId", "invoiceBasisContextHash"].some((key) => Object.prototype.hasOwnProperty.call(safetyPayload, key))) throw new Error("Bruk fakturagrunnlagets egen kontroll.");
       if (sourceKind === "crm_internal_data_review" || Object.prototype.hasOwnProperty.call(safetyPayload, "reviewContract")) throw new Error("Bruk kontrollert intern datakontroll.");
       const safetyEvidence = action.evidence_json || action.evidence || {};
@@ -3685,7 +3688,11 @@
       if (existingActionError) throw existingActionError;
       if ([existingAction?.source_kind, patch.source_kind, patch.sourceKind].includes("invoice_basis_revision_v1")
         || [existingAction?.payload_json, patch.payload_json, patch.payload].some((payload) => payload && ["invoiceBasisContract", "invoiceBasisVersionId", "invoiceBasisContextHash"].some((key) => Object.prototype.hasOwnProperty.call(payload, key)))) throw new Error("Bruk fakturagrunnlagets egen kontroll.");
-      if (existingAction?.action_type === "inbound_triage") throw new Error("Bruk kontrollert intern avklaring for denne kilden.");
+      if (existingAction?.action_type === "inbound_triage"
+        || [existingAction?.source_kind, patch.source_kind, patch.sourceKind].some((kind) => ["google_messages_unlinked_inbound_v1", "supplier_email_internal_review_v1", "system_email_internal_review_v1"].includes(kind))
+        || [existingAction?.payload_json, patch.payload_json, patch.payload].some((payload) => payload
+          && (["google-messages-unlinked-inbound-v1", "supplier-email-internal-review-v1", "system-email-internal-review-v1"].includes(payload.source_variant)
+            || Object.prototype.hasOwnProperty.call(payload, "system_message_class")))) throw new Error("Bruk kontrollert intern avklaring for denne kilden.");
       if ([existingAction?.source_kind, patch.source_kind, patch.sourceKind].includes("crm_internal_data_review")
         || [existingAction?.payload_json, patch.payload_json, patch.payload].some((payload) => payload && Object.prototype.hasOwnProperty.call(payload, "reviewContract"))) throw new Error("Bruk kontrollert intern datakontroll.");
       const existingPayload = existingAction?.payload_json || {};
@@ -3913,11 +3920,19 @@
     },
     async reviewInboundTriage(id, options = {}) {
       const request = options.request || {};
+      // Legacy callers only knew SMS or supplier mail. New email variants must be
+      // selected from the captured action, never inferred from the shared email prefix.
+      const sourceKind = options.expectedSourceKind ?? (String(request.expected_source_ref || "").startsWith("email:")
+        ? "supplier_email_internal_review_v1" : "google_messages_unlinked_inbound_v1");
+      const supplierEmail = sourceKind === "supplier_email_internal_review_v1";
+      const systemEmail = sourceKind === "system_email_internal_review_v1";
       const intents = new Set(["displayed", "assign_owner", "resolve", "reject"]);
       const keys = new Set(["intent", "expected_status", "expected_updated_at", "expected_revision", "expected_content_hash", "expected_source_ref", "expected_intake_updated_at", "expected_source_hash",
         ...(request.intent === "assign_owner" ? ["owner_profile_id"] : []),
         ...(["resolve", "reject"].includes(request.intent) ? ["reason_code", "reviewer_note"] : [])]);
       if (!isUuid(id) || !isUuid(options.clientEventId)
+        || !["google_messages_unlinked_inbound_v1", "supplier_email_internal_review_v1", "system_email_internal_review_v1"].includes(sourceKind)
+        || ((supplierEmail || systemEmail) !== String(request.expected_source_ref || "").startsWith("email:"))
         || !/^[A-Za-z0-9][A-Za-z0-9._:-]{7,199}$/.test(String(options.operationKey || ""))
         || !intents.has(request.intent) || Object.keys(request).some((key) => !keys.has(key))
         || !["needs_review", "completed", "rejected"].includes(request.expected_status)
@@ -3942,12 +3957,13 @@
       if (error) throw error;
       const action = data?.action;
       const source = data?.source;
-      const supplierEmail = request.expected_source_ref.startsWith("email:");
-      const sourceKind = supplierEmail ? "supplier_email_internal_review_v1" : "google_messages_unlinked_inbound_v1";
       const emailSchema = "supplier-email-internal-review-v1";
+      const systemSchema = "system-email-internal-review-v1";
       const smsSchema = "google-messages-unlinked-inbound-v1";
       const classes = new Set(["supplier_operational", "supplier_format_unverified"]);
-      const sourceKeys = supplierEmail
+      const sourceKeys = systemEmail
+        ? ["schema", "producer", "classification", "classifier_version", "from", "from_email", "to", "subject", "message_id", "thread_id", "rfc_message_id", "received_at", "provider", "idempotency_key_source", "message_text", "references", "transportIdentity", "metadata", "classifier_evidence", "context", "metadata_identity", "actor_kind", "lead_format_activated", "automated_irrelevance_confirmed", "body"]
+        : supplierEmail
         ? ["schema", "producer", "parser_version", "classification", "format_marker", "from", "from_email", "to", "subject", "message_id", "thread_id", "rfc_message_id", "received_at", "provider", "idempotency_key_source", "message_text", "actor_kind", "lead_format_activated", "body"]
         : ["schema", "thread_id", "message_id", "sender_e164", "source_url", "body_sha256", "body_canonicalization", "received_local_date", "received_local_time", "collector_timezone", "timezone_authority", "time_precision", "provider_timestamp_verified", "provider_id_persistence_verified", "inbound_verified", "matching_message_ids_verified", "body"];
       const sourceObject = source && typeof source === "object" && !Array.isArray(source);
@@ -3970,6 +3986,43 @@
         && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(String(source.received_local_time || ""))
         && source.collector_timezone === "Europe/Oslo" && source.timezone_authority === "collector_context_only"
         && source.time_precision === "minute" && source.provider_timestamp_verified === false;
+      const exactKeys = (value, keys) => value && typeof value === "object" && !Array.isArray(value)
+        && Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key));
+      const shortText = (value) => typeof value === "string" && value.length <= 2000 && !/[\x00-\x1f\x7f]/.test(value);
+      const metadata = source?.metadata;
+      const systemSourceValid = sourceFieldsValid && sourceKeys.every((key) => Object.hasOwn(source, key))
+        && source.schema === systemSchema && source.producer === "email-intake"
+        && source.classification === "systemmail_requires_review" && source.classifier_version === "email-system-source-review-v1"
+        && source.actor_kind === "system" && source.lead_format_activated === false && source.automated_irrelevance_confirmed === false
+        && ["from", "from_email", "to", "subject", "message_id", "thread_id", "rfc_message_id", "provider", "idempotency_key_source"].every((key) => shortText(source[key]))
+        && /^no[-_.]?reply@[^@\s<>]+\.[^@\s<>]+$/.test(source.from_email) && source.from_email === source.from_email.toLowerCase()
+        && ["gmail", "gmail_apps_script"].includes(source.provider) && Boolean(source.message_id) && Boolean(source.thread_id)
+        && source.idempotency_key_source === source.message_id && source.references === ""
+        && typeof source.message_text === "string" && source.message_text.length <= 100000
+        && Boolean(source.body.trim()) && source.body.length <= 100000
+        && typeof source.received_at === "string" && Number.isFinite(Date.parse(source.received_at))
+        && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(source.received_at)
+        && exactKeys(source.transportIdentity, ["rfcMessageId", "referencesHeader", "fromEmail"])
+        && source.transportIdentity.rfcMessageId === source.rfc_message_id && source.transportIdentity.referencesHeader === ""
+        && source.transportIdentity.fromEmail === source.from_email
+        && exactKeys(source.metadata_identity, ["message_id", "thread_id"])
+        && source.metadata_identity.message_id === source.message_id && source.metadata_identity.thread_id === source.thread_id
+        && exactKeys(metadata, ["version", "status", "origin", "hasListId", "hasListUnsubscribe", "oneClickUnsubscribe", "precedence", "autoSubmitted", "hasInReplyTo", "hasReferences", "mimeType", "deliveryStatusReport", "labels"])
+        && metadata.version === "email-source-metadata-v1" && metadata.status === "valid" && metadata.origin === "gmail_bound_message"
+        && ["hasListId", "hasListUnsubscribe", "oneClickUnsubscribe", "hasInReplyTo", "hasReferences", "deliveryStatusReport"].every((key) => typeof metadata[key] === "boolean")
+        && metadata.hasInReplyTo === false && metadata.hasReferences === false
+        && [null, "bulk", "list", "junk"].includes(metadata.precedence) && [null, "auto-replied", "auto-generated", "no"].includes(metadata.autoSubmitted)
+        && [null, "multipart/report", "text/plain", "text/html", "multipart/alternative", "multipart/mixed"].includes(metadata.mimeType)
+        && Array.isArray(metadata.labels) && metadata.labels.includes("CATEGORY_UPDATES") && new Set(metadata.labels).size === metadata.labels.length
+        && metadata.labels.every((label) => ["CATEGORY_PROMOTIONS", "CATEGORY_UPDATES", "CATEGORY_SOCIAL", "CATEGORY_FORUMS", "INBOX", "SPAM", "TRASH"].includes(label))
+        && exactKeys(source.classifier_evidence, ["origin", "senderMailboxKind", "subjectCategory", "labels", "mimeType"])
+        && source.classifier_evidence.origin === metadata.origin && source.classifier_evidence.senderMailboxKind === "no_reply"
+        && source.classifier_evidence.subjectCategory === "short_club_label" && source.classifier_evidence.mimeType === metadata.mimeType
+        && JSON.stringify(source.classifier_evidence.labels) === JSON.stringify(metadata.labels)
+        && exactKeys(source.context, ["identity_status", "intent_category", "explicit_acceptance", "declined", "deferred", "needs_clarification", "source_reference", "supplier_message_class"])
+        && source.context.identity_status === "unmatched" && source.context.intent_category === "unknown"
+        && ["explicit_acceptance", "declined", "deferred", "needs_clarification"].every((key) => source.context[key] === false)
+        && source.context.source_reference === null && source.context.supplier_message_class === "customer";
       if (!action || action.id !== id || action.action_type !== "inbound_triage" || action.channel !== "internal"
         || action.source_kind !== sourceKind || action.source_ref !== request.expected_source_ref
         || !["needs_review", "completed", "rejected"].includes(action.status)
@@ -3987,7 +4040,15 @@
           || !classes.has(action.payload_json.supplier_message_class) || action.payload_json.autoSendEligible !== false || action.payload_json.doNotExecuteAutomatically !== true
           || action.evidence_json?.actor_kind !== "system" || action.evidence_json?.producer !== "email-intake"
           || action.evidence_json?.lead_format_activated !== false || action.evidence_json?.source_hash !== request.expected_source_hash))
-        || (!supplierEmail && ((action.payload_json.source_variant != null && action.payload_json.source_variant !== smsSchema)
+        || (systemEmail && (action.approval_required !== true || action.payload_json.source_variant !== systemSchema
+          || typeof data.alreadyApplied !== "boolean"
+          || action.payload_json.system_message_class !== "systemmail_requires_review" || Object.hasOwn(action.payload_json, "supplier_message_class")
+          || action.payload_json.autoSendEligible !== false || action.payload_json.doNotExecuteAutomatically !== true
+          || action.evidence_json?.actor_kind !== "system" || action.evidence_json?.producer !== "email-intake"
+          || action.evidence_json?.lead_format_activated !== false || action.evidence_json?.automated_irrelevance_confirmed !== false
+          || action.evidence_json?.source_hash !== request.expected_source_hash))
+        || (!systemEmail && Object.hasOwn(action.payload_json || {}, "system_message_class"))
+        || (!supplierEmail && !systemEmail && ((action.payload_json.source_variant != null && action.payload_json.source_variant !== smsSchema)
           || action.payload_json.supplier_message_class != null || action.evidence_json?.producer === "email-intake"))
         || data?.intake?.id !== action.source_intake_id || data?.intake?.source_hash !== action.payload_json?.source_hash
         || data?.intake?.source_hash !== request.expected_source_hash
@@ -3995,7 +4056,7 @@
         || (request.intent !== "displayed" && source != null)
         || (request.intent === "displayed" && (action.status !== request.expected_status || action.updated_at !== request.expected_updated_at
           || action.review_revision !== request.expected_revision || action.review_content_hash !== request.expected_content_hash
-          || data.intake.updated_at !== request.expected_intake_updated_at || !(supplierEmail ? emailSourceValid : smsSourceValid)))) {
+          || data.intake.updated_at !== request.expected_intake_updated_at || !(systemEmail ? systemSourceValid : supplierEmail ? emailSourceValid : smsSourceValid)))) {
         const invalid = new Error("Mottatt kvittering kunne ikke kontrolleres. Kontroller forrige forsøk.");
         invalid.triageOutcomeUncertain = true;
         throw invalid;
