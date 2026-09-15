@@ -3433,6 +3433,8 @@
       const idempotencyKey = String(action.idempotency_key || action.idempotencyKey || "").trim();
       const sourceKind = String(action.source_kind || action.sourceKind || "").trim();
       const safetyPayload = action.payload_json || action.payload || {};
+      if (sourceKind === "supplier_intake_clarification_v1"
+        || safetyPayload.source_variant === "supplier-intake-clarification-v1") throw new Error("Bruk kontrollert intern avklaring for denne kilden.");
       if (sourceKind === "invoice_basis_revision_v1" || ["invoiceBasisContract", "invoiceBasisVersionId", "invoiceBasisContextHash"].some((key) => Object.prototype.hasOwnProperty.call(safetyPayload, key))) throw new Error("Bruk fakturagrunnlagets egen kontroll.");
       if (sourceKind === "crm_internal_data_review" || Object.prototype.hasOwnProperty.call(safetyPayload, "reviewContract")) throw new Error("Bruk kontrollert intern datakontroll.");
       const safetyEvidence = action.evidence_json || action.evidence || {};
@@ -3613,7 +3615,9 @@
       if (existingActionError) throw existingActionError;
       if ([existingAction?.source_kind, patch.source_kind, patch.sourceKind].includes("invoice_basis_revision_v1")
         || [existingAction?.payload_json, patch.payload_json, patch.payload].some((payload) => payload && ["invoiceBasisContract", "invoiceBasisVersionId", "invoiceBasisContextHash"].some((key) => Object.prototype.hasOwnProperty.call(payload, key)))) throw new Error("Bruk fakturagrunnlagets egen kontroll.");
-      if (existingAction?.action_type === "inbound_triage") throw new Error("Bruk kontrollert intern avklaring for denne kilden.");
+      if (existingAction?.action_type === "inbound_triage"
+        || [existingAction?.source_kind, patch.source_kind, patch.sourceKind].includes("supplier_intake_clarification_v1")
+        || [existingAction?.payload_json, patch.payload_json, patch.payload].some((payload) => payload?.source_variant === "supplier-intake-clarification-v1")) throw new Error("Bruk kontrollert intern avklaring for denne kilden.");
       if ([existingAction?.source_kind, patch.source_kind, patch.sourceKind].includes("crm_internal_data_review")
         || [existingAction?.payload_json, patch.payload_json, patch.payload].some((payload) => payload && Object.prototype.hasOwnProperty.call(payload, "reviewContract"))) throw new Error("Bruk kontrollert intern datakontroll.");
       const existingPayload = existingAction?.payload_json || {};
@@ -3814,18 +3818,24 @@
     },
     async reviewInboundTriage(id, options = {}) {
       const request = options.request || {};
+      const sourceKind = options.expectedSourceKind || "google_messages_unlinked_inbound_v1";
+      const supplierIntake = sourceKind === "supplier_intake_clarification_v1";
       const intents = new Set(["displayed", "assign_owner", "resolve", "reject"]);
       const keys = new Set(["intent", "expected_status", "expected_updated_at", "expected_revision", "expected_content_hash", "expected_source_ref", "expected_intake_updated_at", "expected_source_hash",
         ...(request.intent === "assign_owner" ? ["owner_profile_id"] : []),
         ...(["resolve", "reject"].includes(request.intent) ? ["reason_code", "reviewer_note"] : [])]);
       if (!isUuid(id) || !isUuid(options.clientEventId)
+        || !["google_messages_unlinked_inbound_v1", "supplier_intake_clarification_v1"].includes(sourceKind)
         || !/^[A-Za-z0-9][A-Za-z0-9._:-]{7,199}$/.test(String(options.operationKey || ""))
         || !intents.has(request.intent) || Object.keys(request).some((key) => !keys.has(key))
         || !["needs_review", "completed", "rejected"].includes(request.expected_status)
         || !Number.isSafeInteger(request.expected_revision) || request.expected_revision < 1
         || !/^[0-9a-f]{64}$/.test(String(request.expected_content_hash || ""))
         || !/^[0-9a-f]{64}$/.test(String(request.expected_source_hash || ""))
-        || !/^google-messages-observed:v1:[0-9a-f]{64}$/.test(String(request.expected_source_ref || ""))
+        || typeof request.expected_source_ref !== "string"
+        || !(supplierIntake ? request.expected_source_ref.startsWith("supplier-intake-clarification:v1:")
+          && isUuid(request.expected_source_ref.slice("supplier-intake-clarification:v1:".length))
+          : /^google-messages-observed:v1:[0-9a-f]{64}$/.test(request.expected_source_ref))
         || ![request.expected_updated_at, request.expected_intake_updated_at].every((value) => typeof value === "string" && Number.isFinite(Date.parse(value)))
         || (request.intent === "assign_owner" && !isUuid(request.owner_profile_id))
         || (["resolve", "reject"].includes(request.intent) && !(request.intent === "resolve"
@@ -3843,18 +3853,42 @@
       if (error) throw error;
       const action = data?.action;
       const source = data?.source;
+      const supplierIntakeSchema = "supplier-intake-clarification-v1";
+      const supplierIntakeSourceKeys = ["schema", "body", "from_email", "subject", "received_at", "message_id", "thread_id"];
+      const supplierIntakeSourceValid = source && typeof source === "object" && !Array.isArray(source)
+        && Object.keys(source).length === supplierIntakeSourceKeys.length
+        && supplierIntakeSourceKeys.every((key) => Object.hasOwn(source, key))
+        && source.schema === supplierIntakeSchema
+        && typeof source.body === "string" && Boolean(source.body.trim()) && source.body.length <= 100000
+        && ["from_email", "subject", "message_id", "thread_id"].every((key) => typeof source[key] === "string"
+          && source[key].length <= 2000 && !/[\x00-\x1f\x7f]/.test(source[key]))
+        && (source.received_at === null || (typeof source.received_at === "string" && Number.isFinite(Date.parse(source.received_at))
+          && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(source.received_at)));
       if (!action || action.id !== id || action.action_type !== "inbound_triage" || action.channel !== "internal"
-        || action.source_kind !== "google_messages_unlinked_inbound_v1" || action.source_ref !== request.expected_source_ref
+        || action.source_kind !== sourceKind || action.source_ref !== request.expected_source_ref
         || !["needs_review", "completed", "rejected"].includes(action.status)
         || !Number.isSafeInteger(action.review_revision) || action.review_revision < 1
         || !/^[0-9a-f]{64}$/.test(String(action.review_content_hash || ""))
         || !isUuid(data.reviewId) || !isUuid(data.eventId)
         || ["recipient", "linked_customer_id", "linked_lead_id", "linked_job_id", "linked_order_id", "approved_at", "approved_by", "executed_at", "external_id"].some((key) => action[key] != null)
+        || (supplierIntake && (!isUuid(action.source_intake_id) || action.approval_required !== true
+          || action.payload_json?.source_variant !== supplierIntakeSchema || action.payload_json?.workflow_lane !== "internal"
+          || (action.payload_json?.owner_profile_id != null && !isUuid(action.payload_json.owner_profile_id))
+          || typeof data.alreadyApplied !== "boolean" || data.intake?.status !== "discarded"
+          || data.intake?.updated_at !== request.expected_intake_updated_at
+          || action.source_ref !== `supplier-intake-clarification:v1:${action.source_intake_id}`
+          || action.payload_json.autoSendEligible !== false || action.payload_json.doNotExecuteAutomatically !== true
+          || Object.hasOwn(action.payload_json, "supplier_message_class") || Object.hasOwn(action.payload_json, "system_message_class")
+          || ["not_before", "expires_at"].some((key) => action[key] != null)
+          || ![action.updated_at, data.intake.updated_at].every((value) => typeof value === "string" && Number.isFinite(Date.parse(value)))))
         || data?.intake?.id !== action.source_intake_id || data?.intake?.source_hash !== action.payload_json?.source_hash
         || data?.intake?.source_hash !== request.expected_source_hash
         || data?.intake?.updated_at !== action.payload_json?.intake_updated_at
         || (request.intent !== "displayed" && source != null)
-        || (request.intent === "displayed" && (!source || typeof source.body !== "string"
+        || (request.intent === "displayed" && (supplierIntake ? !supplierIntakeSourceValid
+          || action.status !== request.expected_status || action.updated_at !== request.expected_updated_at
+          || action.review_revision !== request.expected_revision || action.review_content_hash !== request.expected_content_hash
+          : !source || typeof source.body !== "string"
           || !/^\d{4}-\d{2}-\d{2}$/.test(String(source.received_local_date || ""))
           || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(String(source.received_local_time || ""))
           || source.collector_timezone !== "Europe/Oslo" || source.timezone_authority !== "collector_context_only"

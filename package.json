@@ -135,7 +135,9 @@
     "test:invoice-basis": "node --test tests/invoice-basis-review-ui.test.mjs",
     "test:invoice-basis-sql": "node tools/run-local-sql-tests.mjs tests/invoice-basis-isolation-integration.sql tests/invoice-basis-integration.sql",
     "test:invoice-basis-concurrency": "node tests/invoice-basis-concurrency.test.mjs --local",
-    "test:gmail-reconciliation-sql": "node tools/run-local-sql-tests.mjs tests/gmail-recipient-regex-integration.sql tests/gmail-connector-reconciliation-integration.sql tests/legacy-gmail-reply-reconciliation-integration.sql"
+    "test:gmail-reconciliation-sql": "node tools/run-local-sql-tests.mjs tests/gmail-recipient-regex-integration.sql tests/gmail-connector-reconciliation-integration.sql tests/legacy-gmail-reply-reconciliation-integration.sql",
+    "test:supplier-intake-clarification": "node --test tests/supplier-intake-clarification-adapter.test.mjs tests/supplier-intake-clarification-ui.test.mjs",
+    "postcheck": "npm run test:supplier-intake-clarification"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
