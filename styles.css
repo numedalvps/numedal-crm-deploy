@@ -11510,6 +11510,18 @@ textarea {
   font-size: 13px;
 }
 
+.customer-tag-picker { display: grid; gap: 8px; min-width: 0; }
+.customer-tag-picker > label { font-weight: 800; }
+.customer-tag-picker > small { color: var(--muted); }
+.tag-selected { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+.tag-selected .tag-chip { min-height: 44px; max-width: 100%; text-align: left; overflow-wrap: anywhere; }
+.tag-selected .tag-chip span:first-child { min-width: 0; }
+.tag-search-results { display: grid; gap: 4px; max-height: min(22rem, 35dvh); overflow-y: auto; overscroll-behavior: contain; border: 1px solid var(--line); border-radius: 8px; padding: 6px; }
+.tag-search-results[hidden] { display: none; }
+.tag-search-results button { min-height: 44px; text-align: left; overflow-wrap: anywhere; white-space: normal; }
+.tag-search-results .tag-create { border-style: dashed; }
+.tag-search-results .tag-catalog-empty { padding: 8px; }
+
 .dialog-message {
   margin-bottom: 12px;
   border-radius: 8px;
