@@ -5676,6 +5676,16 @@ textarea {
   margin-top: 8px;
 }
 
+.lead-original-inquiry {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.lead-original-inquiry .website-submission-fields div { grid-template-columns: 90px minmax(0, 1fr); }
+.lead-original-inquiry .website-submission-fields dd { white-space: pre-wrap; }
+.lead-original-inquiry .website-submission-message p { white-space: pre-wrap; font-weight: 400; }
+.lead-original-inquiry summary,
+.lead-original-inquiry button { min-height: 44px; }
+
 .lead-quick-note {
   display: grid;
   gap: 10px;
@@ -9561,6 +9571,55 @@ textarea {
   margin-bottom: 5px;
 }
 
+.job-work-facts {
+  margin: 7px 0 10px;
+  overflow-wrap: anywhere;
+}
+
+.job-card .job-task-title {
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.job-card .job-product,
+.job-card .job-work-address,
+.job-card .job-work-note {
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.job-card .job-work-note {
+  white-space: pre-wrap;
+  cursor: text;
+  user-select: text;
+}
+
+.job-card .job-fact-warning {
+  padding: 6px 8px;
+  border-left: 3px solid var(--orange);
+  color: #713f12;
+  background: rgba(255, 251, 235, 0.8);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.job-note-history {
+  margin: 8px 0;
+  border-top: 1px solid rgba(15, 23, 42, 0.14);
+}
+
+.job-note-history > summary {
+  padding: 12px 0;
+  min-height: 44px;
+  box-sizing: border-box;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .overlap-note {
   border-radius: 8px;
   padding: 6px 8px;
@@ -12348,6 +12407,20 @@ textarea {
 .completion-installation {
   display: block;
   margin: 0 0 12px;
+}
+
+.completion-product-section {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 16px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.completion-product-section small {
+  color: var(--muted);
+  line-height: 1.4;
 }
 
 .hidden-select {

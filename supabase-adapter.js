@@ -2762,6 +2762,22 @@
       if (error) throw error;
       return true;
     },
+    async loadOriginalWebsiteSubmission({ submissionId = "", leadId = "" } = {}) {
+      if (submissionId ? !isUuid(submissionId) : !isUuid(leadId)) throw new Error("Originalhenvendelsen mangler en gyldig kobling.");
+      const supabase = await requireClient();
+      const { data, error } = await withDbTimeout(supabase.from("website_submissions")
+        .select("*").eq(submissionId ? "id" : "created_lead_id", submissionId || leadId).limit(2), "hente originalhenvendelsen");
+      if (error) throw error;
+      if (!data?.length) return { status: "not_found" };
+      if (data.length !== 1) return { status: "ambiguous" };
+      const submission = data[0];
+      const attachments = await withDbTimeout(supabase.from("crm_attachments")
+        .select("*", { count: "exact" }).eq("website_submission_id", submission.id)
+        .is("deleted_at", null).order("created_at", { ascending: true }).limit(100), "hente henvendelsens vedlegg")
+        .catch(() => ({ error: true }));
+      return { status: "found", submission, attachments: attachments.error ? [] : attachments.data || [],
+        attachmentStatus: attachments.error ? "error" : "loaded", attachmentCount: attachments.count };
+    },
     async updateWebsiteSubmission(id, patch = {}) {
       const supabase = await requireClient();
       if (!isUuid(id)) throw new Error("Ugyldig nettsideinnsending-id.");

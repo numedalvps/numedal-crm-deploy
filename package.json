@@ -138,7 +138,9 @@
     "test:gmail-reconciliation-sql": "node tools/run-local-sql-tests.mjs tests/gmail-recipient-regex-integration.sql tests/gmail-connector-reconciliation-integration.sql tests/legacy-gmail-reply-reconciliation-integration.sql",
     "test:customer-tags": "node --test tests/customer-tag-picker.test.mjs",
     "test:installation-completion-selection": "node --test tests/installation-completion-selection.test.mjs",
-    "postcheck": "npm run test:customer-tags && npm run test:installation-completion-selection"
+    "postcheck": "npm run test:customer-tags && npm run test:installation-completion-selection && npm run test:lead-original-inquiry && npm run test:job-card-clarity",
+    "test:lead-original-inquiry": "node --test tests/lead-original-inquiry.test.mjs",
+    "test:job-card-clarity": "node --test tests/job-card-clarity.test.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css?v=1.9.4" />
-    <link rel="stylesheet" href="./styles.css?v=20260919-01" />
+    <link rel="stylesheet" href="./styles.css?v=20260919-02" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -1457,6 +1457,16 @@
         <label id="completionInstallationLabel" class="completion-installation hidden">Gjelder varmepumpe/anlegg
           <select id="completionInstallation"></select>
         </label>
+        <section id="completionProductSection" class="completion-product-section hidden" aria-labelledby="completionProductLabel">
+          <label><span id="completionProductLabel">Montert produkt</span>
+            <select id="completionProduct"></select>
+          </label>
+          <div id="completionProductIdentity" class="form-grid hidden">
+            <label>Merke<input id="completionProductBrand" type="text" maxlength="160" autocomplete="off" /></label>
+            <label>Modell / variant<input id="completionProductModel" type="text" maxlength="240" autocomplete="off" /></label>
+          </div>
+          <small id="completionProductHint">Velg produktet som faktisk er montert. Kontroller mot jobbens avtalte produkt og prisgrunnlag.</small>
+        </section>
         <div class="completion-core-fields">
           <label id="completionDoneDateLabel"><span>Utført dato</span><input id="completionDoneDate" type="date" required /></label>
           <label id="completionNoteLabel"><span>Hva ble gjort?</span><textarea id="completionNote" rows="3" placeholder="Beskriv utført arbeid og eventuelle avvik."></textarea></label>
@@ -1837,11 +1847,11 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260919-01"></script>
-    <script src="./supabase-adapter.js?v=20260919-01"></script>
-    <script src="./intake-parser.js?v=20260919-01"></script>
-    <script src="./assistant-coordinator.js?v=20260919-01"></script>
-    <script src="./nearby-planning.js?v=20260919-01"></script>
-    <script src="./app-20260919-01.js"></script>
+    <script src="./supabase-config.js?v=20260919-02"></script>
+    <script src="./supabase-adapter.js?v=20260919-02"></script>
+    <script src="./intake-parser.js?v=20260919-02"></script>
+    <script src="./assistant-coordinator.js?v=20260919-02"></script>
+    <script src="./nearby-planning.js?v=20260919-02"></script>
+    <script src="./app-20260919-02.js"></script>
   </body>
 </html>
