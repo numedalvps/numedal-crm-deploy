@@ -2664,6 +2664,68 @@
       if (activityError) throw activityError;
       return data;
     },
+    async loadCustomerSalesCaseActivity(leadId) {
+      if (!isUuid(leadId)) throw new Error("Ugyldig saks-ID.");
+      const supabase = await requireClient();
+      const { data, error } = await withDbTimeout(supabase.from("activities").select("*").eq("lead_id", leadId)
+        .eq("activity_type", "manual_sales_case_created").limit(2), "hente salgssakens grunnlag");
+      if (error) throw error;
+      if (!Array.isArray(data) || data.length !== 1 || data[0].lead_id !== leadId || !isUuid(data[0].customer_id)
+        || data[0].activity_type !== "manual_sales_case_created" || data[0].metadata?.source !== "manual_customer_sales_case_v1"
+        || !["installasjon", "blaseisolering", "annet"].includes(data[0].metadata?.case_type)) throw new Error("Salgssakens opprinnelige grunnlag kunne ikke bekreftes.");
+      return data[0];
+    },
+    async createCustomerSalesCase(request, options = {}) {
+      const keys = ["new_lead_id", "customer_id", "expected_customer_updated_at", "address_choice", "location_id", "expected_location_updated_at",
+        "installation_id", "expected_installation_updated_at", "case_type", "product_interest", "note"];
+      const timestamp = (value) => typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]\d{2}:\d{2})$/.test(value) && Number.isFinite(Date.parse(value));
+      if (!request || typeof request !== "object" || Array.isArray(request) || Object.keys(request).length !== keys.length
+        || keys.some((key) => !Object.prototype.hasOwnProperty.call(request, key))
+        || !isUuid(options.clientEventId) || !/^[A-Za-z0-9][A-Za-z0-9._:-]{7,239}$/.test(options.operationKey || "")
+        || !isUuid(request.new_lead_id) || !isUuid(request.customer_id) || !timestamp(request.expected_customer_updated_at)
+        || !["unresolved", "customer_main", "location"].includes(request.address_choice)
+        || !["installasjon", "blaseisolering", "annet"].includes(request.case_type)
+        || typeof request.product_interest !== "string" || !request.product_interest.trim() || request.product_interest.length > 500 || /[\x00-\x1f\x7f]/.test(request.product_interest)
+        || typeof request.note !== "string" || request.note.length > 20000 || /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(request.note)
+        || (request.address_choice === "location" ? !isUuid(request.location_id) || !timestamp(request.expected_location_updated_at)
+          : request.location_id !== null || request.expected_location_updated_at !== null)
+        || (request.installation_id === null ? request.expected_installation_updated_at !== null
+          : !isUuid(request.installation_id) || request.address_choice !== "location" || !timestamp(request.expected_installation_updated_at))) {
+        throw Object.assign(new Error("Salgssaken mangler gyldige felt, identiteter eller kildeversjoner."), { code: "22023" });
+      }
+      const original = JSON.parse(JSON.stringify(request));
+      const supabase = await requireClient();
+      const operationHash = [...new Uint8Array(await window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(options.operationKey)))].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+      let response;
+      try {
+        response = await withDbTimeout(supabase.rpc("create_customer_sales_case_v1", {
+          p_client_event_id: options.clientEventId, p_operation_key: options.operationKey, p_request: original,
+        }), "lagre ny salgssak", 30000);
+      } catch (error) { error.salesCaseOutcomeUncertain = true; throw error; }
+      if (response.error) {
+        if (manualResponseOutcomeUncertain(response)) response.error.salesCaseOutcomeUncertain = true;
+        throw response.error;
+      }
+      const result = response.data, lead = result?.lead, activity = result?.activity;
+      const metadata = activity?.metadata;
+      if (result?.outcome !== "created" || !isUuid(result.receipt_id) || !isUuid(result.audit_id)
+        || result.client_event_id !== options.clientEventId || result.operation_key_hash !== operationHash
+        || typeof result.already_applied !== "boolean" || typeof result.current_matches !== "boolean"
+        || lead?.id !== original.new_lead_id || lead.existing_customer_id !== original.customer_id
+        || lead.source !== "Kundekort" || lead.source_detail !== "Ny salgssak" || lead.status !== "quote_needed"
+        || lead.product_interest !== original.product_interest || lead.last_contact_at !== null || lead.converted_customer_id != null || lead.raw_submission_id != null
+        || (original.address_choice === "unresolved" ? [lead.address, lead.postal_code, lead.city].some((value) => value !== null)
+          : [lead.address, lead.postal_code, lead.city].some((value) => typeof value !== "string" || !value.trim()))
+        || !isUuid(activity?.id) || activity.customer_id !== original.customer_id || activity.lead_id !== original.new_lead_id
+        || activity.location_id !== original.location_id || activity.installation_id !== original.installation_id || activity.job_id != null
+        || !isUuid(activity.actor_profile_id) || activity.activity_type !== "manual_sales_case_created" || activity.summary !== "Salgssak opprettet"
+        || activity.body !== (original.note || null) || !metadata || Object.keys(metadata).sort().join(",") !== "address_choice,case_type,receipt_id,source"
+        || metadata.source !== "manual_customer_sales_case_v1" || metadata.address_choice !== original.address_choice
+        || metadata.case_type !== original.case_type || metadata.receipt_id !== result.receipt_id) {
+        throw Object.assign(new Error("Lagringen svarte uten gyldig samlet kvittering. Kontroller samme lagring igjen."), { salesCaseOutcomeUncertain: true });
+      }
+      return result;
+    },
     async saveLeadDraft(values) {
       const supabase = await requireClient();
       const name = String(values?.name || "").trim();

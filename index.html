@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css?v=1.9.4" />
-    <link rel="stylesheet" href="./styles.css?v=20260919-02" />
+    <link rel="stylesheet" href="./styles.css?v=20260919-03" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -1034,6 +1034,23 @@
       </form>
     </dialog>
 
+    <dialog id="salesCaseDialog" class="modal compact-modal manual-editor" aria-labelledby="salesCaseTitle">
+      <form id="salesCaseForm">
+        <div class="modal-head"><h2 id="salesCaseTitle">Ny salgssak</h2><button id="salesCaseClose" type="button" aria-label="Lukk">×</button></div>
+        <p id="salesCaseCustomer" class="manual-scope-notice"></p>
+        <p class="form-hint">Et utkast til tilbud eller mulig nytt arbeid på kunden. Saken opprettes først når du lagrer. Produktet kan avklares senere.</p>
+        <div id="salesCaseMessage" class="dialog-message hidden" role="status" aria-live="polite"></div>
+        <button id="salesCaseRefresh" class="secondary hidden" type="button">Hent oppdaterte opplysninger</button>
+        <label>Type salgssak<select id="salesCaseType"><option value="installasjon">Varmepumpe / installasjon</option><option value="blaseisolering">Blåseisolering</option><option value="annet">Annet</option></select></label>
+        <label>Tema / behov<input id="salesCaseTopic" maxlength="500" required placeholder="Beskriv kort hva saken gjelder" /></label>
+        <label>Notat (valgfritt)<textarea id="salesCaseNote" rows="4" maxlength="20000" placeholder="Skriv bare det som er kjent om denne saken"></textarea></label>
+        <label>Adresse for salgssaken<select id="salesCaseAddress"></select></label>
+        <label id="salesCaseInstallationWrap" class="check-row hidden"><input id="salesCaseInstallationReference" type="checkbox" /><span id="salesCaseInstallationLabel"></span></label>
+        <p class="form-hint">En anleggsreferanse angir hva saken gjelder. Den velger ikke et nytt produkt.</p>
+        <div class="modal-actions manual-editor-actions"><button id="salesCaseCancel" class="secondary" type="button">Avbryt</button><button id="salesCaseSave" class="manual-save-primary" type="submit">Lagre salgssak</button></div>
+      </form>
+    </dialog>
+
     <dialog id="installationDialog" class="modal manual-editor" aria-labelledby="installationDialogTitle">
       <form id="installationForm" method="dialog">
         <div class="modal-head">
@@ -1420,6 +1437,8 @@
           <textarea id="bookingNote" rows="3" placeholder="Beskriv feilen, kontrollen eller arbeidet som skal utføres."></textarea>
           <span class="form-hint">Dette gjelder bare denne jobben. Valgt anlegg, adresse og adkomst legges til automatisk.</span>
         </label>
+        <label class="check-row booking-arrival-choice"><input id="bookingCallBeforeArrival" type="checkbox" aria-describedby="bookingCallBeforeArrivalHint" /> Ring før ankomst</label>
+        <p id="bookingCallBeforeArrivalHint" class="form-hint">Legger «Ring før ankomst.» i arbeidsbeskrivelsen. Andre ringebeskjeder redigeres i teksten over.</p>
         <details id="bookingCalendarDetails" class="workflow-details booking-calendar-details">
           <summary><strong>Se kalender og dagsplan</strong><span id="bookingCalendarSummary"></span></summary>
           <section class="booking-month">
@@ -1847,11 +1866,11 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260919-02"></script>
-    <script src="./supabase-adapter.js?v=20260919-02"></script>
-    <script src="./intake-parser.js?v=20260919-02"></script>
-    <script src="./assistant-coordinator.js?v=20260919-02"></script>
-    <script src="./nearby-planning.js?v=20260919-02"></script>
-    <script src="./app-20260919-02.js"></script>
+    <script src="./supabase-config.js?v=20260919-03"></script>
+    <script src="./supabase-adapter.js?v=20260919-03"></script>
+    <script src="./intake-parser.js?v=20260919-03"></script>
+    <script src="./assistant-coordinator.js?v=20260919-03"></script>
+    <script src="./nearby-planning.js?v=20260919-03"></script>
+    <script src="./app-20260919-03.js"></script>
   </body>
 </html>
