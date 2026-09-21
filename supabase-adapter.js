@@ -1777,6 +1777,23 @@
       if (error && !isOptionalAssistantActionsError(error)) throw error;
       return error ? [] : data || [];
     },
+    async loadAssistantEmailAction(id) {
+      if (!isUuid(id)) throw new Error("Ugyldig e-postutkast.");
+      const supabase = await requireClient();
+      // The queue view omits expired/rejected rows. Read the exact RLS-protected
+      // action so a successful terminal reconciliation is still observable.
+      const { data, error } = await withDbTimeout(
+        supabase.from("assistant_actions").select("*").eq("id", id).single(),
+        "kontrollere e-postens sendestatus",
+        12000,
+      );
+      if (error) throw error;
+      if (!data || data.id !== id || data.channel !== "email"
+        || !["email_reply", "offer_draft"].includes(data.action_type)) {
+        throw new Error("Kunne ikke kontrollere det eksakte e-postutkastet.");
+      }
+      return data;
+    },
     async getIntakeItemById(id) {
       const intakeId = String(id || "").trim();
       if (!isUuid(intakeId)) throw new Error("Ugyldig innbokspost.");
