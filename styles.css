@@ -2154,6 +2154,8 @@ textarea {
 
 .crm-attachment-list {
   display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
 }
 
@@ -2171,6 +2173,10 @@ textarea {
 .crm-attachment-list.compact article {
   grid-template-columns: 36px minmax(0, 1fr) auto;
   padding: 7px;
+}
+
+.crm-attachment-list article > div {
+  min-width: 0;
 }
 
 .attachment-icon {
@@ -2203,6 +2209,8 @@ textarea {
 
 .installation-attachments {
   display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
   border: 1px dashed var(--line);
   border-radius: 8px;
@@ -2212,6 +2220,7 @@ textarea {
 
 .installation-attachments > div:first-child {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 8px;
   color: var(--muted);
@@ -6952,6 +6961,8 @@ textarea {
 
 .installation-list {
   display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
 }
 
@@ -7069,6 +7080,8 @@ textarea {
 
 .installation-card {
   display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
   gap: 6px;
   border: 1px solid var(--line);
   border-left: 5px solid var(--teal);
@@ -7105,14 +7118,15 @@ textarea {
   font-weight: 900;
 }
 
-.installation-card > div {
+.installation-card > div:not(.installation-attachments) {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
 }
 
-.installation-card span {
+.installation-card-head > span,
+.installation-meta-pills > span {
   border: 1px solid var(--line);
   border-radius: 999px;
   padding: 3px 7px;
@@ -9780,6 +9794,15 @@ textarea {
   padding: 18px;
 }
 
+#attachmentPreviewTitle {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+#closeAttachmentPreviewDialog {
+  flex: 0 0 44px;
+}
+
 .attachment-preview-status {
   min-height: 20px;
   margin: 0 0 10px;
@@ -9858,6 +9881,12 @@ textarea {
   flex-direction: column;
   padding: 16px;
   overflow: auto;
+}
+
+#customerQuickDialog .modal-head {
+  top: -16px;
+  margin: -16px -16px 14px;
+  padding: 14px 16px 12px;
 }
 
 .crm-assistant-panel {
@@ -13165,6 +13194,29 @@ label {
     padding: 12px;
   }
 
+  #customerQuickDialog .modal-head {
+    top: -12px;
+    margin: -12px -12px 12px;
+    padding: 12px;
+  }
+
+  .crm-attachment-list article,
+  .crm-attachment-list.compact article {
+    grid-template-columns: 36px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .crm-attachment-list .crm-attachment-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .crm-attachment-list .crm-attachment-actions button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
   .attachment-preview-body {
     min-height: 180px;
   }
@@ -16298,6 +16350,11 @@ html:has(.manual-editor[open]) {
 .invoice-basis-lines li { border-top: 1px solid #dce6e9; padding: .65rem 0; overflow-wrap: anywhere; }
 .invoice-basis-review details { overflow-wrap: anywhere; }
 .invoice-basis-review summary { cursor: pointer; }
+.external-email-draft form { display: grid; gap: .75rem; min-width: 0; }
+.external-email-draft label { display: grid; gap: .3rem; min-width: 0; }
+.external-email-draft input, .external-email-draft textarea { width: 100%; min-width: 0; box-sizing: border-box; }
+.external-email-draft .modal-actions { flex-wrap: wrap; }
+.external-email-draft .modal-actions > * { white-space: normal; overflow-wrap: anywhere; }
 .invoice-basis-tools { margin: .5rem 0 .8rem; }
 .invoice-basis-tools .mini-action-row { margin-top: .6rem; }
 @media (min-width: 1000px) {
@@ -16307,3 +16364,12 @@ html:has(.manual-editor[open]) {
   .invoice-basis-comparison { grid-template-columns: minmax(0, 1fr); }
   .invoice-basis-instruction, .invoice-basis-comparison > section, .invoice-basis-prior { padding: .7rem; }
 }
+/* Contact editing remains reachable above collapsed lead tools on mobile. */
+.lead-contact-shortcut { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin: 12px 0; }
+.lead-contact-shortcut button { min-height: 44px; }
+.lead-contact-shortcut span { font-size: .875rem; color: var(--muted, #63717f); }
+#leadContactForm { display: grid; gap: 14px; }
+#leadContactForm label { display: grid; gap: 6px; }
+#leadContactForm input { box-sizing: border-box; width: 100%; min-height: 44px; }
+#leadContactForm .dialog-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+#leadContactForm button { min-height: 44px; }

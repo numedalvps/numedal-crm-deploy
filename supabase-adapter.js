@@ -1794,6 +1794,22 @@
       }
       return data;
     },
+    async loadAssistantMessageAction(id) {
+      if (!isUuid(id)) throw new Error("Ugyldig meldingsutkast.");
+      const supabase = await requireClient();
+      const { data, error } = await withDbTimeout(
+        supabase.from("assistant_actions").select("*").eq("id", id).single(),
+        "hente eksisterende meldingsutkast", 12000,
+      );
+      if (error) throw error;
+      const missingEmailWebsiteOffer = data?.channel === "internal" && data?.action_type === "offer_draft"
+        && data?.source_kind === "crm_assistant_website_offer";
+      if (!data || data.id !== id || (!["email", "sms"].includes(data.channel) && !missingEmailWebsiteOffer)
+        || !["email_reply", "sms_reply", "offer_draft"].includes(data.action_type)) {
+        throw new Error("Fant ikke det eksakte meldingsutkastet.");
+      }
+      return data;
+    },
     async getIntakeItemById(id) {
       const intakeId = String(id || "").trim();
       if (!isUuid(intakeId)) throw new Error("Ugyldig innbokspost.");
@@ -2810,6 +2826,26 @@
         "lagre aktivitet",
       );
       if (error) throw error;
+      return data;
+    },
+    async loadLeadContact(id) {
+      if (!isUuid(id)) throw new Error("Ugyldig lead-id.");
+      const supabase = await requireClient();
+      const { data, error } = await withDbTimeout(supabase.from("leads").select("*").eq("id", id).maybeSingle(), "hente lagret kontakt");
+      if (error) throw error;
+      return data;
+    },
+    async saveLeadContact(id, expectedUpdatedAt, patch = {}) {
+      if (!isUuid(id) || !expectedUpdatedAt || Number.isNaN(new Date(expectedUpdatedAt).getTime())) throw new Error("Kontaktredigeringen mangler en gyldig saksversjon.");
+      const keys = Object.keys(patch);
+      if (!keys.length || keys.some((key) => !["first_name", "last_name", "company_name", "phone", "email"].includes(key)
+        || (patch[key] !== null && typeof patch[key] !== "string"))) throw new Error("Kontaktredigeringen inneholder ugyldige felt.");
+      const supabase = await requireClient();
+      const { data, error } = await withDbTimeout(supabase.from("leads").update({ ...patch, updated_at: new Date().toISOString() })
+        .eq("id", id).eq("updated_at", expectedUpdatedAt).is("existing_customer_id", null).is("converted_customer_id", null)
+        .select("*").maybeSingle(), "lagre kontakt på henvendelse");
+      if (error) throw error;
+      if (!data) throw Object.assign(new Error("Saken er endret eller koblet til et kundekort. Hent lagret kontakt."), { code: "40001" });
       return data;
     },
     async updateLead(id, patch = {}) {
@@ -3958,6 +3994,28 @@
         invalid.triageOutcomeUncertain = true;
         throw invalid;
       }
+      return data;
+    },
+    async loadMissingOfferRecipientContext(id) {
+      const supabase = await requireClient();
+      if (!isUuid(id)) throw new Error("Ugyldig tilbudsutkast.");
+      const { data, error } = await withDbTimeout(supabase.rpc("get_missing_offer_recipient_context_v1", { p_action_id: id }), "kontrollere registrert mottaker");
+      if (error) throw error;
+      if (data?.action_id !== id || typeof data.recipient !== "string" || data.request?.recipient !== data.recipient
+        || data.request?.expected_status !== "needs_review" || !Number.isSafeInteger(data.request?.expected_revision)
+        || !/^[a-f0-9]{64}$/.test(data.request?.expected_action_hash || "")
+        || !/^[a-f0-9]{64}$/.test(data.request?.expected_context_hash || "")) throw new Error("Mottakergrunnlaget kunne ikke kontrolleres.");
+      return data;
+    },
+    async repairMissingOfferRecipient(id, clientEventId, request) {
+      const supabase = await requireClient();
+      if (!isUuid(id) || !isUuid(clientEventId) || !request || request.expected_status !== "needs_review") throw new Error("Ugyldig mottakerreparasjon.");
+      const { data, error } = await withDbTimeout(supabase.rpc("repair_missing_offer_recipient_v1", {
+        p_action_id: id, p_client_event_id: clientEventId, p_request: request,
+      }), "lagre kontrollert tilbudsmottaker");
+      if (error) throw error;
+      if (data?.action?.id !== id || !isUuid(data.receipt_id) || !isUuid(data.review_id)
+        || data.send_authorized !== false || typeof data.replayed !== "boolean") throw new Error("Mottakerlagringen kunne ikke bekreftes. Hent utkastet på nytt.");
       return data;
     },
     async reviewAssistantAction(id, review = {}) {
