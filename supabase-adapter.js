@@ -2309,7 +2309,7 @@
         "lagre kontrollert serviceområde",
       );
       if (error) {
-        if (error.code === "40001") {
+        if (["40001", "PT409"].includes(error.code)) {
           throw new Error("Anleggsadressen er endret i en annen økt. Oppdater siden før du velger område på nytt.");
         }
         throw error;
@@ -2804,6 +2804,14 @@
         },
       }), "lagre leadhistorikk");
       if (activityError) throw activityError;
+      return data;
+    },
+    async saveJobComment(eventId, jobId, body) {
+      const supabase = await requireClient();
+      const { data, error } = await withDbTimeout(supabase.rpc("save_job_comment_v1", {
+        p_event_id: eventId, p_job_id: jobId, p_body: body,
+      }), "lagre jobbkommentar");
+      if (error) throw error;
       return data;
     },
     async saveActivity(activity = {}) {
@@ -4153,22 +4161,18 @@
       const supabase = await requireClient();
       const id = attachment?.id;
       if (!isUuid(id)) throw new Error("Ugyldig vedlegg-id.");
-      const deletedAt = new Date().toISOString();
-      const { data, error } = await supabase
-        .from("crm_attachments")
-        .update({ deleted_at: deletedAt })
-        .eq("id", id)
-        .is("deleted_at", null)
-        .select("id, storage_bucket, storage_path, deleted_at")
-        .single();
+      const { data, error } = await withDbTimeout(supabase.rpc("remove_crm_attachment_v1", {
+        p_attachment_id: id,
+      }), "fjerne vedlegg");
       if (error) throw error;
       const bucket = data?.storage_bucket || attachment.storage_bucket || "crm-attachments";
       const path = data?.storage_path || attachment.storage_path || "";
       let storageRemoved = true;
       if (path) {
-        const { error: storageError } = await supabase.storage.from(bucket).remove([path]);
-        storageRemoved = !storageError;
-        if (storageError) console.warn("Vedleggsraden ble slettet, men lagringsfilen kunne ikke fjernes.", storageError);
+        try {
+          const { error: storageError } = await withDbTimeout(supabase.storage.from(bucket).remove([path]), "rydde vedleggsfil", 8000);
+          storageRemoved = !storageError;
+        } catch { storageRemoved = false; }
       }
       return { ...data, storage_removed: storageRemoved };
     },

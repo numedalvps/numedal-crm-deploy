@@ -16373,3 +16373,29 @@ html:has(.manual-editor[open]) {
 #leadContactForm input { box-sizing: border-box; width: 100%; min-height: 44px; }
 #leadContactForm .dialog-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 #leadContactForm button { min-height: 44px; }
+
+/* A customer card shows one working area at a time, with stable touch targets. */
+#customerDetail > .customer-section-anchor[hidden], .offer-alternative-target[hidden] { display: none !important; }
+.customer-section-nav { display: flex; flex-wrap: wrap; gap: 6px; }
+.customer-section-nav button { min-height: 44px; }
+.crm-attachment-actions .remove-crm-attachment { width: auto; min-width: 52px; min-height: 44px; padding: 8px; font-size: .85rem; }
+.attachment-more > summary { padding: 12px 0; cursor: pointer; }
+.job-comment-section label { display: grid; gap: 6px; }
+.job-comment-section textarea { box-sizing: border-box; width: 100%; min-height: 76px; resize: vertical; }
+.job-comment-section > button { min-height: 44px; margin-top: 8px; }
+.job-comment-section [role="status"] { color: var(--muted); font-size: .875rem; }
+.job-comment { border-top: 1px solid var(--border, #dce6e9); padding: 12px 0; }
+.job-comment p { white-space: pre-wrap; overflow-wrap: anywhere; margin: 4px 0; }
+.offer-alternative-target { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; margin: 10px 0; }
+.offer-alternative-target label { display: grid; gap: 6px; flex: 1; }
+.offer-alternative-target small { flex-basis: 100%; }
+[data-offer-lines-total] { white-space: pre-line; font-size: 1rem; font-weight: 650; line-height: 1.7; }
+#bookingDayAgenda { max-height: 300px; overflow-y: auto; border: 1px solid var(--border, #dce6e9); border-radius: 12px; padding: 12px; }
+.customer-list, .lead-list, .order-list { align-content: start; }
+#orderDetail > .action-row > .inline-more-actions > div { left: 0; right: auto; }
+#orderDetail > .action-row > .inline-more-actions > div > button { width: 100%; }
+@media (max-width: 600px) {
+  #customerDetail .customer-action-bar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  #customerDetail .customer-action-bar > * { min-width: 0; grid-column: auto; }
+  #customerDetail .customer-action-bar > button, #customerDetail .customer-action-bar > a, #customerDetail .customer-action-bar > details > summary { padding: 8px 5px; min-height: 44px; font-size: 12px; }
+}
