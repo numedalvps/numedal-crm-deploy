@@ -16399,3 +16399,28 @@ html:has(.manual-editor[open]) {
   #customerDetail .customer-action-bar > * { min-width: 0; grid-column: auto; }
   #customerDetail .customer-action-bar > button, #customerDetail .customer-action-bar > a, #customerDetail .customer-action-bar > details > summary { padding: 8px 5px; min-height: 44px; font-size: 12px; }
 }
+/* Compact field report: touch-friendly controls stay above administrative billing. */
+.completion-field-report { display: grid; gap: 12px; padding: 14px; border: 1px solid var(--border, #dce2e6); border-radius: 12px; margin-bottom: 14px; }
+.completion-field-report .checkbox-line { min-height: 44px; }
+.completion-field-report textarea { width: 100%; }
+.offer-accessories { margin-block: 16px; padding: 14px; background: #f3f6f8; border-radius: 10px; }
+.offer-discount-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; margin-top: 14px; }
+.offer-discount-controls label { flex: 1 1 100px; }
+.offer-discount-controls input, .offer-discount-controls select { width: 100%; }
+#customerOffersSection > #leadDetail { width: 100%; max-width: none; margin-top: 20px; border-top: 2px solid #dce2e6; padding-top: 16px; }
+/* Keep the offer workspace usable: the full customer header must not cover the editor. */
+#customersView:not(.details-list-open) .customer-context-header:has([data-customer-section-target="customerOffersSection"].active) { position: static; }
+#leadDetail[data-customer-workspace] > .customer-title,
+#leadDetail[data-customer-workspace] > .mobile-lead-back { display: none; }
+.offer-line-items { display: grid; gap: 8px; margin: 12px 0; }
+.offer-line-item { display: grid; grid-template-columns: minmax(0, 1fr) auto 44px; gap: 8px; align-items: center; padding: 10px 0; border-bottom: 1px solid #dce2e6; }
+.offer-line-item small { display: block; margin-top: 4px; color: #526478; }
+.offer-line-item strong { font-size: 14px; overflow-wrap: anywhere; }
+.offer-line-item > b { font-size: 14px; white-space: nowrap; }
+.offer-line-item button { min-height: 44px; font-size: 20px; padding: 4px; }
+.offer-lines-text-editor { margin-bottom: 12px; }
+.offer-lines-text-editor summary { cursor: pointer; color: #526478; }
+@media (max-width: 700px) {
+  #customerOffersSection > #leadDetail { padding: 8px 0; }
+  #leadDetail[data-customer-workspace] .lead-offer-step { padding: 12px 8px; }
+}

@@ -2553,6 +2553,7 @@
         expected_booking_updated_at: options.expectedBookingUpdatedAt || null,
         expected_job_updated_at: options.expectedJobUpdatedAt || null,
         completed_at: completedAt, note: options.note || null,
+        ...(options.completionReport ? { completion_report: options.completionReport } : {}),
       }, options, ["booking", "job"]);
       return { ...result, booking: bookingFromDb(result.booking) };
     },

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css?v=1.9.4" />
-    <link rel="stylesheet" href="./styles.css?v=20260927-01" />
+    <link rel="stylesheet" href="./styles.css?v=20260927-02" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -1490,6 +1490,17 @@
           <label id="completionDoneDateLabel"><span>Utført dato</span><input id="completionDoneDate" type="date" required /></label>
           <label id="completionNoteLabel"><span>Hva ble gjort?</span><textarea id="completionNote" rows="3" placeholder="Beskriv utført arbeid og eventuelle avvik."></textarea></label>
         </div>
+        <section id="completionFieldReport" class="completion-field-report">
+          <div id="completionServiceExtras">
+            <label class="checkbox-line"><input id="completionExtraCleaning" type="checkbox" /> Ekstra rens · 500 kr</label>
+            <label class="checkbox-line"><input id="completionHousingRemoved" type="checkbox" /> Demontering av varmepumpehus</label>
+          </div>
+          <label>Annet arbeid / plunder<textarea id="completionOtherWork" rows="2" maxlength="2000" placeholder="Kort beskjed til Gunnar for fakturering"></textarea></label>
+          <label class="checkbox-line"><input id="completionCashReceived" type="checkbox" /> Mottatt kontant fra kunden</label>
+          <label id="completionCashAmountLabel" class="hidden">Kontantbeløp (kr)<input id="completionCashAmount" type="number" inputmode="decimal" min="0.01" max="1000000" step="0.01" /></label>
+          <p class="form-hint">Kontantbeløp og ekstraarbeid følger jobben til fakturering.</p>
+          <p id="completionServiceDefault" class="form-hint"></p>
+        </section>
         <section id="completionAttachmentSection" class="completion-attachment-section hidden">
           <label><span id="completionAttachmentLabel">Bilder / vedlegg</span>
             <input id="completionAttachments" type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif,application/pdf" multiple />
@@ -1866,11 +1877,11 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20260927-01"></script>
-    <script src="./supabase-adapter.js?v=20260927-01"></script>
-    <script src="./intake-parser.js?v=20260927-01"></script>
-    <script src="./assistant-coordinator.js?v=20260927-01"></script>
-    <script src="./nearby-planning.js?v=20260927-01"></script>
-    <script src="./app-20260927-01.js"></script>
+    <script src="./supabase-config.js?v=20260927-02"></script>
+    <script src="./supabase-adapter.js?v=20260927-02"></script>
+    <script src="./intake-parser.js?v=20260927-02"></script>
+    <script src="./assistant-coordinator.js?v=20260927-02"></script>
+    <script src="./nearby-planning.js?v=20260927-02"></script>
+    <script src="./app-20260927-02.js"></script>
   </body>
 </html>
