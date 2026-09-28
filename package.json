@@ -140,14 +140,15 @@
     "test:gmail-reconciliation-sql": "node tools/run-local-sql-tests.mjs tests/gmail-recipient-regex-integration.sql tests/gmail-connector-reconciliation-integration.sql tests/legacy-gmail-reply-reconciliation-integration.sql",
     "test:customer-tags": "node --test tests/customer-tag-picker.test.mjs",
     "test:installation-completion-selection": "node --test tests/installation-completion-selection.test.mjs",
-    "postcheck": "npm run test:customer-tags && npm run test:installation-completion-selection && npm run test:lead-original-inquiry && npm run test:job-card-clarity && npm run test:booking-calendar-areas && npm run test:customer-sales-case && npm run test:mobile-feedback",
+    "postcheck": "npm run test:customer-tags && npm run test:installation-completion-selection && npm run test:lead-original-inquiry && npm run test:job-card-clarity && npm run test:booking-calendar-areas && npm run test:customer-sales-case && npm run test:mobile-feedback && npm run test:offer-travel",
     "test:lead-original-inquiry": "node --test tests/lead-original-inquiry.test.mjs",
     "test:job-card-clarity": "node --test tests/job-card-clarity.test.mjs",
     "test:booking-calendar-areas": "node --test tests/booking-calendar-areas.test.mjs",
     "test:customer-sales-case": "node --test tests/customer-sales-case-draft.test.mjs",
     "test:assistant-existing-drafts": "node --test tests/crm-assistant-existing-draft-navigation.test.mjs tests/crm-assistant-internal-source-context.test.mjs",
     "test:mobile-feedback": "node --test tests/mobile-email-flow.test.mjs tests/mobile-email-session-races.test.mjs tests/lead-contact-maps.test.mjs",
-    "test:e2e:mobile-webkit": "playwright test -c playwright.mobile-webkit.config.js"
+    "test:e2e:mobile-webkit": "playwright test -c playwright.mobile-webkit.config.js",
+    "test:offer-travel": "node --test tests/offer-travel.test.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",

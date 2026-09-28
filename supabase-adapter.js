@@ -1386,7 +1386,7 @@
   async function invokeRoutePlanner(payload = {}) {
     const supabase = await requireClient();
     const stops = Array.isArray(payload.stops) ? payload.stops : [];
-    if (!stops.length || stops.length > 10) throw new Error("Velg mellom 1 og 10 bekreftede servicekunder.");
+    if (payload.action !== "estimate_offer_travel" && (!stops.length || stops.length > 10)) throw new Error("Velg mellom 1 og 10 bekreftede servicekunder.");
     const { data, error } = await withTimeout(
       supabase.functions.invoke("route-planner", { body: payload }),
       "Ruteberegningen brukte for lang tid. Kontroller nettet og prøv igjen.",
@@ -2939,6 +2939,13 @@
     },
     async computeDrivingRoute(payload = {}) {
       return invokeRoutePlanner(payload);
+    },
+    async computeOfferTravelDistance(destination) {
+      const result = await invokeRoutePlanner({ action: "estimate_offer_travel", destination });
+      if (result.kind !== "offer_travel" || result.returnToOrigin !== true || !Number.isFinite(result.totalDistanceMeters) || result.totalDistanceMeters < 0) {
+        throw new Error("Rutetjenesten returnerte ikke en gyldig tur–retur-beregning.");
+      }
+      return result;
     },
     async createVerifiedServiceRoute(payload = {}) {
       const supabase = await requireClient();

@@ -16439,3 +16439,11 @@ html:has(.manual-editor[open]) {
 .flexible-job .section-actions button, .flexible-job .section-actions a { min-height: 40px; padding: 8px 10px; font-size: 12px; }
 .flexible-note { white-space: pre-line; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin: 4px 0; }
 .order-badge.flexible { color: #203e5c; background: #e0ecf7; border: 1px dashed #577da3; }
+
+.offer-travel { margin: 14px 0; padding: 14px; border: 1px solid #bdd6d3; border-radius: 12px; background: #f0f8f6; }
+.offer-travel .lead-offer-builder-head { display:flex; flex-wrap:wrap; gap:12px; justify-content:space-between; }
+.offer-travel .lead-offer-builder-head > div { display:flex; flex-direction:column; gap:5px; flex:1; min-width:180px; }
+.offer-travel-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin:12px 0; }
+.offer-travel .section-actions { display:flex; align-items:center; flex-wrap:wrap; gap:10px; }
+.offer-travel [role=status] { flex:1; min-width:180px; line-height:1.5; }
+@media(max-width:760px) { .offer-travel-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
