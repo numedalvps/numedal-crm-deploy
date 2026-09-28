@@ -850,6 +850,7 @@
       bookingIds,
       booking_ids: bookingIds,
       scheduledDate: row.scheduled_date || "",
+      flexiblePlan: row.flexible_plan || null,
       scheduledTime: row.scheduled_time || "",
       completedAt: row.completed_at || "",
       invoicedAt: row.invoiced_at || "",

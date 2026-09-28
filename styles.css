@@ -16424,3 +16424,18 @@ html:has(.manual-editor[open]) {
   #customerOffersSection > #leadDetail { padding: 8px 0; }
   #leadDetail[data-customer-workspace] .lead-offer-step { padding: 12px 8px; }
 }
+
+/* Open orders have no clock and never occupy the fixed appointment timeline. */
+.flexible-order-fields { padding: 14px; border: 1px solid #bdcddc; border-radius: 12px; background: #f2f7fc; }
+.flexible-date-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.flexible-planning { padding: 12px; margin: 10px 0; border: 1px dashed #577da3; border-radius: 12px; background: #edf4fb; color: #203e5c; min-width: 0; }
+.flexible-planning > h3 { margin: 0; font-size: 16px; }
+.flexible-planning > h3 span { padding: 2px 7px; border-radius: 12px; background: #d7e5f3; font-size: 12px; }
+.flexible-planning > p { margin: 4px 0 10px; font-size: 12px; }
+.flexible-job { display: flex; flex-direction: column; gap: 5px; padding: 12px; margin-top: 8px; background: white; border-radius: 9px; border-left: 4px solid #577da3; overflow-wrap: anywhere; }
+.flexible-job b { font-size: 13px; font-weight: 500; }
+.flexible-job small { line-height: 1.5; }
+.flexible-job .section-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+.flexible-job .section-actions button, .flexible-job .section-actions a { min-height: 40px; padding: 8px 10px; font-size: 12px; }
+.flexible-note { white-space: pre-line; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin: 4px 0; }
+.order-badge.flexible { color: #203e5c; background: #e0ecf7; border: 1px dashed #577da3; }
