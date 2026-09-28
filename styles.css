@@ -16447,3 +16447,6 @@ html:has(.manual-editor[open]) {
 .offer-travel .section-actions { display:flex; align-items:center; flex-wrap:wrap; gap:10px; }
 .offer-travel [role=status] { flex:1; min-width:180px; line-height:1.5; }
 @media(max-width:760px) { .offer-travel-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+.customer-offer-case + .customer-offer-case { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border, #dce3e8); }
+.customer-offer-case .section-title-row { gap: 12px; flex-wrap: wrap; }
+.customer-offer-case details > summary { padding: 10px 0; cursor: pointer; }

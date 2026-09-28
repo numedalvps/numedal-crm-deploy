@@ -2858,6 +2858,16 @@
       if (!data) throw Object.assign(new Error("Saken er endret eller koblet til et kundekort. Hent lagret kontakt."), { code: "40001" });
       return data;
     },
+    async confirmManualOfferSent(leadId, payload) {
+      if (!isUuid(leadId)) throw new Error("Ugyldig sak.");
+      const supabase = await requireClient();
+      const { data, error } = await withDbTimeout(supabase.rpc("confirm_manual_offer_sent_v1", {
+        p_lead_id: leadId, p_request: payload,
+      }), "registrere sendt tilbud");
+      if (error) throw error;
+      if (data?.lead?.id !== leadId || data?.activity?.lead_id !== leadId) throw new Error("Sendestatus kunne ikke bekreftes. Oppdater saken før du prøver igjen.");
+      return data;
+    },
     async updateLead(id, patch = {}) {
       const supabase = await requireClient();
       if (!isUuid(id)) throw new Error("Ugyldig lead-id.");

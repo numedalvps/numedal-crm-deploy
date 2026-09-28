@@ -63,7 +63,7 @@
   }
 
   function emailReferencePattern() {
-    return /\[?\b(?:NVS-[A-Z0-9]+-\d{8}-[A-Z0-9]{6}|NVS-\d{4}-[A-Z0-9]{8})\b\]?/gi;
+    return /\[?\b(?:NVS-[A-Z0-9]+-\d{8}-[A-Z0-9]{6}|NVS-\d{4}-[A-Z0-9]{8}|NVS-[A-Z]{4})(?![A-Z0-9-])\b\]?/gi;
   }
 
   function withoutCrmReferences(value) {
