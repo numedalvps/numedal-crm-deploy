@@ -2311,7 +2311,7 @@
       );
       if (error) {
         if (["40001", "PT409"].includes(error.code)) {
-          throw new Error("Anleggsadressen er endret i en annen økt. Oppdater siden før du velger område på nytt.");
+          throw Object.assign(new Error("Anleggsadressen er endret i en annen økt. Oppdater opplysningene før du velger område på nytt."), { code: error.code });
         }
         throw error;
       }
