@@ -2615,10 +2615,18 @@ textarea {
 }
 
 .form-hint {
-  margin: -4px 0 12px;
+  display: block;
+  margin: 6px 0 12px;
   color: var(--muted);
   font-size: 13px;
   line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+/* Labels already provide a gap; help must never pull back over a control. */
+label > .form-hint {
+  margin: 0;
+  font-weight: 400;
 }
 
 .completion-payment {
