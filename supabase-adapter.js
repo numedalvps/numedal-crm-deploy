@@ -1849,6 +1849,20 @@
         activities: activityResult.data || [],
       };
     },
+    async loadJobComments(jobIds) {
+      const supabase = await requireClient();
+      const ids = [...new Set(jobIds)].filter(isUuid);
+      const rows = [];
+      for (let offset = 0; offset < ids.length; offset += 100) {
+        const batch = ids.slice(offset, offset + 100);
+        const { data, error } = await withDbTimeout(fetchAllRows(() => supabase.from("activities")
+          .select("id,customer_id,job_id,body,metadata,activity_type,occurred_at,created_at")
+          .in("job_id", batch).eq("metadata->>source", "job_comment_v1").order("id")), "hente jobbkommentarer", 30000);
+        if (error) throw error;
+        rows.push(...(data || []));
+      }
+      return rows;
+    },
     async saveCrmSetting(key, value) {
       const supabase = await requireClient();
       const cleanKey = String(key || "").trim();

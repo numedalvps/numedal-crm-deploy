@@ -11154,6 +11154,9 @@ label > .form-hint {
 
 .quick-job-focus {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  overflow-wrap: anywhere;
   gap: 10px;
   margin-bottom: 14px;
   border: 1px solid rgba(99, 102, 241, 0.28);
@@ -11237,11 +11240,41 @@ label > .form-hint {
 
 .quick-job-note {
   margin: 0;
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   border: 1px dashed #cbd5e1;
   border-radius: 8px;
   padding: 8px;
   background: rgba(255, 255, 255, 0.7);
 }
+
+#customerQuickContent,
+#customerQuickContent > *,
+.quick-job-focus > *,
+.planning-practical {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.planning-practical {
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.planning-practical p {
+  margin: 0 0 7px;
+  white-space: pre-wrap;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.planning-practical p:last-child { margin-bottom: 0; }
+.planning-comment { color: #7c3908; }
+.timeline-event .timeline-area { color: #134e4a; font-weight: 800; }
 
 .quick-facts {
   display: grid;
