@@ -2676,6 +2676,17 @@ label > .form-hint {
   font-weight: 800;
 }
 
+/* Prose needs its full height; compact-help is only a small tooltip icon. */
+.context-help,
+.detail-section > .context-help {
+  min-width: 0;
+  margin: 8px 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
 .compact-help {
   display: inline-grid;
   place-items: center;
