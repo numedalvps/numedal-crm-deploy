@@ -8222,14 +8222,14 @@ label > .form-hint {
 
 .planning-board {
   display: grid;
-  grid-template-columns: repeat(7, minmax(220px, 1fr));
+  grid-template-columns: repeat(7, minmax(240px, 1fr));
   gap: 10px;
   overflow-x: auto;
   padding-bottom: 8px;
 }
 
 .planning-day {
-  min-width: 220px;
+  min-width: 240px;
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 10px;
@@ -11274,7 +11274,12 @@ label > .form-hint {
 
 .planning-practical p:last-child { margin-bottom: 0; }
 .planning-comment { color: #7c3908; }
-.timeline-event .timeline-area { color: #134e4a; font-weight: 800; }
+.timeline-event .timeline-time-area {
+  color: #134e4a;
+  font-weight: 800;
+  white-space: nowrap;
+  font-size: 10px;
+}
 
 .quick-facts {
   display: grid;
