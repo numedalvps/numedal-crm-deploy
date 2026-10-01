@@ -747,6 +747,19 @@
   }
 
   async function completionAttachmentIdentity(file, links) {
+    if (links.attachmentUploadId) {
+      if (!isUuid(links.attachmentUploadId)
+        || !["kundekort", "lead", "anlegg", "jobb"].includes(links.source_kind)
+        || ![links.customer_id, links.lead_id, links.installation_id, links.job_id].some(isUuid)) {
+        throw new Error("Vedlegget mangler en gyldig lagringsnøkkel eller tilknytning.");
+      }
+      const bytes = await file.arrayBuffer();
+      const hash = [...new Uint8Array(await window.crypto.subtle.digest("SHA-256", bytes))]
+        .map(value => value.toString(16).padStart(2, "0")).join("");
+      const owner = links.customer_id || links.lead_id || links.installation_id || links.job_id;
+      return { id: links.attachmentUploadId,
+        path: `${owner}/manual/${links.attachmentUploadId}-${hash}-${safeAttachmentFilename(file.name || "vedlegg")}` };
+    }
     if (!links.completionUploadId) return null;
     if (!isUuid(links.completionUploadId) || links.source_kind !== "jobb_fullforing"
       || !isUuid(links.customer_id) || !isUuid(links.job_id)) {
@@ -1662,6 +1675,7 @@
         attachmentResult,
         settingsResult,
         timeEntryResult,
+        workPeriodResult,
       ] = await withDbTimeout(runWithConcurrency([
         () => fetchAllRows(() => supabase.from("customers").select("*").order("name").order("id")),
         () => fetchAllRows(() => supabase.from("bookings").select("*").neq("status", "cancelled").order("starts_at").order("id")),
@@ -1692,6 +1706,7 @@
         () => supabase.from("crm_attachments").select("*").is("deleted_at", null).order("created_at", { ascending: false }).limit(2000),
         () => supabase.from("crm_settings").select("*"),
         () => supabase.from("time_entries").select("*").order("work_date", { ascending: false }).order("start_time", { ascending: true }).limit(3000),
+        () => supabase.from("technician_work_periods").select("*").eq("status", "active").order("arrival_date").limit(1000),
       ], 6), "laste CRM-data", 45000);
       if (customerError) throw customerError;
       if (bookingError) throw bookingError;
@@ -1746,6 +1761,8 @@
           ? {}
           : Object.fromEntries((settingsResult.data || []).map((row) => [row.key, row.value])),
         timeEntries: timeEntryResult.error ? [] : timeEntryResult.data || [],
+        workPeriods: workPeriodResult.error ? [] : workPeriodResult.data || [],
+        workPeriodsAvailable: !workPeriodResult.error,
       };
     },
     async loadDeferredHistory() {
@@ -2570,7 +2587,7 @@
         completed_at: completedAt, note: options.note || null,
         ...(options.completionReport ? { completion_report: options.completionReport } : {}),
       }, options, ["booking", "job"]);
-      return { ...result, booking: bookingFromDb(result.booking) };
+      return { ...result, booking: bookingFromDb(result.booking), order: result.order?.id ? orderFromDb(result.order) : null };
     },
     async completeBookingAsAdmin(id, options = {}) {
       const supabase = await requireClient();
@@ -3396,6 +3413,19 @@
       if (error) throw new Error(await crmAssistantErrorMessage(error, "Klarte ikke endre brukeren."));
       if (data?.error) throw new Error(data.error);
       return data;
+    },
+    async loadWorkPeriods() {
+      const supabase = await requireClient();
+      const { data, error } = await withDbTimeout(supabase.from("technician_work_periods").select("*").eq("status", "active").order("arrival_date").limit(1000), "hente arbeidsperioder");
+      if (error) throw error;
+      return data || [];
+    },
+    async saveWorkPeriod(clientEventId, request) {
+      const supabase = await requireClient();
+      const { data, error } = await withDbTimeout(supabase.rpc("save_technician_work_period_v1", { p_client_event_id: clientEventId, p_request: request }), "lagre arbeidsperiode");
+      if (error) throw error;
+      if (!data?.period?.id) throw new Error("Arbeidsperioden kunne ikke bekreftes.");
+      return data.period;
     },
     async saveTimeEntry(entry) {
       const supabase = await requireClient();

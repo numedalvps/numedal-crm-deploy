@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css?v=1.9.4" />
-    <link rel="stylesheet" href="./styles.css?v=20261001-01" />
+    <link rel="stylesheet" href="./styles.css?v=20261001-02" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -273,6 +273,7 @@
             <div id="aiRegistrationDraft" class="ai-registration-draft hidden"></div>
             </div>
           </details>
+          <section id="inboxAttentionPanel" class="panel inbox-attention-panel hidden" aria-labelledby="inboxAttentionTitle"></section>
           <div class="leads-layout">
             <section class="panel lead-list-panel">
               <div class="section-head">
@@ -288,7 +289,7 @@
               <div class="lead-metrics inbox-filter-cards" role="tablist" aria-label="Innboksfilter">
                 <button class="active" data-lead-inbox-tab="new" type="button" title="Nye meldinger fra kunder som ikke er behandlet ennå."><strong id="leadFollowupMetric">0</strong><span>Nye meldinger</span></button>
                 <button data-lead-inbox-tab="followup" type="button" title="Opprettede kundesaker som må kontaktes, tilbys eller planlegges."><strong id="leadNeedsOfferMetric">0</strong><span>Oppfølging / tilbud</span></button>
-                <button data-lead-inbox-tab="drafts" type="button" title="Svar, jobber og andre utkast som må kontrolleres før noe utføres."><strong id="leadDraftMetric">0</strong><span>Utkast</span></button>
+                <button data-lead-inbox-tab="drafts" type="button" title="Svar, jobber og andre forslag som trenger en beslutning."><strong id="leadDraftMetric">0</strong><span>Til kontroll</span></button>
                 <button data-lead-inbox-tab="archive" type="button" title="Ferdig koblede og tapte saker. Arkiv er ikke en aktiv arbeidsliste."><strong id="leadLostMetric">0</strong><span>Arkiv</span></button>
               </div>
               <div id="leadStageFilters" class="lead-stage-filters hidden" role="group" aria-label="Velg neste oppgave"></div>
@@ -530,6 +531,14 @@
                 </details>
               </div>
             </div>
+            <div id="planningWorkPeriods" class="planning-work-periods"></div>
+            <details id="planningBacklog" class="planning-backlog" open>
+              <summary>Ikke bookede jobber <span id="planningBacklogCount"></span></summary>
+              <p class="form-hint">Dra en jobb til ønsket dag og klokkeslett, eller trykk «Book tid». Kontroller avtalen før du lagrer.</p>
+              <label class="sr-only" for="planningBacklogSearch">Søk i ikke bookede jobber</label>
+              <input id="planningBacklogSearch" type="search" placeholder="Søk kunde, område eller arbeid" autocomplete="off" />
+              <div id="planningBacklogJobs" class="planning-backlog-jobs"></div>
+            </details>
             <div id="planningDayPicker" class="planning-day-picker hidden" aria-label="Velg dag i uken"></div>
             <div id="planningMonthOverview" class="planning-month-overview hidden">
               <div class="planning-month-summary">
@@ -818,6 +827,7 @@
               </div>
             </div>
             <div id="technicianHelp" class="technician-help hidden"></div>
+            <div id="technicianWorkPeriod" class="technician-work-period"></div>
             <div id="technicianTimesheet" class="technician-timesheet"></div>
             <div id="technicianJobs" class="tech-jobs"></div>
           </section>
@@ -1513,14 +1523,19 @@
           <label id="completionNoteLabel"><span>Hva ble gjort?</span><textarea id="completionNote" rows="3" placeholder="Beskriv utført arbeid og eventuelle avvik."></textarea></label>
         </div>
         <section id="completionFieldReport" class="completion-field-report">
+          <section id="completionActualMaterials" class="hidden" aria-labelledby="completionActualTitle">
+            <h3 id="completionActualTitle">Faktisk brukt materiell og ekstraarbeid</h3>
+            <p id="completionActualHint" class="form-hint">Tilbudets estimat er forhåndsutfylt. Endre til faktisk antall. Rør og kanal: kun meter utover de inkluderte 4 m.</p>
+            <div id="completionActualControls" class="completion-actual-controls"></div>
+          </section>
           <div id="completionServiceExtras">
-            <label class="checkbox-line"><input id="completionExtraCleaning" type="checkbox" /> Ekstra rens · 500 kr</label>
-            <label class="checkbox-line"><input id="completionHousingRemoved" type="checkbox" /> Demontering av varmepumpehus</label>
+            <label class="checkbox-line"><input id="completionExtraCleaning" type="checkbox" /><span id="completionExtraCleaningText">Ekstra rens · 500 kr</span></label>
+            <label class="checkbox-line"><input id="completionHousingRemoved" type="checkbox" /><span id="completionHousingRemovedText">Demontering av varmepumpehus</span></label>
           </div>
-          <label>Annet arbeid / plunder<textarea id="completionOtherWork" rows="2" maxlength="2000" placeholder="Kort beskjed til Gunnar for fakturering"></textarea></label>
-          <label class="checkbox-line"><input id="completionCashReceived" type="checkbox" /> Mottatt kontant fra kunden</label>
-          <label id="completionCashAmountLabel" class="hidden">Kontantbeløp (kr)<input id="completionCashAmount" type="number" inputmode="decimal" min="0.01" max="1000000" step="0.01" /></label>
-          <p class="form-hint">Kontantbeløp og ekstraarbeid følger jobben til fakturering.</p>
+          <label><span id="completionOtherWorkText">Annet arbeid / plunder</span><textarea id="completionOtherWork" rows="2" maxlength="2000" placeholder="Kort beskjed til Gunnar for fakturering"></textarea></label>
+          <label class="checkbox-line"><input id="completionCashReceived" type="checkbox" /><span id="completionCashReceivedText">Mottatt kontant fra kunden</span></label>
+          <label id="completionCashAmountLabel" class="hidden"><span id="completionCashAmountText">Kontantbeløp (kr)</span><input id="completionCashAmount" type="number" inputmode="decimal" min="0.01" max="1000000" step="0.01" /></label>
+          <p id="completionFieldReportHint" class="form-hint">Kontantbeløp og ekstraarbeid følger jobben til fakturering.</p>
           <p id="completionServiceDefault" class="form-hint"></p>
         </section>
         <section id="completionAttachmentSection" class="completion-attachment-section hidden">
@@ -1724,6 +1739,14 @@
       </form>
     </dialog>
 
+    <dialog id="reminderDetailsDialog" class="modal compact-modal reminder-details-dialog" aria-labelledby="reminderDetailsTitle">
+      <div class="modal-head">
+        <h2 id="reminderDetailsTitle">Påminnelse</h2>
+        <button id="closeReminderDetailsDialog" type="button" aria-label="Lukk">×</button>
+      </div>
+      <div id="reminderDetailsContent"></div>
+    </dialog>
+
     <dialog id="reminderDialog" class="modal compact-modal">
       <form id="reminderForm" method="dialog">
         <div class="modal-head">
@@ -1805,6 +1828,19 @@
           <button class="secondary" id="cancelContactLogButton" type="button">Avbryt</button>
           <button id="saveContactLogButton" type="submit">Lagre kontakt</button>
         </div>
+      </form>
+    </dialog>
+
+    <dialog id="crmAttachmentUploadDialog" class="modal compact-modal attachment-upload-dialog">
+      <form id="crmAttachmentUploadForm" method="dialog">
+        <div class="modal-head"><h2 id="crmAttachmentUploadTitle">Legg til bilder / vedlegg</h2><button id="closeCrmAttachmentUploadDialog" type="button" aria-label="Lukk">×</button></div>
+        <p id="crmAttachmentUploadContext" class="context-help"></p>
+        <p id="crmAttachmentUploadHint" class="form-hint"></p>
+        <input id="crmAttachmentUploadInput" class="hidden" type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif,application/pdf" multiple />
+        <button id="crmAttachmentUploadChoose" class="secondary" type="button">Velg bilder / filer</button>
+        <div id="crmAttachmentUploadList" class="attachment-upload-list"></div>
+        <p id="crmAttachmentUploadStatus" role="status" aria-live="polite"></p>
+        <div class="modal-actions"><button id="crmAttachmentUploadClose" class="secondary" type="button">Lukk</button><button id="crmAttachmentUploadSave" type="submit" disabled>Last opp</button></div>
       </form>
     </dialog>
 
@@ -1899,11 +1935,11 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20261001-01"></script>
-    <script src="./supabase-adapter.js?v=20261001-01"></script>
-    <script src="./intake-parser.js?v=20261001-01"></script>
-    <script src="./assistant-coordinator.js?v=20261001-01"></script>
-    <script src="./nearby-planning.js?v=20261001-01"></script>
-    <script src="./app-20261001-01.js"></script>
+    <script src="./supabase-config.js?v=20261001-02"></script>
+    <script src="./supabase-adapter.js?v=20261001-02"></script>
+    <script src="./intake-parser.js?v=20261001-02"></script>
+    <script src="./assistant-coordinator.js?v=20261001-02"></script>
+    <script src="./nearby-planning.js?v=20261001-02"></script>
+    <script src="./app-20261001-02.js"></script>
   </body>
 </html>
