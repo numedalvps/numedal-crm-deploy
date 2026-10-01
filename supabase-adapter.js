@@ -2514,6 +2514,49 @@
       if (error) throw error;
       return data;
     },
+    async cancelBookingAsAdmin(id, options = {}) {
+      const ids = [id, options.customerId, options.orderId, options.jobId, options.appointmentId];
+      if (ids.some((value) => !isUuid(value))
+        || [options.installationId, options.locationId].some((value) => value && !isUuid(value))) {
+        throw new Error("Last inn den valgte jobben før du fjerner tiden.");
+      }
+      const versions = [options.expectedCustomerUpdatedAt, options.expectedOrderUpdatedAt, options.expectedJobUpdatedAt,
+        options.expectedBookingUpdatedAt, options.expectedAppointmentUpdatedAt];
+      if (versions.some((value) => !String(value || "").trim())) {
+        throw new Error("Jobben mangler kontrollversjoner. Last inn planen på nytt før avbooking.");
+      }
+      const result = await manualReceiptRpc("cancel_manual_job_booking_v1", {
+        customer_id: options.customerId, expected_customer_updated_at: options.expectedCustomerUpdatedAt,
+        order_id: options.orderId, expected_order_updated_at: options.expectedOrderUpdatedAt,
+        job_id: options.jobId, expected_job_updated_at: options.expectedJobUpdatedAt,
+        booking_id: id, expected_booking_updated_at: options.expectedBookingUpdatedAt,
+        appointment_id: options.appointmentId, expected_appointment_updated_at: options.expectedAppointmentUpdatedAt,
+        installation_id: options.installationId || null, location_id: options.locationId || null,
+        cancel_linked_order: Boolean(options.cancelLinkedOrder),
+      }, options, ["booking", "order", "job", "appointment", "serviceEvent"]);
+      const scopeMatches = (row) => row?.customer_id === options.customerId
+        && (row.installation_id || null) === (options.installationId || null)
+        && (row.location_id || null) === (options.locationId || null);
+      if (result.eventId !== options.clientEventId || !/^[a-f0-9]{64}$/.test(String(result.operationHash || ""))
+        || result.booking.id !== id || result.booking.status !== "cancelled" || !scopeMatches(result.booking)
+        || result.order.id !== options.orderId || !scopeMatches(result.order)
+        || !Array.isArray(result.order.booking_ids) || result.order.booking_ids.includes(id)
+        || !Array.isArray(result.remainingBookingIds) || JSON.stringify(result.remainingBookingIds) !== JSON.stringify(result.order.booking_ids)
+        || typeof result.alreadyApplied !== "boolean"
+        || result.job.id !== options.jobId || !scopeMatches(result.job)
+        || result.job.source_table !== "orders" || result.job.source_id !== options.orderId
+        || result.appointment.id !== options.appointmentId || result.appointment.job_id !== options.jobId
+        || result.appointment.source_table !== "bookings" || result.appointment.source_id !== id || result.appointment.status !== "cancelled"
+        || [result.booking, result.order, result.job, result.appointment].some((row) => !row.updated_at)
+        || result.cancelLinkedOrder !== Boolean(options.cancelLinkedOrder)
+        || result.serviceEvent.customer_id !== options.customerId || result.serviceEvent.source_system !== "manual_booking_cancellation_v1"
+        || result.serviceEvent.source_ref !== options.clientEventId) {
+        const error = new Error("Avbookingssvaret mangler en entydig kvittering. Kontroller den samme avbookingen igjen.");
+        error.manualOutcomeUncertain = true;
+        throw error;
+      }
+      return { ...result, id: result.booking.id, booking: bookingFromDb(result.booking), order: orderFromDb(result.order) };
+    },
     async cancelBooking(id) {
       const supabase = await requireClient();
       const { error } = await withDbTimeout(supabase.from("bookings").update({ status: "cancelled" }).eq("id", id), "avbestille booking");

@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css?v=1.9.4" />
-    <link rel="stylesheet" href="./styles.css?v=20261002-02" />
+    <link rel="stylesheet" href="./styles.css?v=20261002-03" />
     <link rel="preload" href="./vendor/inter/InterVariable.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="stylesheet" href="./crm-design.css?v=20261002-02" />
+    <link rel="stylesheet" href="./crm-design.css?v=20261002-03" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -91,6 +91,7 @@
           </div>
         </header>
         <p id="syncStatus" class="sync-status"></p>
+        <button id="recoverBookingCancellation" class="secondary" type="button" hidden>Kontroller avbooking</button>
 
         <section id="dashboardView" class="view">
           <div class="dashboard-workspace">
@@ -1374,14 +1375,15 @@
         <div id="deleteBookingOrderOptions" class="choice-stack">
           <label>
             <input id="deleteBookingKeepOrder" name="deleteBookingOrderAction" type="radio" value="keep" checked />
-            <span><strong>Behold jobb</strong><small>Avtalen fjernes fra kalenderen, men jobben blir liggende som ikke planlagt.</small></span>
+            <span><strong>Behold jobb</strong><small>Kun denne tiden fjernes. Jobben blir uboket hvis den ikke har andre avtalte tider.</small></span>
           </label>
           <label>
             <input id="deleteBookingDeleteOrder" name="deleteBookingOrderAction" type="radio" value="delete" />
-            <span><strong>Slett også jobb</strong><small>Bruk dette når avtale og jobb var feil eller bare et testutkast.</small></span>
+            <span><strong>Avbestill også jobb</strong><small>Avtale og oppdrag avbestilles samlet. Historikken beholdes. Andre avtalte tider må fjernes først.</small></span>
           </label>
         </div>
         <p class="form-hint">Dette sletter ikke kundekortet og ikke gammel servicehistorikk.</p>
+        <button class="secondary" id="refreshCancellationContext" type="button">Hent oppdatert avtale</button>
         <div class="modal-actions">
           <button class="secondary" id="cancelDeleteBookingButton" type="button">Avbryt</button>
           <button class="danger" type="submit">Fjern avtale</button>
@@ -1955,11 +1957,11 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20261002-02"></script>
-    <script src="./supabase-adapter.js?v=20261002-02"></script>
-    <script src="./intake-parser.js?v=20261002-02"></script>
-    <script src="./assistant-coordinator.js?v=20261002-02"></script>
-    <script src="./nearby-planning.js?v=20261002-02"></script>
-    <script src="./app-20261002-02.js"></script>
+    <script src="./supabase-config.js?v=20261002-03"></script>
+    <script src="./supabase-adapter.js?v=20261002-03"></script>
+    <script src="./intake-parser.js?v=20261002-03"></script>
+    <script src="./assistant-coordinator.js?v=20261002-03"></script>
+    <script src="./nearby-planning.js?v=20261002-03"></script>
+    <script src="./app-20261002-03.js"></script>
   </body>
 </html>
