@@ -16714,13 +16714,32 @@ html:has(.manual-editor[open]) {
 .planning-backlog { margin: 12px 0; padding: 12px; border: 1px solid var(--line, #d8e0e6); border-radius: 12px; background: #f7faf9; }
 .planning-backlog > summary { cursor: pointer; font-weight: 750; }
 .planning-backlog > input { margin: 8px 0; max-width: 520px; width: 100%; }
+.planning-backlog-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.planning-backlog-filters legend { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
+.planning-backlog-filters label { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; }
+.planning-backlog-filters input { margin: 0; width: 20px; height: 20px; flex-shrink: 0; accent-color: var(--teal); }
+.planning-backlog-filters small { flex-basis: 100%; color: var(--muted); }
+#planningBacklogResults { margin: 8px 0; }
 .planning-backlog-jobs { display: grid; gap: 8px; max-height: 330px; overflow-y: auto; }
 .planning-backlog-job { display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid #d8e0e6; background: #fff; padding: 10px; border-radius: 10px; min-width: 0; }
+.planning-backlog-job { border-left: 4px solid var(--service); }
+.planning-backlog-job.service, .planning-backlog-job.reklamasjon, .planning-backlog-job.utleie, .planning-backlog-job.annet { border-left-color: var(--service); }
+.planning-backlog-job.installasjon { border-left-color: var(--blue); }
+.planning-backlog-job.befaring { border-left-color: var(--warning, #854600); }
+.planning-backlog-job.reparasjon, .planning-backlog-job.servicearbeid { border-left-color: #62558c; }
+.planning-backlog-job.blaseisolering { border-left-color: var(--insulation); }
+.planning-backlog-kind { color: var(--service-dark); font-size: 12px; font-weight: 650; }
+.planning-backlog-job.installasjon .planning-backlog-kind { color: var(--blue); }
+.planning-backlog-job.befaring .planning-backlog-kind { color: var(--warning, #854600); }
+.planning-backlog-job.reparasjon .planning-backlog-kind, .planning-backlog-job.servicearbeid .planning-backlog-kind { color: #62558c; }
+.planning-backlog-job.blaseisolering .planning-backlog-kind { color: var(--insulation-dark); }
 .planning-backlog-job[draggable="true"] { cursor: grab; }
 .planning-backlog-job.dragging { opacity: .5; }
 .planning-backlog-job > div { min-width: 0; }
 .planning-backlog-job > div:first-child { display: grid; gap: 3px; overflow-wrap: anywhere; }
-.planning-backlog-job small { color: #526174; }
+.planning-backlog-job small { color: var(--muted, #526174); }
+.planning-backlog-job .planning-backlog-area { color: var(--ink); font-weight: 600; }
+.planning-backlog-age { font-variant-numeric: tabular-nums; }
 .planning-backlog-job .section-actions { flex-shrink: 0; }
 .planning-backlog-job .section-actions > * { min-height: 40px; }
 .planning-backlog-job .section-actions a { display: inline-flex; align-items: center; justify-content: center; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--teal); text-decoration: none; font-size: 13px; font-weight: 650; }

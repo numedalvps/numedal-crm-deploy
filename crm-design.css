@@ -53,6 +53,19 @@ input, select, textarea { color: var(--ink); background: #fff; border-color: var
 body :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) { border-color: var(--line-strong); }
 body :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea):focus { border-color: var(--blue); }
 body :is(input, select, textarea)[aria-invalid="true"], body :is(input, select, textarea):user-invalid { border-color: var(--danger); }
+.manual-field-invalid { color: var(--danger); }
+.manual-field-error { color: var(--danger); font-weight: 600; overflow-wrap: anywhere; }
+.editable-job-lines { display: grid; gap: 8px; min-width: 0; }
+.editable-job-line { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.editable-job-line > span { min-width: 0; overflow-wrap: anywhere; font-weight: 500; }
+.editable-job-line.is-replacing { border-color: var(--teal); background: var(--teal-soft); }
+.editable-job-line-actions { display: flex; gap: 6px; }
+.editable-job-line-actions button { white-space: nowrap; }
+.job-line-replacement { margin: 0; }
+.job-lines-text-editor { margin-top: 8px; }
+.job-lines-text-editor summary { cursor: pointer; color: var(--muted); }
+.lead-status-discount-mode-field { grid-column: 1 / -1; }
+@media (max-width: 600px) { .editable-job-line { grid-template-columns: minmax(0, 1fr); } .editable-job-line-actions { justify-content: flex-end; } }
 input::placeholder, textarea::placeholder { color: #61756f; opacity: 1; }
 label, .modal label:not(.choice-stack label) { color: var(--ink); font-size: 13px; line-height: 1.45; font-weight: 600; }
 button, .action-row a, .job-actions a, .lead-contact-actions a, .billing-draft-actions a, .inline-more-actions > summary {
@@ -202,6 +215,9 @@ button:disabled, button[data-busy="true"] { cursor: default; }
   #customerDetail .customer-action-bar > button, #customerDetail .customer-action-bar > a, #customerDetail .customer-action-bar > details > summary { font-size: 13px; }
   .job-card .job-actions a, .job-card .job-actions button, .job-card .inline-more-actions summary { min-height: 44px; font-size: 13px; }
   .customer-section-nav button { font-size: 13px; padding-inline: 10px; }
+  #customerDetail .customer-section-nav { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  #customerDetail .customer-section-nav button { white-space: nowrap; overflow-wrap: normal; }
+  .mobile-bottom-nav button { font-size: 12px; padding-inline: 2px; white-space: nowrap; overflow-wrap: normal; }
   .planning-mode-toggle button { min-height: 44px; }
   .modal { border-radius: 12px; }
   .panel { border-radius: 10px; }

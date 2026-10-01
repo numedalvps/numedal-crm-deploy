@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css?v=1.9.4" />
-    <link rel="stylesheet" href="./styles.css?v=20261001-03" />
+    <link rel="stylesheet" href="./styles.css?v=20261001-04" />
     <link rel="preload" href="./vendor/inter/InterVariable.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="stylesheet" href="./crm-design.css?v=20261001-03" />
+    <link rel="stylesheet" href="./crm-design.css?v=20261001-04" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -539,6 +539,13 @@
               <p class="form-hint">Dra en jobb til ønsket dag og klokkeslett, eller trykk «Book tid». Kontroller avtalen før du lagrer.</p>
               <label class="sr-only" for="planningBacklogSearch">Søk i ikke bookede jobber</label>
               <input id="planningBacklogSearch" type="search" placeholder="Søk kunde, område eller arbeid" autocomplete="off" />
+              <fieldset class="planning-backlog-filters">
+                <legend>Vis jobbtyper</legend>
+                <label><input id="planningBacklogService" type="checkbox" /><span>Standard service</span></label>
+                <label><input id="planningBacklogInstallation" type="checkbox" /><span>Installasjon</span></label>
+                <small id="planningBacklogFilterHint">Ingen valgt viser alle. Velg begge for å vise service og installasjon.</small>
+              </fieldset>
+              <p id="planningBacklogResults" class="form-hint" role="status" aria-live="polite"></p>
               <div id="planningBacklogJobs" class="planning-backlog-jobs"></div>
             </details>
             <div id="planningDayPicker" class="planning-day-picker hidden" aria-label="Velg dag i uken"></div>
@@ -1187,6 +1194,8 @@
         </div>
         <details id="orderPriceDetails" class="completion-price-details">
           <summary>Avtalt produkt / fakturagrunnlag</summary>
+          <p class="form-hint">Bytt modell eller farge på en eksisterende linje med Bytt. Kontroller den nye prisen før du lagrer. Tidligere sendte tilbud beholdes i historikken.</p>
+          <div id="orderPriceLineList" class="editable-job-lines"></div>
           <div class="completion-price-controls order-price-controls">
             <label>Søk eller skriv vare
               <input id="orderPriceSearch" type="search" placeholder="Søk Panasonic HZ25, varmepumpehus, montering eller skriv egen vare" />
@@ -1200,8 +1209,11 @@
             <label>Pris per enhet inkl. mva
               <input id="orderPriceUnitPrice" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Skriv pris" />
             </label>
-            <label>Rabatt %
-              <input id="orderPriceDiscount" type="number" min="0" max="100" step="0.1" inputmode="decimal" value="0" />
+            <label>Rabatt
+              <input id="orderPriceDiscount" type="number" min="0" step="0.01" inputmode="decimal" value="0" />
+            </label>
+            <label>Rabattype
+              <select id="orderPriceDiscountMode"><option value="percent">Prosent (%)</option><option value="amount">Kroner (kr) på varelinjen</option></select>
             </label>
             <button id="orderAddPriceLine" class="secondary" type="button" title="Legg valgt produkt, tillegg eller egen vare inn som grunnlag for jobben.">Legg til varelinje</button>
           </div>
@@ -1209,7 +1221,7 @@
             <input id="orderIncludeStandardInstallation" type="checkbox" checked />
             <span>Ta med standard montering automatisk</span>
           </label>
-          <textarea id="orderPriceLines" rows="4" placeholder="Avtalt varmepumpe, standard montering, varmepumpehus, tillegg eller timer. Skriv egen vare med pris, f.eks. Mitsubishi Kaiteki 29 900. Kan korrigeres ved fullføring."></textarea>
+          <details class="job-lines-text-editor"><summary>Rediger varelinjer som tekst</summary><textarea id="orderPriceLines" aria-label="Avtalt varegrunnlag på jobben" rows="4" placeholder="Avtalt varmepumpe, standard montering, varmepumpehus, tillegg eller timer. Skriv egen vare med pris, f.eks. Mitsubishi Kaiteki 29 900."></textarea></details>
           <div id="orderPriceTotal" class="completion-price-total"></div>
         </details>
         <label class="form-wide">Hva skal gjøres?
@@ -1247,6 +1259,11 @@
           <details id="leadStatusProductEditor" class="lead-status-product-editor" open>
             <summary>Endre varer eller pris</summary>
             <div class="lead-status-product-editor-body">
+              <section aria-label="Avtalt varegrunnlag">
+                <h3>Avtalt varegrunnlag</h3>
+                <span class="form-hint">Bytt modell eller farge med Bytt på linjen. Kontroller den nye prisen. Det sendte tilbudet beholdes i historikken.</span>
+                <div id="leadStatusProductLineList" class="editable-job-lines"></div>
+              </section>
               <div class="completion-price-controls lead-status-price-controls">
                 <label class="lead-status-search-field">Søk eller skriv vare
                   <input id="leadStatusProductSearch" type="search" aria-label="Søk eller skriv vare" placeholder="Søk Panasonic, Toshiba, varmepumpehus eller skriv egen modell" />
@@ -1260,8 +1277,11 @@
                 <label class="lead-status-unit-price-field">Pris per enhet inkl. mva
                   <input id="leadStatusProductUnitPrice" type="number" min="0" step="0.01" inputmode="decimal" aria-label="Pris per enhet inklusiv merverdiavgift" placeholder="Skriv pris" />
                 </label>
-                <label class="lead-status-discount-field">Rabatt %
-                  <input id="leadStatusProductDiscount" type="number" min="0" max="100" step="0.1" inputmode="decimal" value="0" aria-label="Rabatt i prosent" />
+                <label class="lead-status-discount-field">Rabatt
+                  <input id="leadStatusProductDiscount" type="number" min="0" step="0.01" inputmode="decimal" value="0" aria-label="Rabatt" />
+                </label>
+                <label class="lead-status-discount-mode-field">Rabattype
+                  <select id="leadStatusProductDiscountMode" aria-label="Rabattype"><option value="percent">Prosent (%)</option><option value="amount">Kroner (kr) på varelinjen</option></select>
                 </label>
                 <button id="leadStatusAddProduct" class="secondary" type="button" title="Legg valgt vare, tillegg eller egen vare inn som avtalt grunnlag.">Legg til varelinje</button>
               </div>
@@ -1269,9 +1289,7 @@
                 <input id="leadStatusIncludeStandardInstallation" type="checkbox" checked />
                 <span>Ta med standard montering automatisk</span>
               </label>
-              <label>Avtalt varegrunnlag
-                <textarea id="leadStatusProduct" rows="4" placeholder="Legg inn faktisk modell, standard montering og tillegg. Egen vare kan skrives med pris, f.eks. Mitsubishi Kaiteki 29 900. Kan rettes når jobben fullføres."></textarea>
-              </label>
+              <details class="job-lines-text-editor"><summary>Rediger varelinjer som tekst</summary><textarea id="leadStatusProduct" aria-label="Avtalt varegrunnlag" rows="4" placeholder="Legg inn faktisk modell, standard montering og tillegg. Egen vare kan skrives med pris, f.eks. Mitsubishi Kaiteki 29 900."></textarea></details>
               <div id="leadStatusProductTotal" class="completion-price-total"></div>
               <label>Tilbehør eller noe som må sjekkes
                 <textarea id="leadStatusAccessories" rows="2" placeholder="F.eks. trevegg, ekstra rør eller varmepumpehus."></textarea>
@@ -1937,11 +1955,11 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20261001-03"></script>
-    <script src="./supabase-adapter.js?v=20261001-03"></script>
-    <script src="./intake-parser.js?v=20261001-03"></script>
-    <script src="./assistant-coordinator.js?v=20261001-03"></script>
-    <script src="./nearby-planning.js?v=20261001-03"></script>
-    <script src="./app-20261001-03.js"></script>
+    <script src="./supabase-config.js?v=20261001-04"></script>
+    <script src="./supabase-adapter.js?v=20261001-04"></script>
+    <script src="./intake-parser.js?v=20261001-04"></script>
+    <script src="./assistant-coordinator.js?v=20261001-04"></script>
+    <script src="./nearby-planning.js?v=20261001-04"></script>
+    <script src="./app-20261001-04.js"></script>
   </body>
 </html>
