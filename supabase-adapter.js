@@ -749,7 +749,7 @@
   async function completionAttachmentIdentity(file, links) {
     if (links.attachmentUploadId) {
       if (!isUuid(links.attachmentUploadId)
-        || !["kundekort", "lead", "anlegg", "jobb"].includes(links.source_kind)
+        || !["kundekort", "lead", "anlegg", "jobb", "installation_plan_indoor", "installation_plan_outdoor", "installation_plan_pdf"].includes(links.source_kind)
         || ![links.customer_id, links.lead_id, links.installation_id, links.job_id].some(isUuid)) {
         throw new Error("Vedlegget mangler en gyldig lagringsnøkkel eller tilknytning.");
       }
@@ -780,7 +780,14 @@
     if (!data) return null;
     const fields = ["customer_id", "job_id", "installation_id", "lead_id", "intake_id", "website_submission_id",
       "source_kind", "storage_bucket", "storage_path", "original_filename", "mime_type", "size_bytes", "title", "note", "source_order"];
-    if (data.deleted_at || fields.some((key) => (data[key] ?? null) !== (expected[key] ?? null))) {
+    // A preparation PDF is identified by its exact job and source-state digest.
+    // Canvas rendering differs between phones; replay the first confirmed PDF
+    // for the same semantic state rather than duplicating it or overwriting it.
+    const logicalPdfReplay = expected.source_kind === "installation_plan_pdf"
+      && /^installation_instruction_v1:[a-f0-9]{64}:[a-f0-9,-]+$/.test(expected.note || "")
+      && fields.filter(key => !["storage_path", "size_bytes"].includes(key))
+        .every(key => (data[key] ?? null) === (expected[key] ?? null));
+    if (data.deleted_at || (!logicalPdfReplay && fields.some((key) => (data[key] ?? null) !== (expected[key] ?? null)))) {
       const conflict = new Error("Vedleggets lagringsnøkkel tilhører et annet innhold eller en annen jobb.");
       conflict.code = "40001";
       throw conflict;
@@ -2846,6 +2853,47 @@
       }), "lagre jobbkommentar");
       if (error) throw error;
       return data;
+    },
+    async saveInstallationPreparation(request) {
+      const supabase = await requireClient();
+      const { data, error } = await withDbTimeout(supabase.rpc("save_installation_preparation_v1", {
+        p_event_id: request.id, p_job_id: request.jobId, p_expected_version: request.version,
+        p_power_source: request.powerSource, p_power_note: request.powerNote,
+      }), "lagre monteringsplan");
+      if (error) throw error;
+      return data;
+    },
+    async loadInstallationPreparation(jobId) {
+      const supabase = await requireClient();
+      const { data, error } = await withDbTimeout(supabase.from("jobs").select("*").eq("id", jobId).single(), "hente monteringsplan");
+      if (error) throw error;
+      return data;
+    },
+    async loadInstallationInstructionContext(jobId) {
+      const supabase = await requireClient();
+      const read = async query => {
+        const { data, error } = await withDbTimeout(query, "hente oppdatert monteringsgrunnlag");
+        if (error) throw error;
+        return data;
+      };
+      const job = await read(supabase.from("jobs").select("*").eq("id", jobId).single());
+      if (job.source_table !== "orders" || !isUuid(job.source_id) || !isUuid(job.customer_id)) {
+        throw new Error("Jobben mangler en entydig ordrekobling. Kontroller jobben før du lager bilde-PDF.");
+      }
+      const [customer, order, locations] = await Promise.all([
+        read(supabase.from("customers").select("*").eq("id", job.customer_id).single()),
+        read(supabase.from("orders").select("*").eq("id", job.source_id).eq("customer_id", job.customer_id).single()),
+        job.location_id ? read(supabase.from("customer_locations").select("*").eq("id", job.location_id).eq("customer_id", job.customer_id)) : [],
+      ]);
+      return { job, customer: customerFromDb(customer), locations,
+        order: { ...orderFromDb(order), jobId: job.id, job_id: job.id, leadId: job.lead_id || "", lead_id: job.lead_id || "" } };
+    },
+    async loadPreparationAttachments(jobId) {
+      const supabase = await requireClient();
+      const { data, error } = await withDbTimeout(supabase.from("crm_attachments").select("*")
+        .eq("job_id", jobId).is("deleted_at", null).order("created_at").limit(400), "hente jobbens bilder");
+      if (error) throw error;
+      return data || [];
     },
     async saveActivity(activity = {}) {
       const supabase = await requireClient();
