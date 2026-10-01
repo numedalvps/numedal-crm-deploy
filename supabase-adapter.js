@@ -1333,9 +1333,18 @@
     return results;
   }
 
-  function assistantActionQueueQuery(supabase) {
-    return supabase.from("assistant_review_queue_v1").select("*")
-      .order("created_at", { ascending: false }).limit(200);
+  async function assistantActionQueueQuery(supabase) {
+    const rows = [], pageSize = 250;
+    for (let from = 0; from < 5000; from += pageSize) {
+      const page = await supabase.from("assistant_review_queue_v1").select("*")
+        .order("created_at", { ascending: false }).order("id", { ascending: false })
+        .range(from, from + pageSize - 1);
+      if (page.error) return { data: [], error: page.error };
+      const pageRows = page.data || [];
+      rows.push(...pageRows);
+      if (pageRows.length < pageSize) return { data: rows, error: null };
+    }
+    return { data: [], error: new Error("Kontrollkøen er for stor til å lastes fullstendig. Ingen forslag er fjernet; kontakt administrator.") };
   }
 
   async function fetchAllRows(queryFactory, pageSize = 1000, maxRows = 20000) {
