@@ -10151,6 +10151,7 @@ label > .form-hint {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .crm-assistant-head-actions .crm-assistant-close {
@@ -10427,6 +10428,9 @@ label > .form-hint {
 
 .crm-assistant-messages {
   min-height: 0;
+  position: relative;
+  contain: paint;
+  background: #fff;
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
@@ -10607,7 +10611,10 @@ label > .form-hint {
 }
 
 .crm-assistant-suggestions {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  min-height: 0;
+  position: relative;
+  contain: paint;
   max-height: min(34vh, 280px);
   display: grid;
   gap: 8px;
@@ -10744,8 +10751,10 @@ label > .form-hint {
 
 .crm-assistant-more-suggestions {
   width: 100%;
-  min-height: 38px;
+  min-height: 44px;
   font-size: 12px;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .crm-assistant-review-view {
@@ -16628,6 +16637,9 @@ html:has(.manual-editor[open]) {
 .offer-line-item strong { font-size: 14px; overflow-wrap: anywhere; }
 .offer-line-item > b { font-size: 14px; white-space: nowrap; }
 .offer-line-item button { min-height: 44px; font-size: 20px; padding: 4px; }
+.offer-line-item.offer-alternative-heading { grid-template-columns: minmax(0, 1fr) auto; }
+.offer-alternative-heading h4 { margin: 0; font-size: 14px; }
+.offer-alternative-heading button { font-size: 13px; padding: 8px; }
 .offer-lines-text-editor { margin-bottom: 12px; }
 .offer-lines-text-editor summary { cursor: pointer; color: #526478; }
 @media (max-width: 700px) {
