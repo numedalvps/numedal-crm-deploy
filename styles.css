@@ -16507,3 +16507,71 @@ html:has(.manual-editor[open]) {
 .customer-offer-case + .customer-offer-case { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border, #dce3e8); }
 .customer-offer-case .section-title-row { gap: 12px; flex-wrap: wrap; }
 .customer-offer-case details > summary { padding: 10px 0; cursor: pointer; }
+
+/* Frequent customer actions share one visual hierarchy across tabs and devices. */
+#customerDetail .customer-action-bar > a,
+#customerDetail .customer-action-bar > button,
+#customerDetail .customer-action-bar > details > summary {
+  min-height: 44px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--teal-dark);
+  border-radius: 9px;
+  font-weight: 700;
+  box-shadow: none;
+}
+#customerDetail .customer-action-bar > .customer-offer-primary,
+#customerDetail .customer-action-bar > .book-primary {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: #fff;
+}
+#customerDetail .customer-section-nav {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+  padding: 4px;
+  border-radius: 10px;
+  background: #f2f6f6;
+  border: 1px solid var(--line);
+}
+#customerDetail .customer-section-nav button {
+  min-width: 0;
+  padding: 8px 4px;
+  border: 0;
+  border-radius: 7px;
+  margin: 0;
+}
+#customerDetail .customer-section-nav button.active {
+  background: #fff;
+  box-shadow: 0 1px 4px #12343418;
+  color: var(--teal-dark);
+}
+.customer-offer-list > .customer-offer-variant,
+.customer-offer-replies { min-width: 0; }
+.customer-offer-list article > div { min-width: 0; width: 100%; }
+.customer-offer-content { margin-top: 6px; }
+.customer-offer-message {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 380px;
+  overflow-y: auto;
+  padding: 12px;
+  background: #f7f9fa;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.customer-search-legacy {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.customer-search-legacy input { width: auto; margin: 0; }
+@media (max-width: 600px) {
+  #customerDetail .customer-section-nav { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  #customerDetail .customer-action-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
