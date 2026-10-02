@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css?v=1.9.4" />
-    <link rel="stylesheet" href="./styles.css?v=20261002-07" />
+    <link rel="stylesheet" href="./styles.css?v=20261002-08" />
     <link rel="preload" href="./vendor/inter/InterVariable.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="stylesheet" href="./crm-design.css?v=20261002-07" />
+    <link rel="stylesheet" href="./crm-design.css?v=20261002-08" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -47,6 +47,7 @@
               <button data-view="routeplanner" data-admin-nav type="button">Servicerute</button>
               <button data-view="technician" data-admin-nav type="button">Min dag</button>
               <button data-view="insulation" data-admin-nav type="button">Blåseisolering</button>
+              <button data-view="stock" data-admin-nav type="button">Lager</button>
               <button data-view="settings" data-admin-nav type="button">Innstillinger</button>
             </div>
           </div>
@@ -517,6 +518,7 @@
             <div class="plan-tabs" role="tablist" aria-label="Planområde">
               <button class="active" data-plan-tab-view="planning" type="button">Kalender</button>
               <button data-plan-tab-view="routeplanner" type="button">Servicerute</button>
+              <button data-view-jump="stock" data-admin-nav class="secondary" type="button">Lagerstatus</button>
             </div>
             <div class="planning-head">
               <div class="planning-period-nav">
@@ -853,6 +855,21 @@
           </section>
         </section>
 
+        <section id="stockView" class="view hidden">
+          <section class="panel pump-stock-panel" aria-labelledby="pumpStockTitle">
+            <div class="section-head">
+              <div><h2 id="pumpStockTitle">Varmepumper på lager</h2><p>På lager, bestilt og reservert til installasjoner.</p></div>
+              <div class="section-actions"><button id="addPumpStockOpening" type="button">Legg inn beholdning</button><button id="refreshPumpStock" class="secondary" type="button">Oppdater lager</button></div>
+            </div>
+            <div id="pumpStockMessage" role="status" aria-live="polite"></div>
+            <label>Søk modell eller merke<input id="pumpStockSearch" type="search" placeholder="Søk HZ25, Norgespumpa eller farge" /></label>
+            <label class="check-row"><input id="pumpStockShowAll" type="checkbox" /> Vis også modeller uten beholdning eller bestilling</label>
+            <div id="pumpStockSummary" class="pump-stock-summary"></div>
+            <div id="pumpStockList" class="pump-stock-list"></div>
+            <details class="pump-stock-orders"><summary>Leverandørordrer og mottak</summary><div id="pumpStockOrders"></div><button id="addPumpStockSupplierOrder" class="secondary" type="button">Registrer ordrebekreftelse</button></details>
+            <details class="pump-stock-unallocated"><summary id="pumpStockUnallocatedSummary">Installasjoner som mangler lagervare</summary><div id="pumpStockUnallocated"></div></details>
+          </section>
+        </section>
         <section id="settingsView" class="view hidden">
           <section class="panel settings-panel">
             <div class="section-head">
@@ -893,6 +910,7 @@
         <button data-view="routeplanner" data-admin-mobile type="button">Servicerute</button>
         <button data-view="technician" data-admin-mobile type="button">Min dag</button>
         <button data-view="insulation" data-admin-mobile type="button">Blåseisolering</button>
+        <button data-view="stock" data-admin-mobile type="button">Lager</button>
         <button data-view="settings" data-admin-mobile type="button">Innstillinger</button>
         <button id="mobileLogoutButton" class="mobile-logout" type="button">Logg ut</button>
       </div>
@@ -1645,6 +1663,7 @@
             </fieldset>
             <button id="completionAddPriceLine" class="secondary" type="button" title="Legg valgt tillegg eller egen vare inn i prisgrunnlaget for jobben.">Legg til prislinje</button>
           </div>
+          <div id="completionServiceTravel"></div>
           <textarea id="completionPriceLines" rows="4" placeholder="Tillegg eller prisgrunnlag som bør kontrolleres før faktura."></textarea>
           <div id="completionPriceTotal" class="completion-price-total"></div>
         </details>
@@ -1714,6 +1733,21 @@
       </form>
     </dialog>
 
+    <dialog id="pumpStockDialog" class="modal compact-modal">
+      <form id="pumpStockForm" method="dialog">
+        <div class="modal-head"><h2 id="pumpStockDialogTitle">Oppdater lager</h2><button id="closePumpStockDialog" type="button" aria-label="Lukk">×</button></div>
+        <div id="pumpStockDialogMessage" role="status" aria-live="polite"></div>
+        <label id="pumpStockProductWrap">Varmepumpe<select id="pumpStockProduct" required></select></label>
+        <p id="pumpStockDialogHint" class="form-hint"></p>
+        <label id="pumpStockQuantityWrap"><span id="pumpStockQuantityLabel">Antall</span><input id="pumpStockQuantity" type="number" step="1" inputmode="numeric" required /></label>
+        <label id="pumpStockReasonWrap" class="hidden">Årsak<input id="pumpStockReason" maxlength="400" /></label>
+        <label id="pumpStockSourceWrap" class="hidden">Ordrebekreftelse i e-post<select id="pumpStockSource"></select></label>
+        <label id="pumpStockReferenceWrap" class="hidden">Leverandørens ordrenummer<input id="pumpStockReference" maxlength="160" /></label>
+        <div id="pumpStockJobItems" class="hidden"></div>
+        <button id="addPumpStockJobItem" class="secondary hidden" type="button">Legg til en varmepumpe til</button>
+        <div class="modal-actions"><button id="cancelPumpStockDialog" class="secondary" type="button">Avbryt</button><button id="savePumpStock" type="submit">Lagre</button></div>
+      </form>
+    </dialog>
     <dialog id="billingDialog" class="modal">
       <form id="billingForm" method="dialog">
         <div class="modal-head">
@@ -1757,6 +1791,7 @@
           <input id="billingIncludeStandardInstallation" type="checkbox" checked />
           <span>Ta med standard montering automatisk</span>
         </label>
+        <div id="billingServiceTravel"></div>
         <label id="billingPriceBasisLabel">Prisgrunnlag / tillegg<textarea id="billingPriceBasis" rows="4"></textarea></label>
         <div id="billingPriceTotal" class="completion-price-total"></div>
         <div class="billing-draft-actions">
@@ -1967,11 +2002,11 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20261002-07"></script>
-    <script src="./supabase-adapter.js?v=20261002-07"></script>
-    <script src="./intake-parser.js?v=20261002-07"></script>
-    <script src="./assistant-coordinator.js?v=20261002-07"></script>
-    <script src="./nearby-planning.js?v=20261002-07"></script>
-    <script src="./app-20261002-07.js"></script>
+    <script src="./supabase-config.js?v=20261002-08"></script>
+    <script src="./supabase-adapter.js?v=20261002-08"></script>
+    <script src="./intake-parser.js?v=20261002-08"></script>
+    <script src="./assistant-coordinator.js?v=20261002-08"></script>
+    <script src="./nearby-planning.js?v=20261002-08"></script>
+    <script src="./app-20261002-08.js"></script>
   </body>
 </html>

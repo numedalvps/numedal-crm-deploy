@@ -1563,6 +1563,39 @@
   }
 
   window.NumedalStore = {
+    async listPumpStock() {
+      const supabase = await requireClient();
+      const { data, error } = await withDbTimeout(supabase.rpc("list_pump_stock_v1"), "hente lagerstatus");
+      if (error) throw error;
+      if (data?.contractVersion !== 1 || !Array.isArray(data.products) || !Array.isArray(data.supplierOrders) || !Array.isArray(data.unallocatedJobs)) {
+        throw new Error("Lagerstatus er ufullstendig. Hent den på nytt.");
+      }
+      return data;
+    },
+    async mutatePumpStock(request, options = {}) {
+      if (!isUuid(options.clientEventId) || !request || typeof request !== "object" || Array.isArray(request)) throw new Error("Lagerendringen mangler et gyldig grunnlag.");
+      const supabase = await requireClient();
+      let response;
+      try { response = await withDbTimeout(supabase.rpc("mutate_pump_stock_v1", { p_client_event_id: options.clientEventId, p_request: request }), "lagre lagerendringen"); }
+      catch (error) { error.manualOutcomeUncertain = true; throw error; }
+      if (response.error) { if (manualResponseOutcomeUncertain(response)) response.error.manualOutcomeUncertain = true; throw response.error; }
+      if (response.data?.applied !== true || response.data.eventId !== options.clientEventId || response.data.productId !== request.productId || !Number.isInteger(response.data.revision)) {
+        const error = new Error("Lagerendringen mangler et entydig lagringssvar. Kontroller samme endring igjen."); error.manualOutcomeUncertain = true; throw error;
+      }
+      return response.data;
+    },
+    async setJobPumpStockItems(jobId, items, options = {}) {
+      if (!isUuid(jobId) || !isUuid(options.clientEventId) || !options.expectedUpdatedAt || !Array.isArray(items)) throw new Error("Varevalget mangler et gyldig jobbgrunnlag.");
+      const supabase = await requireClient();
+      let response;
+      try { response = await withDbTimeout(supabase.rpc("set_job_pump_stock_items_v1", { p_job_id: jobId, p_expected_updated_at: options.expectedUpdatedAt, p_items: items, p_client_event_id: options.clientEventId }), "lagre jobbens pumpevalg"); }
+      catch (error) { error.manualOutcomeUncertain = true; throw error; }
+      if (response.error) { if (manualResponseOutcomeUncertain(response)) response.error.manualOutcomeUncertain = true; throw response.error; }
+      if (response.data?.applied !== true || response.data.eventId !== options.clientEventId || response.data.jobId !== jobId || !response.data.updatedAt || !Array.isArray(response.data.items)) {
+        const error = new Error("Pumpevalget mangler et entydig lagringssvar. Kontroller samme endring igjen."); error.manualOutcomeUncertain = true; throw error;
+      }
+      return response.data;
+    },
     isConfigured,
     client,
     customerToDb,

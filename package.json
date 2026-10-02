@@ -144,7 +144,7 @@
     "test:gmail-reconciliation-sql": "node tools/run-local-sql-tests.mjs tests/gmail-recipient-regex-integration.sql tests/gmail-connector-reconciliation-integration.sql tests/legacy-gmail-reply-reconciliation-integration.sql",
     "test:customer-tags": "node --test tests/customer-tag-picker.test.mjs",
     "test:installation-completion-selection": "node --test tests/installation-completion-selection.test.mjs",
-    "postcheck": "npm run test:customer-tags && npm run test:installation-completion-selection && npm run test:lead-original-inquiry && npm run test:job-card-clarity && npm run test:booking-calendar-areas && npm run test:customer-sales-case && npm run test:mobile-feedback && npm run test:offer-travel && npm run test:offer-case-references && npm run test:planning-technician-workflow && npm run test:assistant-quality",
+    "postcheck": "npm run test:customer-tags && npm run test:installation-completion-selection && npm run test:lead-original-inquiry && npm run test:job-card-clarity && npm run test:booking-calendar-areas && npm run test:customer-sales-case && npm run test:mobile-feedback && npm run test:offer-travel && npm run test:offer-case-references && npm run test:planning-technician-workflow && npm run test:assistant-quality && npm run test:pump-stock-travel",
     "test:lead-original-inquiry": "node --test tests/lead-original-inquiry.test.mjs",
     "test:job-card-clarity": "node --test tests/job-card-clarity.test.mjs",
     "test:booking-calendar-areas": "node --test tests/booking-calendar-areas.test.mjs",
@@ -164,7 +164,9 @@
     "test:job-presentation": "node --test tests/job-presentation-consistency.test.mjs tests/planning-backlog-work-period.test.mjs tests/completion-date-display.test.mjs tests/invoice-status-presentation.test.mjs",
     "test:lead-activity-performance": "node --test tests/lead-activity-index-performance.test.mjs",
     "test:supplier-parts-routing": "node --test tests/supplier-parts-routing.test.mjs",
-    "test:supplier-parts-routing-sql": "node tools/run-local-sql-tests.mjs tests/supplier-parts-routing-integration.sql tests/supplier-parts-inquiry-integration.sql"
+    "test:supplier-parts-routing-sql": "node tools/run-local-sql-tests.mjs tests/supplier-parts-routing-integration.sql tests/supplier-parts-inquiry-integration.sql",
+    "test:pump-stock-travel": "node --test tests/pump-stock-adapter.test.mjs tests/service-travel-ui.test.mjs tests/service-travel-assistant.test.mjs",
+    "test:pump-stock-sql": "node tools/run-local-sql-tests.mjs tests/pump-stock-integration.sql"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",

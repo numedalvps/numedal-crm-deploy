@@ -16612,6 +16612,30 @@ html:has(.manual-editor[open]) {
   #customerDetail .customer-action-bar > * { min-width: 0; grid-column: auto; }
   #customerDetail .customer-action-bar > button, #customerDetail .customer-action-bar > a, #customerDetail .customer-action-bar > details > summary { padding: 8px 5px; min-height: 44px; font-size: 12px; }
 }
+.service-travel-fields { margin: 12px 0; padding: 14px; border: 1px solid #bdd6d3; border-radius: 10px; background: #f0f8f6; }
+.service-travel-fields p { line-height: 1.5; margin: 8px 0; }
+.service-travel-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) auto; align-items: end; gap: 10px; }
+@media(max-width:600px) { .service-travel-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }.service-travel-grid button { grid-column: 1 / -1; } }
+.pump-stock-summary { margin: 12px 0 18px; color: var(--muted, #5b6876); line-height: 1.5; }
+.pump-stock-list { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,340px),1fr)); gap: 12px; }
+.pump-stock-card { min-width: 0; border: 1px solid #d8e3e8; border-radius: 12px; padding: 16px; background: #fff; }
+.pump-stock-card h3 { margin: 0 0 8px; font-size: 1rem; overflow-wrap: anywhere; }
+.pump-stock-card dl { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 8px; margin: 16px 0; }
+.pump-stock-card dt { font-size: .8rem; color: #5b6876; }
+.pump-stock-card dd { margin: 4px 0 0; font-size: 1.5rem; font-weight: 650; }
+.pump-stock-card.shortage { border-color: #df977f; background: #fff7f3; }
+.pump-stock-shortage { color: #a0391f; font-weight: 600; }
+.pump-stock-unknown { color: #7a5b18; }
+.pump-stock-orders,.pump-stock-unallocated { margin-top: 20px; padding: 14px; border: 1px solid #d8e3e8; border-radius: 10px; }
+.pump-stock-orders summary,.pump-stock-unallocated summary { cursor: pointer; font-weight: 600; }
+.pump-stock-order { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; padding: 12px 0; border-bottom: 1px solid #e4ebef; overflow-wrap: anywhere; }
+.pump-stock-order strong { flex: 1 1 220px; }
+.pump-stock-order span { flex: 1 1 260px; }
+.pump-stock-job-item { display: grid; grid-template-columns: minmax(0,1fr) 90px auto; gap: 10px; align-items: end; padding: 12px 0; }
+#pumpStockDialogMessage:not(:empty) { padding: 12px; background: #fff4df; color: #734816; border-radius: 8px; margin: 12px 0; }
+#pumpStockMessage:not(:empty) { padding: 10px 0; }
+@media(max-width:600px) { .pump-stock-job-item { grid-template-columns: minmax(0,1fr) 75px; }.pump-stock-job-item button { grid-column: 1 / -1; } }
+
 /* Compact field report: touch-friendly controls stay above administrative billing. */
 .completion-field-report { display: grid; gap: 12px; padding: 14px; border: 1px solid var(--border, #dce2e6); border-radius: 12px; margin-bottom: 14px; }
 .completion-field-report .checkbox-line { min-height: 44px; }
