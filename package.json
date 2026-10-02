@@ -165,7 +165,7 @@
     "test:lead-activity-performance": "node --test tests/lead-activity-index-performance.test.mjs",
     "test:supplier-parts-routing": "node --test tests/supplier-parts-routing.test.mjs",
     "test:supplier-parts-routing-sql": "node tools/run-local-sql-tests.mjs tests/supplier-parts-routing-integration.sql tests/supplier-parts-inquiry-integration.sql",
-    "test:pump-stock-travel": "node --test tests/pump-stock-adapter.test.mjs tests/service-travel-ui.test.mjs tests/service-travel-assistant.test.mjs",
+    "test:pump-stock-travel": "node --test tests/pump-stock-adapter.test.mjs tests/service-travel-ui.test.mjs tests/service-travel-location.test.mjs tests/service-travel-assistant.test.mjs",
     "test:pump-stock-sql": "node tools/run-local-sql-tests.mjs tests/pump-stock-integration.sql"
   },
   "devDependencies": {
