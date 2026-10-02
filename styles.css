@@ -7467,10 +7467,6 @@ label > .form-hint {
   display: inline;
 }
 
-.customer-history-panel .expandable-text:not([open]) .expandable-expanded-label {
-  display: none;
-}
-
 @media (max-width: 600px) {
   .customer-history-dates {
     grid-template-columns: minmax(0, 1fr);
@@ -7594,15 +7590,15 @@ label > .form-hint {
   font-weight: 900;
 }
 
-.expandable-expanded-label {
+.expandable-text:not([open]) > summary .expandable-expanded-label {
   display: none;
 }
 
-.expandable-text[open] .expandable-collapsed-label {
+.expandable-text[open] > summary .expandable-collapsed-label {
   display: none;
 }
 
-.expandable-text[open] .expandable-expanded-label {
+.expandable-text[open] > summary .expandable-expanded-label {
   display: inline;
 }
 
