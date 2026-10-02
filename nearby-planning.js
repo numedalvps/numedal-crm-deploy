@@ -187,6 +187,85 @@
     ));
   }
 
+  // Route advice uses reviewed service-area keys, never a customer's invoice
+  // address or a straight-line distance presented as driving time.
+  function assessDayRouteInsertion(dayStops, candidate, window, relations = []) {
+    const areaKey = String(candidate?.areaKey || "").trim();
+    const branch = (key) => ["vegglifjell_nord", "vegglifjell_sor"].includes(key) ? key : "";
+    const corridor = ["veggli", "rollag", "flesberg", "lampeland", "svene"];
+    const rank = (key) => corridor.indexOf(key);
+    const stops = (Array.isArray(dayStops) ? dayStops : [])
+      .filter((stop) => stop && String(stop.id || "") !== String(candidate?.id || "__new__"))
+      .filter((stop) => Number.isFinite(stop.start) && Number.isFinite(stop.end) && stop.end > stop.start)
+      .map((stop) => ({ ...stop, areaKey: String(stop.areaKey || "").trim() }))
+      .sort((left, right) => left.start - right.start || left.end - right.end);
+    const start = Number.isFinite(window?.start) ? window.start : null;
+    const end = Number.isFinite(window?.end) ? window.end : null;
+    const before = start === null ? [] : stops.filter((stop) => stop.end <= start);
+    const after = end === null ? [] : stops.filter((stop) => stop.start >= end);
+    const previous = before.at(-1) || null;
+    const next = after[0] || null;
+    let minimumStart = previous?.end ?? null;
+    let maximumEnd = next?.start ?? null;
+    const issues = [];
+    const add = (code, left = previous, right = next, requiredMinutes = null, availableMinutes = null) => {
+      const issue = { code, previousId: left?.id || "", nextId: right?.id || "", requiredMinutes, availableMinutes };
+      const existing = issues.findIndex((item) => item.code === code);
+      if (existing < 0) issues.push(issue);
+      else if (availableMinutes !== null && (issues[existing].availableMinutes === null || availableMinutes < issues[existing].availableMinutes)) issues[existing] = issue;
+    };
+    if (!areaKey || areaKey === "vegglifjell_uavklart" || stops.some((stop) => !stop.areaKey || stop.areaKey === "vegglifjell_uavklart")) {
+      add("area_unknown");
+    }
+    const candidateBranch = branch(areaKey);
+    const opposite = candidateBranch ? stops.find((stop) => branch(stop.areaKey) && stop.areaKey !== areaKey) : null;
+    // A new branch makes the whole day inefficient even when the neighboring
+    // valley stop hides the branch change. An already mixed day can still be
+    // improved by adding stops on its existing branches.
+    if (opposite && !stops.some((stop) => stop.areaKey === areaKey)) add("mountain_branch_change", opposite, null, 45);
+    for (const [neighbor, outgoing] of [[previous, false], [next, true]]) {
+      if (!neighbor || !areaKey || !neighbor.areaKey) continue;
+      const branchChange = candidateBranch && branch(neighbor.areaKey) && neighbor.areaKey !== areaKey;
+      if (branchChange) {
+        const available = outgoing ? neighbor.start - end : start - neighbor.end;
+        add("mountain_branch_change", outgoing ? previous : neighbor, outgoing ? neighbor : next, 45, available);
+        if (outgoing) maximumEnd = neighbor.start - 45;
+        else minimumStart = neighbor.end + 45;
+      } else if (prohibitedAreaPair(relations, areaKey, neighbor.areaKey)) {
+        add("prohibited_area_pair", outgoing ? previous : neighbor, outgoing ? neighbor : next);
+      }
+    }
+    const mountainsBefore = before.filter((stop) => branch(stop.areaKey));
+    const mountainsAfter = after.filter((stop) => branch(stop.areaKey));
+    if (rank(areaKey) >= 0 && mountainsBefore.length && mountainsAfter.length) {
+      add("valley_between_mountain_stops", mountainsBefore.at(-1), mountainsAfter[0]);
+    }
+    if (candidateBranch) {
+      const lastMountain = mountainsBefore.at(-1);
+      const descended = lastMountain && before.some((stop) => stop.start >= lastMountain.end && rank(stop.areaKey) >= 0);
+      if (descended) add("mountain_after_descent", lastMountain, next);
+      // A mountain stop before an existing valley->mountain pair turns that
+      // previously sensible outbound visit into a trip down and back up.
+      if (mountainsAfter.length && after.some((stop) => rank(stop.areaKey) >= 0 && stop.end <= mountainsAfter[0].start)) {
+        add("valley_between_mountain_stops", previous, mountainsAfter[0]);
+      }
+    }
+    if (rank(areaKey) >= 0 && mountainsBefore.length && !mountainsAfter.length) {
+      const lastMountain = mountainsBefore.at(-1);
+      const returnBefore = before.filter((stop) => stop.start >= lastMountain.end && rank(stop.areaKey) >= 0);
+      const returnAfter = after.filter((stop) => rank(stop.areaKey) >= 0);
+      if (returnBefore.some((stop) => rank(stop.areaKey) > rank(areaKey))
+        || returnAfter.some((stop) => rank(stop.areaKey) < rank(areaKey))) {
+        add("return_corridor_backtrack", returnBefore.at(-1) || lastMountain, returnAfter[0]);
+      }
+    }
+    return {
+      suitable: !issues.some((issue) => issue.code !== "area_unknown"),
+      issues, minimumStart, maximumEnd, corridorRank: rank(areaKey),
+      returning: mountainsBefore.length > 0 && mountainsAfter.length === 0,
+    };
+  }
+
   function sortCandidates(candidates, mode = "nearby") {
     const categoryRank = { open_job: 0, service: 1 };
     const dueRank = { overdue: 0, soon: 1, later: 2, missing: 3 };
@@ -198,6 +277,11 @@
       const leftPriority = candidatePriorityRank(left);
       const rightPriority = candidatePriorityRank(right);
       if (leftPriority !== rightPriority) return leftPriority - rightPriority;
+      if (mode === "home" && left?.routeAssessment?.returning && right?.routeAssessment?.returning) {
+        const leftRouteRank = Number(left.routeAssessment.corridorRank);
+        const rightRouteRank = Number(right.routeAssessment.corridorRank);
+        if (leftRouteRank >= 0 && rightRouteRank >= 0 && leftRouteRank !== rightRouteRank) return leftRouteRank - rightRouteRank;
+      }
       if (left?.kind === "service" && right?.kind === "service") {
         const leftServicePriority = Number(left?.servicePriorityRank || 99);
         const rightServicePriority = Number(right?.servicePriorityRank || 99);
@@ -248,6 +332,7 @@
     serviceDueMatches,
     sortServiceWorklist,
     prohibitedAreaPair,
+    assessDayRouteInsertion,
     candidatePriorityRank,
     sortCandidates,
   });
