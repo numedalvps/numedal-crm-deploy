@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css?v=1.9.4" />
-    <link rel="stylesheet" href="./styles.css?v=20261002-12" />
+    <link rel="stylesheet" href="./styles.css?v=20261003-01" />
     <link rel="preload" href="./vendor/inter/InterVariable.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="stylesheet" href="./crm-design.css?v=20261002-12" />
+    <link rel="stylesheet" href="./crm-design.css?v=20261003-01" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -901,7 +901,10 @@
             <div id="eaccountingCatalogSettings" class="eaccounting-catalog-settings"></div>
             <div id="offerTemplateSettings" class="offer-template-settings"></div>
             <div id="privateDataExportSettings" class="private-data-export-settings"></div>
-            <div id="tagSettings" class="tag-settings"></div>
+            <details class="settings-legacy-tags">
+              <summary>Eldre merker og importdata</summary>
+              <div id="tagSettings" class="tag-settings"></div>
+            </details>
           </section>
         </section>
       </main>
@@ -1027,6 +1030,7 @@
           </fieldset>
         </div>
         <input id="formTag" type="hidden" />
+        <input id="formTags" type="hidden" />
         <div class="manual-customer-options form-grid">
           <label class="check-row"><input id="formIsCustomer" type="checkbox" /> Er kunde</label>
           <label class="check-row"><input id="formPaysCash" type="checkbox" /> Betaling på stedet</label>
@@ -1045,14 +1049,6 @@
               <label class="hidden">Eldre koordinater<input id="formGps" readonly /></label>
               <label class="hidden">Eldre kartlenke<input id="formGoogleMaps" readonly /></label>
               <label class="check-row"><input id="formInsulation" type="checkbox" /> Blåseisolering / Isobygg</label>
-            </div>
-            <div class="customer-tag-picker">
-              <input id="formTags" type="hidden" />
-              <label for="formTagSearch">Tags</label>
-              <div id="formSelectedTags" class="tag-selected" aria-label="Valgte tags"></div>
-              <input id="formTagSearch" type="search" placeholder="Søk etter tag …" aria-label="Søk etter tag" aria-controls="formTagCatalog" aria-describedby="formTagHelp" autocomplete="off" />
-              <small id="formTagHelp">Velg et treff eller opprett en tag. Søket lagres ikke. Tags endrer ikke kundens adresse eller område.</small>
-              <div id="formTagCatalog" class="tag-search-results" role="group" aria-label="Tagtreff" hidden></div>
             </div>
             <label>Notat<textarea id="formNote" rows="3"></textarea></label>
           </div>
@@ -2002,11 +1998,11 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20261002-12"></script>
-    <script src="./supabase-adapter.js?v=20261002-12"></script>
-    <script src="./intake-parser.js?v=20261002-12"></script>
-    <script src="./assistant-coordinator.js?v=20261002-12"></script>
-    <script src="./nearby-planning.js?v=20261002-12"></script>
-    <script src="./app-20261002-12.js"></script>
+    <script src="./supabase-config.js?v=20261003-01"></script>
+    <script src="./supabase-adapter.js?v=20261003-01"></script>
+    <script src="./intake-parser.js?v=20261003-01"></script>
+    <script src="./assistant-coordinator.js?v=20261003-01"></script>
+    <script src="./nearby-planning.js?v=20261003-01"></script>
+    <script src="./app-20261003-01.js"></script>
   </body>
 </html>
