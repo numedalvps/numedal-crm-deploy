@@ -287,22 +287,33 @@
         const rightServicePriority = Number(right?.servicePriorityRank || 99);
         if (leftServicePriority !== rightServicePriority) return leftServicePriority - rightServicePriority;
       }
-      const leftDueAt = timestamp(left?.priorityDueAt || left?.dueDate);
-      const rightDueAt = timestamp(right?.priorityDueAt || right?.dueDate);
-      if (leftDueAt !== rightDueAt) return leftDueAt - rightDueAt;
-      const leftWaitSince = timestamp(left?.priorityWaitSince || left?.createdAt || left?.created_at);
-      const rightWaitSince = timestamp(right?.priorityWaitSince || right?.createdAt || right?.created_at);
-      if (leftWaitSince !== rightWaitSince) return leftWaitSince - rightWaitSince;
+      const ageOrder = () => {
+        const leftDueAt = timestamp(left?.priorityDueAt || left?.dueDate);
+        const rightDueAt = timestamp(right?.priorityDueAt || right?.dueDate);
+        if (leftDueAt !== rightDueAt) return leftDueAt - rightDueAt;
+        const leftWaitSince = timestamp(left?.priorityWaitSince || left?.createdAt || left?.created_at);
+        const rightWaitSince = timestamp(right?.priorityWaitSince || right?.createdAt || right?.created_at);
+        return leftWaitSince !== rightWaitSince ? leftWaitSince - rightWaitSince : 0;
+      };
+      // Urgent deadlines retain their order. Routine work is grouped by actual
+      // site proximity before age, rather than criss-crossing one large area.
+      if (leftPriority < 2) { const urgentAge = ageOrder(); if (urgentAge) return urgentAge; }
       const leftCategory = categoryRank[left?.kind] ?? 9;
       const rightCategory = categoryRank[right?.kind] ?? 9;
       if (leftCategory !== rightCategory) return leftCategory - rightCategory;
-      const leftDistance = Number(mode === "home" ? left?.homeDetourKm : left?.distanceKm);
-      const rightDistance = Number(mode === "home" ? right?.homeDetourKm : right?.distanceKm);
+      const distanceValue = candidate => {
+        const value = mode === "home" ? candidate?.homeDetourKm : candidate?.distanceKm;
+        return value == null || value === "" ? Infinity : Number(value);
+      };
+      const leftDistance = distanceValue(left);
+      const rightDistance = distanceValue(right);
       if (Number.isFinite(leftDistance) || Number.isFinite(rightDistance)) {
         if (!Number.isFinite(leftDistance)) return 1;
         if (!Number.isFinite(rightDistance)) return -1;
         if (leftDistance !== rightDistance) return leftDistance - rightDistance;
       }
+      const remainingAge = ageOrder();
+      if (remainingAge) return remainingAge;
       const leftDue = dueRank[left?.dueKind] ?? 9;
       const rightDue = dueRank[right?.dueKind] ?? 9;
       if (leftDue !== rightDue) return leftDue - rightDue;

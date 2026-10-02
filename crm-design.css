@@ -287,3 +287,11 @@ button:disabled, button[data-busy="true"] { cursor: default; }
   #leadsView .lead-list-panel > .lead-followup-controls { order: 5; width: 100%; min-width: 0; }
   .lead-list .lead-priority-heading { font-size: 13px; }
 }
+/* Keep road suggestions readable inside the booking agenda on phone and PC. */
+.booking-road-preview { margin: 12px 0; padding: 12px; border: 1px solid var(--border, #d7e3e1); border-radius: 10px; background: #f3f8f7; min-width: 0; }
+.booking-road-preview > button { width: 100%; white-space: normal; }
+.booking-road-slots { display: grid; gap: 8px; }
+.booking-road-slot { display: grid; gap: 4px; padding: 10px; text-align: left; color: #163f3a; background: white; border: 1px solid #b8d4cf; border-radius: 8px; min-width: 0; width: 100%; }
+.booking-road-slot span, .booking-road-slot strong { white-space: normal; overflow-wrap: anywhere; }
+.booking-road-slot span { font-size: .85rem; line-height: 1.4; }
+.booking-road-slot:first-child { border-color: #0b7669; }
