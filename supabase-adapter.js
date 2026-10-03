@@ -2027,7 +2027,27 @@
     },
     async saveManualOrder(request, options = {}) {
       const result = await manualReceiptRpc("save_manual_order_v1", request, options, ["order", "job", "serviceEvent"]);
-      return { ...result, order: { ...orderFromDb(result.order), jobId: result.job.id, job_id: result.job.id,
+      const bookingIds = result.order.booking_ids || [];
+      const returnedBookings = result.bookings ?? [];
+      const returnedAppointments = result.appointments ?? [];
+      const completeMirrors = Array.isArray(bookingIds) && Array.isArray(returnedBookings) && Array.isArray(returnedAppointments)
+        && (!bookingIds.length || (Array.isArray(result.bookings) && Array.isArray(result.appointments)))
+        && (!bookingIds.length || (result.order.customer_id === request.customer_id && result.job.customer_id === request.customer_id
+          && result.job.source_table === "orders" && result.job.source_id === result.order.id))
+        && returnedBookings.length === bookingIds.length && returnedAppointments.length === bookingIds.length
+        && new Set(returnedBookings.map(row => row?.id)).size === bookingIds.length
+        && returnedBookings.every(row => row?.id && bookingIds.includes(row.id) && row.customer_id === result.order.customer_id)
+        && new Set(returnedAppointments.map(row => row?.source_id)).size === bookingIds.length
+        && new Set(returnedAppointments.map(row => row?.id)).size === bookingIds.length
+        && returnedAppointments.every(row => row?.id && row.source_table === "bookings"
+          && bookingIds.includes(row.source_id) && row.job_id === result.job.id);
+      if (!completeMirrors) {
+        const error = new Error("Lagringssvaret mangler oppdatert bookinggrunnlag. Kontroller den samme lagringen igjen.");
+        error.manualOutcomeUncertain = true;
+        throw error;
+      }
+      return { ...result, bookings: (result.bookings || []).map(bookingFromDb), appointments: result.appointments || [],
+        order: { ...orderFromDb(result.order), jobId: result.job.id, job_id: result.job.id,
         leadId: result.job.lead_id || "", lead_id: result.job.lead_id || "" } };
     },
     async loadManualOrderContext(customerId, orderId = null) {
