@@ -333,6 +333,10 @@ button:disabled, button[data-busy="true"] { cursor: default; }
 .offer-review-facts dt { font-size: 13px; color: var(--muted); font-weight: 600; }
 .offer-review-facts dd { margin: 0; overflow-wrap: anywhere; }
 .offer-review-body { white-space: pre-wrap; overflow-wrap: anywhere; padding: 16px; border: 1px solid var(--line); border-radius: 8px; background: #fff; line-height: 1.6; }
+.offer-review-dialog [data-offer-review-subject] { width: 100%; min-width: 0; margin: 5px 0 12px; font-weight: 400; }
+.offer-review-dialog textarea.offer-review-body { width: 100%; min-width: 0; min-height: 210px; max-height: 48dvh; margin: 5px 0 0; font: inherit; font-weight: 400; resize: vertical; }
+.offer-review-current-text { margin-top: 12px; border: 1px solid #dec17b; border-radius: 8px; padding: 12px; background: #fffbef; }
+.offer-review-current-text p { white-space: pre-wrap; overflow-wrap: anywhere; font-weight: 400; }
 .offer-review-dialog form > .modal-actions { position: static; flex: 0 0 auto; margin: 0; padding: 12px 18px; display: flex; flex-wrap: wrap; gap: 8px; border-top: 1px solid var(--line); }
 .offer-review-dialog .modal-actions button { white-space: normal; max-width: 100%; }
 @media (max-width: 600px) {

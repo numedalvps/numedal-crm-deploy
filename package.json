@@ -175,7 +175,8 @@
     "test:workflow-parity-sql": "node tools/run-local-sql-tests.mjs tests/technician-service-completion-parity-integration.sql tests/manual-order-nonretryable-conflicts-integration.sql tests/manual-order-integration.sql tests/manual-completion-recovery-integration.sql tests/site-visit-installation-acceptance-integration.sql tests/installation-completion-site-integration.sql tests/manual-job-booking-installation-update-integration.sql tests/field-completion-report-integration.sql tests/completion-actual-quantities-integration.sql tests/invoice-basis-integration.sql",
     "test:booked-job-changes-sql": "node tools/run-local-sql-tests.mjs tests/booked-order-note-projection-integration.sql",
     "test:booked-job-changes-concurrency": "node tests/booked-order-note-concurrency.test.mjs --local",
-    "test:booked-job-changes-chrome": "playwright test -c playwright.chrome.config.js tests/e2e/booked-job-changes.spec.js"
+    "test:booked-job-changes-chrome": "playwright test -c playwright.chrome.config.js tests/e2e/booked-job-changes.spec.js",
+    "test:offer-review-postgres": "node --test tests/offer-review-postgres-serialization.integration.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
