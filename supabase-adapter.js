@@ -1861,6 +1861,49 @@
       }
       return data;
     },
+    async recordOfferReviewDisplay(id, request = {}) {
+      if (!isUuid(id) || !isUuid(request.clientEventId)) throw new Error("Tilbudskontrollen mangler en gyldig id.");
+      if (!["needs_review", "approved"].includes(request.expectedStatus)
+        || !Number.isSafeInteger(request.expectedRevision) || request.expectedRevision < 1
+        || !/^[0-9a-f]{64}$/.test(request.expectedContentHash || "")
+        || !request.expectedUpdatedAt || Number.isNaN(Date.parse(request.expectedUpdatedAt))) {
+        throw new Error("Tilbudskontrollen mangler en gyldig utkastversjon.");
+      }
+      const snapshot = request.expectedSnapshot;
+      const keys = ["action_type", "channel", "approval_required", "recipient", "subject", "body", "payload_json", "evidence_json", "blockers_json", "source_kind", "source_intake_id", "linked_customer_id", "linked_lead_id", "linked_job_id", "linked_order_id"];
+      if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)
+        || Object.keys(snapshot).length !== keys.length || keys.some(key => !Object.hasOwn(snapshot, key))
+        || snapshot.action_type !== "offer_draft" || snapshot.channel !== "email") {
+        throw new Error("Tilbudskontrollen mangler det eksakte lagrede utkastet.");
+      }
+      const supabase = await requireClient();
+      const { data, error } = await withDbTimeout(supabase.rpc("record_offer_review_display_v1", {
+        p_action_id: id,
+        p_client_event_id: request.clientEventId,
+        p_expected_status: request.expectedStatus,
+        p_expected_updated_at: request.expectedUpdatedAt,
+        p_expected_revision: request.expectedRevision,
+        p_expected_content_hash: request.expectedContentHash,
+        p_expected_source_ref: request.expectedSourceRef ?? null,
+        p_expected_snapshot: snapshot,
+      }), "registrere tilbudskontroll", 12000);
+      if (error) throw error;
+      const canonical = value => Array.isArray(value) ? value.map(canonical)
+        : value && typeof value === "object" ? Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])])) : value;
+      if (!data || data.action?.id !== id || data.action?.action_type !== "offer_draft" || data.action?.channel !== "email"
+        || data.action?.status !== request.expectedStatus || data.action?.review_revision !== request.expectedRevision
+        || data.action?.review_content_hash !== request.expectedContentHash
+        || Date.parse(data.action?.updated_at) !== Date.parse(request.expectedUpdatedAt)
+        || (data.action?.source_ref ?? null) !== (request.expectedSourceRef ?? null)
+        || keys.some(key => JSON.stringify(canonical(data.action[key] ?? (key === "payload_json" || key === "evidence_json" ? {} : key === "blockers_json" ? [] : null))) !== JSON.stringify(canonical(snapshot[key])))
+        || !isUuid(data.receipt_id) || !isUuid(data.review_id) || !isUuid(data.actor_profile_id)
+        || data.client_event_id !== request.clientEventId || data.send_authorized !== false
+        || !/^[0-9a-f]{64}$/.test(data.snapshot_hash || "")
+        || !data.displayed_at || Number.isNaN(Date.parse(data.displayed_at))) {
+        throw new Error("Serveren bekreftet ikke den eksakte tilbudskontrollen.");
+      }
+      return data;
+    },
     async loadAssistantMessageAction(id) {
       if (!isUuid(id)) throw new Error("Ugyldig meldingsutkast.");
       const supabase = await requireClient();
@@ -3666,21 +3709,35 @@
       if (options.approvedByUser !== true && options.approved_by_user !== true) {
         throw new Error("E-posten krever en ny, eksplisitt bekreftelse før sending.");
       }
+      const expectedOfferReview = options.expectedOfferReview;
+      if (expectedOfferReview !== undefined && (!expectedOfferReview || typeof expectedOfferReview !== "object"
+        || Array.isArray(expectedOfferReview) || !Number.isSafeInteger(expectedOfferReview.expected_revision) || expectedOfferReview.expected_revision < 1
+        || !/^[a-f0-9]{64}$/.test(expectedOfferReview.expected_content_hash || "")
+        || !expectedOfferReview.expected_updated_at || Number.isNaN(Date.parse(expectedOfferReview.expected_updated_at))
+        || !Object.hasOwn(expectedOfferReview, "expected_source_ref")
+        || expectedOfferReview.expected_snapshot?.action_type !== "offer_draft" || expectedOfferReview.expected_snapshot?.channel !== "email")) {
+        throw new Error("Sendingen mangler den eksakte kontrollerte tilbudsversjonen.");
+      }
       const { data, error } = await supabase.functions.invoke("send-offer-email", {
         body: {
           assistant_action_id: id,
           client_event_id: clientEventId,
           approved_by_user: true,
           dry_run: options.dryRun === true,
+          ...(expectedOfferReview !== undefined ? { expected_offer_review: expectedOfferReview } : {}),
         },
       });
       if (error) {
         let message = error.message || "Klarte ikke sende e-posten fra CRM.";
+        let offerReviewNotStarted = false;
         const response = error.context;
         if (response && typeof response.clone === "function") {
           try {
             const body = await response.clone().json();
             if (body?.error) message = body.error;
+            offerReviewNotStarted = expectedOfferReview !== undefined && response.status === 409
+              && body?.reason_code === "offer_review_stale_before_claim" && body?.attempt_started === false
+              && body?.ok === false && body?.sent === false;
           } catch (_jsonError) {
             try {
               const responseText = await response.clone().text();
@@ -3690,7 +3747,9 @@
             }
           }
         }
-        throw new Error(message);
+        const sendError = new Error(message);
+        if (offerReviewNotStarted) sendError.offerReviewNotStarted = true;
+        throw sendError;
       }
       if (data?.error || data?.sent !== true) {
         throw new Error(data?.error || "SMTP-kvitteringen bekreftet ikke at e-posten ble sendt.");
