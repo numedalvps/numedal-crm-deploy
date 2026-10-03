@@ -2102,7 +2102,10 @@
         read(jobId ? supabase.from("job_priority_worklist_v1").select("*").eq("id", jobId)
           : supabase.from("job_priority_worklist_v1").select("*").eq("lead_id", leadId).neq("work_status", "cancelled")),
       ]);
-      const job = (jobs || []).find((row) => row.source_table === "orders") || null;
+      const fulfillmentJobs = (jobs || []).filter((row) => row.source_table === "orders"
+        && (jobId || row.job_type !== "befaring"));
+      if (fulfillmentJobs.length > 1) throw new Error("Saken har flere jobber. Åpne den aktuelle jobben før du endrer den; utkastet er beholdt.");
+      const job = fulfillmentJobs[0] || null;
       const order = job ? await read(supabase.from("orders").select("*").eq("id", job.source_id).single()) : null;
       const activityRows = [...(recentActivities || [])];
       if (sourceActivity && !activityRows.some((row) => row.id === sourceActivity.id)) activityRows.push(sourceActivity);
