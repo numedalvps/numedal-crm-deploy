@@ -295,3 +295,30 @@ button:disabled, button[data-busy="true"] { cursor: default; }
 .booking-road-slot span, .booking-road-slot strong { white-space: normal; overflow-wrap: anywhere; }
 .booking-road-slot span { font-size: .85rem; line-height: 1.4; }
 .booking-road-slot:first-child { border-color: #0b7669; }
+.nearby-road-status {
+  margin: 0 16px 12px;
+  padding: 12px;
+  border: 1px solid var(--border, #d4dce5);
+  border-radius: 10px;
+  background: var(--surface-subtle, #f5f8fa);
+  display: grid;
+  gap: 7px;
+  overflow-wrap: anywhere;
+}
+.nearby-road-status p { margin: 0; }
+.nearby-road-status small { color: var(--text-muted, #566579); }
+.nearby-road-status button { justify-self: start; max-width: 100%; white-space: normal; }
+.nearby-road-facts {
+  display: grid;
+  gap: 5px;
+  margin: 10px 0;
+  padding: 10px 12px;
+  border-radius: 9px;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.nearby-road-facts.checked { background: #eef7f3; border: 1px solid #c8e1d5; }
+.nearby-road-facts.unchecked { background: #f5f7fa; border: 1px solid #e0e5eb; }
+.nearby-road-facts strong { color: #164b3d; font-size: .95rem; }
+.nearby-road-facts small { color: #566579; }
+.nearby-return-warning { color: #854b0b; font-weight: 600; }

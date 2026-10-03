@@ -330,6 +330,127 @@
     return 2;
   }
 
+  const nearbyRoadDistanceLimit = 2000000;
+  const nearbyRoadDurationLimit = 172800;
+
+  function nonnegativeTravelNumber(value, limit = Number.POSITIVE_INFINITY) {
+    return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= limit ? value : null;
+  }
+
+  function validNearbyRoadComparison(value) {
+    return value && typeof value === "object" && !Array.isArray(value)
+      && nonnegativeTravelNumber(value.distanceMeters, nearbyRoadDistanceLimit) !== null
+      && nonnegativeTravelNumber(value.durationSeconds, nearbyRoadDurationLimit) !== null
+      && nonnegativeTravelNumber(value.addedDistanceMeters, nearbyRoadDistanceLimit * 2) !== null
+      && nonnegativeTravelNumber(value.addedDurationSeconds, nearbyRoadDurationLimit * 2) !== null
+      && typeof value.furtherFromHome === "boolean";
+  }
+
+  // This is the explicit travel ordering used by Nearby. Operational priority
+  // stays visible, but must not silently replace the selected distance order.
+  // Checked road figures and geometric preselection are separate groups.
+  function sortNearbyByTravel(candidates, mode = "nearby") {
+    const home = mode === "home";
+    const compareNumber = (left, right) => {
+      const a = nonnegativeTravelNumber(left);
+      const b = nonnegativeTravelNumber(right);
+      if (a === null) return b === null ? 0 : 1;
+      if (b === null) return -1;
+      return a - b;
+    };
+    return [...(Array.isArray(candidates) ? candidates : [])].sort((left, right) => {
+      const leftRoad = validNearbyRoadComparison(left?.roadComparison);
+      const rightRoad = validNearbyRoadComparison(right?.roadComparison);
+      if (Boolean(leftRoad) !== Boolean(rightRoad)) return leftRoad ? -1 : 1;
+      if (leftRoad && rightRoad) {
+        const keys = home
+          ? ["addedDurationSeconds", "addedDistanceMeters", "distanceMeters"]
+          : ["distanceMeters", "durationSeconds"];
+        for (const key of keys) {
+          const order = compareNumber(left.roadComparison[key], right.roadComparison[key]);
+          if (order) return order;
+        }
+      } else {
+        const key = home ? "homeDetourKm" : "distanceKm";
+        const order = compareNumber(left?.[key], right?.[key]);
+        if (order) return order;
+      }
+      const labelOrder = String(left?.label || "").localeCompare(String(right?.label || ""), "nb");
+      return labelOrder || String(left?.id || "").localeCompare(String(right?.id || ""), "nb");
+    });
+  }
+
+  function strictZonedIsoTime(value) {
+    if (typeof value !== "string") return null;
+    const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/.exec(value);
+    if (!match) return null;
+    const [, year, month, day, hour, minute, second] = match.map((part, index) => index ? Number(part) : part);
+    const calendar = new Date(Date.UTC(year, month - 1, day));
+    if (calendar.getUTCFullYear() !== year || calendar.getUTCMonth() !== month - 1 || calendar.getUTCDate() !== day
+      || hour > 23 || minute > 59 || second > 59) return null;
+    const timestamp = Date.parse(value);
+    return Number.isFinite(timestamp) ? timestamp : null;
+  }
+
+  // Validate the exact preview that was requested before attaching road figures
+  // to candidates. No null coercion, missing entry or mixed home/next-site
+  // context may turn an unchecked candidate into a checked road suggestion.
+  function validateNearbyRoadComparisonResponse(result, payload, now = Date.now()) {
+    if (!result || typeof result !== "object" || Array.isArray(result)
+      || !payload || typeof payload !== "object" || Array.isArray(payload)
+      || typeof now !== "number" || !Number.isFinite(now)
+      || result.ok !== true || result.action !== "assess_nearby_routes"
+      || !["google_routes_matrix", "statens_vegvesen_nvdb"].includes(result.source)
+      || !Object.prototype.hasOwnProperty.call(payload, "nextSite")) return false;
+    const nextSite = payload.nextSite;
+    if (nextSite !== null && (!nextSite || typeof nextSite !== "object" || Array.isArray(nextSite))) return false;
+    if (result.context !== (nextSite === null ? "home" : "between")) return false;
+    const verified = strictZonedIsoTime(result.verifiedAt);
+    const departure = strictZonedIsoTime(result.departureTime);
+    if (verified === null || now - verified > 300000 || verified - now > 30000
+      || departure === null || typeof payload.date !== "string"
+      || !/^\d{4}-\d{2}-\d{2}$/.test(payload.date)
+      || strictZonedIsoTime(`${payload.date}T00:00:00Z`) === null
+      || !Number.isInteger(payload.departureMinute) || payload.departureMinute < 0 || payload.departureMinute >= 1440) return false;
+    const departureFields = Object.fromEntries(new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Europe/Oslo", year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
+    }).formatToParts(new Date(departure)).filter((part) => part.type !== "literal").map((part) => [part.type, part.value]));
+    if (`${departureFields.year}-${departureFields.month}-${departureFields.day}` !== payload.date
+      || Number(departureFields.hour) * 60 + Number(departureFields.minute) + Number(departureFields.second) / 60 < payload.departureMinute) return false;
+    const baselineDistance = nonnegativeTravelNumber(result.baselineDistanceMeters, nearbyRoadDistanceLimit);
+    const baselineDuration = nonnegativeTravelNumber(result.baselineDurationSeconds, nearbyRoadDurationLimit);
+    if (baselineDistance === null || baselineDuration === null
+      || !Array.isArray(result.warnings) || result.warnings.some((warning) => typeof warning !== "string")
+      || !Array.isArray(payload.candidates) || !payload.candidates.length || payload.candidates.length > 10
+      || !Array.isArray(result.results) || result.results.length !== payload.candidates.length) return false;
+    const requested = new Set();
+    for (const candidate of payload.candidates) {
+      const id = candidate?.id;
+      if (typeof id !== "string" || !id.trim() || id !== id.trim() || requested.has(id)) return false;
+      requested.add(id);
+    }
+    const returned = new Set();
+    const sameMetric = (left, right) => Math.abs(left - right) <= 0.000001;
+    for (const row of result.results) {
+      if (!row || typeof row !== "object" || Array.isArray(row)
+        || !requested.has(row.id) || returned.has(row.id)) return false;
+      returned.add(row.id);
+      if (Object.prototype.hasOwnProperty.call(row, "unavailable")) {
+        if (row.unavailable !== true || Object.keys(row).some((key) => key !== "id" && key !== "unavailable")) return false;
+        continue;
+      }
+      if (!validNearbyRoadComparison(row)) return false;
+      const onwardDistance = nonnegativeTravelNumber(row.onwardDistanceMeters, nearbyRoadDistanceLimit);
+      const onwardDuration = nonnegativeTravelNumber(row.onwardDurationSeconds, nearbyRoadDurationLimit);
+      if (onwardDistance === null || onwardDuration === null
+        || !sameMetric(row.addedDistanceMeters, Math.max(0, row.distanceMeters + onwardDistance - baselineDistance))
+        || !sameMetric(row.addedDurationSeconds, Math.max(0, row.durationSeconds + onwardDuration - baselineDuration))
+        || row.furtherFromHome !== (result.context === "home" && onwardDistance > baselineDistance + 1000)) return false;
+    }
+    return returned.size === requested.size;
+  }
+
   return Object.freeze({
     haversineKm,
     distancePrecision,
@@ -346,5 +467,7 @@
     assessDayRouteInsertion,
     candidatePriorityRank,
     sortCandidates,
+    sortNearbyByTravel,
+    validateNearbyRoadComparisonResponse,
   });
 });

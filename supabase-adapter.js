@@ -1415,7 +1415,7 @@
   async function invokeRoutePlanner(payload = {}) {
     const supabase = await requireClient();
     const stops = Array.isArray(payload.stops) ? payload.stops : [];
-    if (!["estimate_offer_travel", "assess_booking_insertion"].includes(payload.action) && (!stops.length || stops.length > 10)) throw new Error("Velg mellom 1 og 10 bekreftede servicekunder.");
+    if (!["estimate_offer_travel", "assess_booking_insertion", "assess_nearby_routes"].includes(payload.action) && (!stops.length || stops.length > 10)) throw new Error("Velg mellom 1 og 10 bekreftede servicekunder.");
     const { data, error } = await withTimeout(
       supabase.functions.invoke("route-planner", { body: payload }),
       "Ruteberegningen brukte for lang tid. Kontroller nettet og prøv igjen.",
@@ -3118,6 +3118,13 @@
       const result = await invokeRoutePlanner({ ...payload, action: "assess_booking_insertion" });
       if (result.action !== "assess_booking_insertion" || !Array.isArray(result.windows) || !Array.isArray(result.warnings)) {
         throw new Error("Rutetjenesten returnerte ikke et gyldig forslag til plass i kjøreruten.");
+      }
+      return result;
+    },
+    async assessNearbyRoutes(payload = {}) {
+      const result = await invokeRoutePlanner({ ...payload, action: "assess_nearby_routes" });
+      if (result.action !== "assess_nearby_routes" || !Array.isArray(result.results) || !Array.isArray(result.warnings)) {
+        throw new Error("Rutetjenesten returnerte ikke gyldig kjørelengde og kjøretid for forslagene.");
       }
       return result;
     },

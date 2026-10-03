@@ -4,7 +4,7 @@
   "private": true,
   "description": "Intern CRM-webapp for Numedal Varmepumpeservice.",
   "scripts": {
-    "test:service-location-routing": "node --test tests/service-road-insertion.test.mjs tests/service-road-insertion-edge.test.mjs tests/service-route-key-access.test.mjs tests/service-microcluster-priority.test.mjs tests/service-microcluster-sort.test.mjs tests/service-outreach-batch.test.mjs",
+    "test:service-location-routing": "node --test tests/nearby-road-ordering.test.mjs tests/nearby-road-ui-context.test.mjs tests/nearby-road-comparison-edge.test.mjs tests/service-road-insertion.test.mjs tests/service-road-insertion-edge.test.mjs tests/service-route-key-access.test.mjs tests/service-microcluster-priority.test.mjs tests/service-microcluster-sort.test.mjs tests/service-outreach-batch.test.mjs",
     "test:photo-navigation": "node --test tests/photo-navigation-regressions.test.mjs",
     "test:offer-recipient-repair": "node --test tests/offer-recipient-repair.test.mjs",
     "test:booking-call-before-arrival": "node --test tests/booking-call-before-arrival.test.mjs",
