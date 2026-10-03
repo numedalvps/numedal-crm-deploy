@@ -16566,6 +16566,28 @@ html:has(.manual-editor[open]) {
 .customer-list, .lead-list, .order-list { align-content: start; }
 #orderDetail > .action-row > .inline-more-actions > div { left: 0; right: auto; }
 #orderDetail > .action-row > .inline-more-actions > div > button { width: 100%; }
+#ordersView.order-focus-open .orders-layout { grid-template-columns: minmax(0, 1fr); }
+#ordersView.order-focus-open .order-list-panel { display: none; }
+#ordersView.order-focus-open .order-detail { width: 100%; max-width: 1080px; margin-inline: auto; }
+.order-context-nav { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-bottom: 14px; }
+.order-context-nav > button { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.customer-job-group + .customer-job-group, .customer-job-history { margin-top: 12px; }
+.customer-job-group h4 { margin: 0 0 8px; color: var(--ink); }
+.customer-job-history > summary { padding: 10px 0; font-weight: 800; cursor: pointer; }
+.customer-jobs-summary .customer-job-row { border-left: 4px solid var(--teal); }
+.customer-jobs-summary .customer-job-row.status-cancelled { border-left-color: #94a3b8; }
+.customer-jobs-summary .customer-job-row.status-completed { border-left-color: var(--green); }
+.customer-job-row > div { min-width: 0; overflow-wrap: anywhere; }
+.customer-job-row .customer-job-state { color: var(--ink); font-weight: 700; }
+.customer-jobs-summary.compact .customer-job-row { padding: 9px; }
+.acceptance-related-jobs { border-color: #e7bd75; background: #fff9ed; }
+.acceptance-related-jobs > button { margin-top: 12px; }
+@media (max-width: 760px) {
+  #ordersView.order-focus-open .orders-layout { min-height: 0; height: auto; }
+  .order-context-nav { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .order-context-nav > button { width: 100%; }
+  .customer-job-row > button { width: 100%; }
+}
 @media (max-width: 600px) {
   #customerDetail .customer-action-bar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
   #customerDetail .customer-action-bar > * { min-width: 0; grid-column: auto; }

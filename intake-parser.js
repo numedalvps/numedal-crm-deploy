@@ -425,30 +425,46 @@
   function inferIntent(text, options = {}) {
     const n = normalize(text);
     const explicitAcceptance = /\b(?:(?:jeg|vi)\s+(?:aksepterer|godtar|godkjenner)|tilbudet\s+(?:er\s+)?(?:akseptert|godkjent)|bekrefter tilbudet|onsker a bestille|sett (?:oss|meg) opp)\b/.test(n)
+      || /\b(?:(?:jeg|vi)\s+(?:vil|onsker a)\s+(?:bestille|ga for)\s+(?:(?:losningen|alternativet)\s+i\s+)?(?:det|dette|deres|ditt)\s+tilbud(?:et)?|(?:jeg|vi)\s+takker ja til\s+(?:det |dette |deres |ditt )?tilbud(?:et)?|(?:aksepterer|godtar|godkjenner)\s+(?:det |dette |deres |ditt )?tilbud(?:et)?|tilbudet\s+aksepteres)\b/.test(n)
+      || (options.offerReferenced && /\b(?:jeg|vi)\s+(?:vil|onsker a)\s+(?:bestille|ga for)\s+(?:det|dette|den|denne)\b/.test(n))
       || /^(?:akseptert|godkjent|ja takk)$/.test(n);
     const directPositiveReply = /\b(?:jo fortere jo bedre|sa fort som mulig|gjerne sa fort som mulig|kjor pa|ja takk|vi tar den|det gar vi for|sett i gang|bestill den)\b/.test(n);
     const positiveConfirmation = /\b(?:det hores fornuftig ut|det hores greit ut|det hores bra ut|det ser greit ut|det ser bra ut|det ser fint ut|det passer bra|dette virker fornuftig|dette virker greit)\b/.test(n);
     const installationTimingRequested = /\b(?:nar|hvilken dag|hvilket tidspunkt)\b.{0,80}\b(?:monter|montere|monteres|montering|installer|installere|installeres|installasjon)\b|\b(?:nar kan dette|nar kan den|nar kan dere)\b.{0,80}\b(?:monteres|installeres|gjores)\b/.test(n);
     const conditionalQuestion = /\b(?:hvis|dersom|om jeg|om vi|eventuelt|kanskje)\b.{0,100}\b(?:bestill\w*|ga for|aksepter\w*|monter\w*|installer\w*)\b/.test(n);
+    const conditionalAcceptance = /\b(?:hvis|dersom|om|eventuelt|kanskje)\b.{0,100}\b(?:aksepter\w*|godtar|godkjenner|takker ja|vil bestille|vil ga for)\b|\b(?:aksepter\w*|godtar|godkjenner|takker ja|vil bestille|vil ga for)\b.{0,120}\b(?:hvis|dersom|forutsatt|forutsetning|forbehold|sa lenge|safremt|pa betingelse|forutsetter)\b/.test(n);
     const deferred = /\b(?:vil vente|onsker a vente|venter med|vente litt|utsett|utsette|utsettes|utsettelse|sette dette pa vent|ikke na|kommer tilbake|ma tenke|vil tenke|avventer)\b/.test(n);
-    const declined = /\b(?:takker nei|ikke aktuelt|onsker ikke|vil ikke bestille|gar ikke videre|dropper dette|godtar ikke|aksepterer ikke|ikke akseptert|ikke godkjent)\b/.test(n);
+    const declined = /\b(?:takker nei|ikke aktuelt|onsker ikke|vil ikke bestille|vil ikke ga for|gar ikke videre|dropper dette|godtar ikke|godkjenner ikke|aksepterer ikke|ikke akseptert|ikke godkjent)\b/.test(n);
     const priceQuestion = /\b(?:hva koster|pris pa|pris for|tillegg|ekstra kostnad|inkludert i prisen|med i prisen|prisforbehold|forbehold om pris)\b/.test(n);
+    const offerChangeRequested = Boolean(options.offerReferenced)
+      && /\b(?:onsker|vil|velger|bytte|endre|i stedet|heller|aksepterer|godtar|godkjenner)\b/.test(n)
+      && (/\b(?:annen|annet|andre|bytt\w*|endre\w*|i stedet|heller)\b/.test(n)
+        || /\b(?:onsker|vil|velger)\b.{0,60}\b(?:rabatt|avslag|flere|faerre|ekstra|to|tre|fire|\d+)\b/.test(n)
+        || /\b(?:men|med|heller)\b.{0,80}\b(?:morke?|sorte?|svarte?|hvite?|annen|annet|ekstra|rabatt|avslag)\b/.test(n))
+      && /\b(?:modell\w*|farge\w*|morke?|sorte?|svarte?|hvite?|innedel\w*|utedel\w*|pump\w*|varmepump\w*|pris\w*|rabatt|avslag|antall|stk|enhet\w*|monteringstillegg|standard montering|brakett\w*|stativ\w*|ror\w*|kabel\w*|tilbehor|[a-z]{1,4}\d{2}[a-z0-9-]*)\b/.test(n);
     const hasQuestionCue = /\b(?:hva|hvilken|hvilke|hvordan|hvor|trenger|ma|kan|er det|blir det|folger|inkludert|anbefaler)\b/.test(n)
       || /^er\b/.test(n);
-    const clarificationTopics = hasQuestionCue ? [
+    const clarificationTopics = hasQuestionCue || offerChangeRequested ? [
       /\b(?:pris(?:en|er)?|koster|kostnad|tillegg|rabatt|totalpris|mellomlegg)\b/.test(n) ? "price" : "",
       /\b(?:modell(?:en|er)?|varmepump(?:e|en|er)?|pump(?:e|en|er)?|kapasitet|effekt|kw|farge(?:n|r)?|sort|svart|hvit|produkt(?:et|er)?|alternativ(?:et|er)?)\b/.test(n) ? "product" : "",
       /\b(?:elektriker(?:en)?|strom|sikring(?:en|er)?|kurs(?:en|er)?|stikk|stikkontakt(?:en|er)?|kabel(?:en|er)?|ampere)\b/.test(n) ? "electrical" : "",
       /\b(?:plassering(?:en|er)?|plasseres|innedel(?:en|er)?|utedel(?:en|er)?|vegg(?:en|er)?|gulvstativ|bakkestativ|veggbrakett(?:en|er)?|takras|snodybde)\b/.test(n) ? "placement" : "",
       /\b(?:standard montering|inkludert|rorgate|kjoring|bom|tilkomst|stillas|arbeid)\b/.test(n) ? "scope" : "",
     ].filter(Boolean) : [];
-    const needsClarification = Boolean(options.offerReferenced) && clarificationTopics.length > 0;
+    if (offerChangeRequested && !clarificationTopics.length) clarificationTopics.push('scope');
+    const needsClarification = Boolean(options.offerReferenced) && (clarificationTopics.length > 0 || offerChangeRequested);
     const referencedOfferAcceptance = Boolean(options.offerReferenced)
       && !conditionalQuestion
       && !needsClarification
       && (directPositiveReply || positiveConfirmation || installationTimingRequested);
-    const accepted = !declined
+    const accepted = !declined && !conditionalAcceptance && !offerChangeRequested
       && (explicitAcceptance || (referencedOfferAcceptance && !(deferred && !explicitAcceptance)));
+    const offerAcceptanceCertain = Boolean(options.offerReferenced) && accepted
+      && (String(text || '').split(/[.!?;,\n]/).some(part => /\b(?:aksepterer|godtar|godkjenner|bekrefter)\s+(?:det |dette |deres |ditt )?tilbud(?:et)?$|\btilbudet\s+(?:er\s+)?(?:akseptert|godkjent|aksepteres)$|\b(?:jeg|vi)\s+takker ja til\s+(?:det |dette |deres |ditt )?tilbud(?:et)?$/.test(normalize(part)))
+        || String(text || '').split(/[.!?;,\n]/).some(part => /\b(?:jeg|vi)\s+(?:vil|onsker a)\s+(?:bestille|ga for)\s+(?:(?:losningen|alternativet)\s+i\s+)?(?:det|dette|den|denne)(?:\s+tilbudet)?$/.test(normalize(part)))
+        || /^(?:akseptert|godkjent|ja takk)$/.test(n))
+    && !/\b(?:avlys\w*|avbestill\w*|kansell\w*)\b/.test(n)
+    && !/\b(?:pris\w*|kr|kroner?|nok|belop\w*|kostnad\w*|rabatt|avslag|mellomlegg|antall|stk|enhet\w*|anlegg\w*|pump\w*|varmepump\w*|modell\w*|farge\w*|morke?|sorte?|svarte?|hvite?|panasonic|mitsubishi|fujitsu|toshiba|wilfa|[a-z]{1,8}\d{2}[a-z0-9-]*|innedel\w*|utedel\w*|kabel\w*|ror\w*|brakett\w*|stativ\w*|tilbehor|elektriker\w*|strom|sikring\w*|stillas|tilkomst)\b/.test(n);
     const acceptanceFields = {
       explicitAcceptance: accepted,
       directAcceptance: explicitAcceptance,
@@ -458,9 +474,11 @@
       installationTimingRequested,
       priceReservation: accepted && priceQuestion,
       needsClarification,
+      offerChangeRequested,
+      offerAcceptanceCertain,
       clarificationTopics,
       customerDecisionState: accepted ? "accepted" : declined ? "declined" : deferred || needsClarification ? "waiting_customer_decision" : "undetermined",
-      intentVersion: "2026-09-01.1",
+      intentVersion: "2026-10-03.1",
     };
     if (/\b(?:ignorer|slett alle|returner telefonnummeret|tidligere instruksjoner|sett status til vunnet)\b/.test(n)) {
       return { category: "general_history", confidence: "low", ...acceptanceFields, explicitAcceptance: false, warning: "Mulig instruksjon i kildetekst. Behandles kun som kundemelding." };
@@ -468,7 +486,7 @@
     if (/\b(?:industristovsuger|stovsuger|leie|utleie|isopro)\b/.test(n)) return { category: "rental", confidence: "high", ...acceptanceFields, explicitAcceptance: false };
     if (/\b(?:blaseisolering|isobygg|isolering|etterisolering|supafil|stubbloft|sagflis|kutterflis|komplett pris inkl rigg|antall m2|tykkelse)\b/.test(n)) return { category: "insulation", confidence: "high", ...acceptanceFields, explicitAcceptance: false };
     if (declined || (deferred && !explicitAcceptance)) return { category: options.offerReferenced ? "quote_question" : "unknown", confidence: declined ? "high" : "medium", ...acceptanceFields };
-    if (options.offerReferenced && needsClarification && !explicitAcceptance) {
+    if (options.offerReferenced && (conditionalAcceptance || offerChangeRequested || (needsClarification && !explicitAcceptance))) {
       return { category: "request_for_quote_clarification", confidence: "high", ...acceptanceFields, explicitAcceptance: false };
     }
     if (accepted) return { category: "quote_accepted", confidence: explicitAcceptance || directPositiveReply || positiveConfirmation ? "high" : "medium", ...acceptanceFields };
