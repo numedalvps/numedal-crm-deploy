@@ -350,3 +350,23 @@ button:disabled, button[data-busy="true"] { cursor: default; }
   .offer-review-body { padding: 12px; font-size: 15px; }
   .offer-review-dialog .modal-actions [data-offer-review-send] { flex: 1 1 100%; }
 }
+/* Replies belong to the open case, beside the customer's latest email. */
+.customer-reply-composer { margin-top:16px; padding:16px; border:1px solid #b4d9d4; border-radius:12px; background:#fff; color:#1f2937; min-width:0; max-width:100%; }
+.lead-next-action .customer-reply-composer strong { color:#1f2937; font-size:16px; }
+.customer-reply-heading { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 12px; margin-bottom:10px; }
+.lead-next-action .customer-reply-heading span { color:#64748b; text-transform:none; font-weight:400; font-size:12px; }
+.customer-reply-composer label { display:grid; gap:5px; margin:10px 0; min-width:0; font-size:13px; font-weight:600; }
+.customer-reply-composer input,.customer-reply-composer textarea { width:100%; min-width:0; max-width:100%; box-sizing:border-box; font:inherit; font-weight:400; color:#1f2937; border:1px solid #cbd5e1; border-radius:8px; background:#fff; padding:10px; }
+.customer-reply-composer textarea { min-height:180px; max-height:360px; resize:vertical; line-height:1.55; overflow-wrap:anywhere; }
+.lead-next-action .customer-reply-composer p { display:block; margin:8px 0; overflow-wrap:anywhere; }
+.customer-reply-recipient { color:#475569; font-size:13px; }
+.customer-reply-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.customer-reply-actions button,.customer-reply-date-options button { min-height:44px; white-space:normal; }
+.customer-reply-status { color:#475569; font-size:13px; min-height:20px; }
+.customer-reply-date-options { margin:8px 0; font-size:13px; }
+.customer-reply-date-options summary { cursor:pointer; color:#0f766e; }
+.customer-reply-date-options>div { display:flex; flex-wrap:wrap; align-items:end; gap:10px; }
+.customer-reply-date-options small,.customer-reply-stored small { display:block; color:#64748b; font-size:12px; }
+.customer-reply-stored { margin:10px 0; padding:10px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; }
+.customer-reply-stored pre { max-height:160px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; font:inherit; font-size:13px; }
+@media(max-width:480px) { .customer-reply-composer { padding:12px; } .customer-reply-actions button { flex:1 1 140px; } }

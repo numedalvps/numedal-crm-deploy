@@ -1861,6 +1861,86 @@
       }
       return data;
     },
+    async ensureInlineCustomerReply(request = {}) {
+      if (!isUuid(request.leadId) || !isUuid(request.sourceActivityId)
+        || (request.sourceIntakeId && !isUuid(request.sourceIntakeId))
+        || (request.proposedDate && !/^\d{4}-\d{2}-\d{2}$/.test(request.proposedDate))
+        || (request.regenerate === true && (!isUuid(request.expectedActionId)
+          || !Number.isSafeInteger(request.expectedRevision) || request.expectedRevision < 1
+          || !/^[a-f0-9]{64}$/.test(request.expectedContentHash || "")))) {
+        throw new Error("Svarforslaget mangler en gyldig sak eller kundemelding.");
+      }
+      const supabase = await requireClient();
+      const {data, error} = await supabase.functions.invoke("crm-assistant", {body:{
+        action:"ensure_case_email_reply", leadId:request.leadId, sourceActivityId:request.sourceActivityId,
+        ...(request.sourceIntakeId ? {sourceIntakeId:request.sourceIntakeId} : {}),
+        ...(request.proposedDate ? {proposedDate:request.proposedDate} : {}),
+        ...(request.regenerate === true ? {regenerate:true, expectedActionId:request.expectedActionId,
+          expectedRevision:request.expectedRevision, expectedContentHash:request.expectedContentHash} : {}),
+      }});
+      if (error) {
+        let message = error.message || "Kunne ikke hente svarforslaget.";
+        let generationNotApplied = false;
+        try {
+          const body = await error.context?.clone?.().json(); if (body?.error) message = body.error;
+          generationNotApplied = request.regenerate === true && [409, 502].includes(error.context?.status)
+            && body?.ok === false && body?.generation_not_applied === true;
+        } catch (_) {}
+        const generationError = new Error(message);
+        if (generationNotApplied) generationError.generationNotApplied = true;
+        throw generationError;
+      }
+      const row = data?.assistantAction, payload = row?.payload_json || {};
+      const handledLegacy = data?.alreadyHandled === true && !["needs_review", "approved"].includes(row?.status);
+      if (data?.ok !== true || !isUuid(row?.id) || row?.action_type !== "email_reply" || row?.channel !== "email"
+        || row.linked_lead_id !== request.leadId || row.source_kind !== "crm_assistant_email_triage"
+        || data.sourceActivityId !== request.sourceActivityId || (!handledLegacy && payload.customerReplySourceActivityId !== request.sourceActivityId)
+        || (request.sourceIntakeId && (data.sourceIntakeId !== request.sourceIntakeId || row.source_intake_id !== request.sourceIntakeId))
+        || (!handledLegacy
+          && (payload.customerReplyContract !== "case_email_reply_v1"
+            || payload.inlineCustomerReplyVersion !== "inline-customer-reply-v1"))) {
+        throw new Error(data?.error || "Serveren bekreftet ikke et svar på den riktige kundemeldingen.");
+      }
+      return data;
+    },
+    async recordCustomerReplyDisplay(id, request = {}) {
+      if (!isUuid(id) || !isUuid(request.clientEventId)) throw new Error("Svarkontrollen mangler en gyldig id.");
+      if (!["needs_review", "approved"].includes(request.expectedStatus)
+        || !Number.isSafeInteger(request.expectedRevision) || request.expectedRevision < 1
+        || !/^[0-9a-f]{64}$/.test(request.expectedContentHash || "")
+        || !request.expectedUpdatedAt || Number.isNaN(Date.parse(request.expectedUpdatedAt))) {
+        throw new Error("Svarkontrollen mangler en gyldig utkastversjon.");
+      }
+      const snapshot = request.expectedSnapshot;
+      const keys = ["action_type", "channel", "approval_required", "recipient", "subject", "body", "payload_json", "evidence_json", "blockers_json", "source_kind", "source_intake_id", "linked_customer_id", "linked_lead_id", "linked_job_id", "linked_order_id"];
+      if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)
+        || Object.keys(snapshot).length !== keys.length || keys.some(key => !Object.hasOwn(snapshot, key))
+        || snapshot.action_type !== "email_reply" || snapshot.channel !== "email") {
+        throw new Error("Svarkontrollen mangler det eksakte lagrede utkastet.");
+      }
+      const supabase = await requireClient();
+      const {data, error} = await withDbTimeout(supabase.rpc("record_customer_reply_display_v1", {
+        p_action_id:id, p_client_event_id:request.clientEventId, p_expected_status:request.expectedStatus,
+        p_expected_updated_at:request.expectedUpdatedAt, p_expected_revision:request.expectedRevision,
+        p_expected_content_hash:request.expectedContentHash, p_expected_source_ref:request.expectedSourceRef ?? null,
+        p_expected_snapshot:snapshot,
+      }), "registrere svarkontroll", 12000);
+      if (error) throw error;
+      const canonical = value => Array.isArray(value) ? value.map(canonical) : value && typeof value === "object"
+        ? Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])])) : value;
+      if (!data || data.action?.id !== id || data.action?.action_type !== "email_reply" || data.action?.channel !== "email"
+        || data.action.status !== request.expectedStatus || data.action.review_revision !== request.expectedRevision
+        || data.action.review_content_hash !== request.expectedContentHash
+        || Date.parse(data.action.updated_at) !== Date.parse(request.expectedUpdatedAt)
+        || (data.action.source_ref ?? null) !== (request.expectedSourceRef ?? null)
+        || keys.some(key => JSON.stringify(canonical(data.action[key] ?? (["payload_json", "evidence_json"].includes(key) ? {} : key === "blockers_json" ? [] : null))) !== JSON.stringify(canonical(snapshot[key])))
+        || !isUuid(data.receipt_id) || !isUuid(data.review_id) || !isUuid(data.actor_profile_id)
+        || data.client_event_id !== request.clientEventId || data.send_authorized !== false
+        || !/^[0-9a-f]{64}$/.test(data.snapshot_hash || "") || !data.displayed_at || Number.isNaN(Date.parse(data.displayed_at))) {
+        throw new Error("Serveren bekreftet ikke den eksakte svarkontrollen.");
+      }
+      return data;
+    },
     async recordOfferReviewDisplay(id, request = {}) {
       if (!isUuid(id) || !isUuid(request.clientEventId)) throw new Error("Tilbudskontrollen mangler en gyldig id.");
       if (!["needs_review", "approved"].includes(request.expectedStatus)
@@ -3724,6 +3804,18 @@
         throw new Error("E-posten krever en ny, eksplisitt bekreftelse før sending.");
       }
       const expectedOfferReview = options.expectedOfferReview;
+      const expectedCustomerReplyReview = options.expectedCustomerReplyReview;
+      if (expectedCustomerReplyReview !== undefined && (expectedOfferReview !== undefined
+        || !expectedCustomerReplyReview || typeof expectedCustomerReplyReview !== "object" || Array.isArray(expectedCustomerReplyReview)
+        || !Number.isSafeInteger(expectedCustomerReplyReview.expected_revision) || expectedCustomerReplyReview.expected_revision < 1
+        || !/^[a-f0-9]{64}$/.test(expectedCustomerReplyReview.expected_content_hash || "")
+        || !expectedCustomerReplyReview.expected_updated_at || Number.isNaN(Date.parse(expectedCustomerReplyReview.expected_updated_at))
+        || !Object.hasOwn(expectedCustomerReplyReview, "expected_source_ref")
+        || expectedCustomerReplyReview.expected_snapshot?.action_type !== "email_reply"
+        || expectedCustomerReplyReview.expected_snapshot?.channel !== "email"
+        || !isUuid(expectedCustomerReplyReview.display_receipt_id))) {
+        throw new Error("Sendingen mangler den eksakte kontrollerte svarversjonen.");
+      }
       if (expectedOfferReview !== undefined && (!expectedOfferReview || typeof expectedOfferReview !== "object"
         || Array.isArray(expectedOfferReview) || !Number.isSafeInteger(expectedOfferReview.expected_revision) || expectedOfferReview.expected_revision < 1
         || !/^[a-f0-9]{64}$/.test(expectedOfferReview.expected_content_hash || "")
@@ -3739,6 +3831,7 @@
           approved_by_user: true,
           dry_run: options.dryRun === true,
           ...(expectedOfferReview !== undefined ? { expected_offer_review: expectedOfferReview } : {}),
+          ...(expectedCustomerReplyReview !== undefined ? { expected_customer_reply_review: expectedCustomerReplyReview } : {}),
         },
       });
       if (error) {
@@ -3751,6 +3844,9 @@
             if (body?.error) message = body.error;
             offerReviewNotStarted = expectedOfferReview !== undefined && response.status === 409
               && body?.reason_code === "offer_review_stale_before_claim" && body?.attempt_started === false
+              && body?.ok === false && body?.sent === false;
+            offerReviewNotStarted ||= expectedCustomerReplyReview !== undefined && response.status === 409
+              && body?.reason_code === "customer_reply_review_stale_before_claim" && body?.attempt_started === false
               && body?.ok === false && body?.sent === false;
           } catch (_jsonError) {
             try {
