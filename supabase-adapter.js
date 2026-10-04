@@ -2735,6 +2735,20 @@
       }
       return { booking: bookingFromDb(booking), job };
     },
+    async startAssignedFlexibleOrder(request, options = {}) {
+      const result = await manualReceiptRpc("start_assigned_flexible_order_v1", request, options, ["order", "job", "booking", "appointment"]);
+      const order = orderFromDb(result.order), booking = bookingFromDb(result.booking);
+      if (result.order.id !== request.order_id || result.job.id !== request.job_id
+        || result.job.source_table !== "orders" || result.job.source_id !== result.order.id
+        || result.booking.customer_id !== result.job.customer_id || result.order.customer_id !== result.job.customer_id
+        || (result.booking.location_id || null) !== (result.job.location_id || null)
+        || (result.booking.installation_id || null) !== (result.job.installation_id || null)
+        || result.appointment.job_id !== result.job.id || result.appointment.source_table !== "bookings"
+        || result.appointment.source_id !== result.booking.id || !result.order.booking_ids?.includes(result.booking.id)) {
+        throw Object.assign(new Error("Jobbstarten returnerte ikke den samme jobben. Kontroller den samme starten på nytt."), { manualOutcomeUncertain: true });
+      }
+      return { ...result, order: { ...order, jobId: result.job.id, job_id: result.job.id }, booking: { ...booking, orderId: result.order.id, jobId: result.job.id } };
+    },
     async completeTechnicianBooking(id, options = {}) {
       const completedAt = /^\d{4}-\d{2}-\d{2}$/.test(options.completedAt || "")
         ? localBookingTimestamp(options.completedAt, "00:00") : options.completedAt;

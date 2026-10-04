@@ -308,6 +308,11 @@ button:disabled, button[data-busy="true"] { cursor: default; }
 .nearby-road-status p { margin: 0; }
 .nearby-road-status small { color: var(--text-muted, #566579); }
 .nearby-road-status button { justify-self: start; max-width: 100%; white-space: normal; }
+.nearby-road-help > summary { min-height: 44px; padding-block: 10px; cursor: pointer; font-weight: 600; }
+.nearby-road-help p { color: var(--text-muted, #566579); margin-top: 6px; }
+@media (max-width: 760px) {
+  .nearby-road-status { padding: 8px; gap: 4px; }
+}
 .nearby-road-facts {
   display: grid;
   gap: 5px;

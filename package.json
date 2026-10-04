@@ -149,7 +149,8 @@
     "test:gmail-reconciliation-sql": "node tools/run-local-sql-tests.mjs tests/gmail-recipient-regex-integration.sql tests/gmail-connector-reconciliation-integration.sql tests/legacy-gmail-reply-reconciliation-integration.sql",
     "test:customer-tags": "node --test tests/customer-tag-picker.test.mjs",
     "test:installation-completion-selection": "node --test tests/installation-completion-selection.test.mjs",
-    "postcheck": "node --test tests/email-history-attachments.test.mjs && npm run test:customer-tags && npm run test:installation-completion-selection && npm run test:lead-original-inquiry && npm run test:job-card-clarity && npm run test:booking-calendar-areas && npm run test:customer-sales-case && npm run test:mobile-feedback && npm run test:offer-travel && npm run test:offer-case-references && npm run test:planning-technician-workflow && npm run test:assistant-quality && npm run test:pump-stock-travel",
+    "postcheck": "node --test tests/email-history-attachments.test.mjs && npm run test:customer-tags && npm run test:installation-completion-selection && npm run test:lead-original-inquiry && npm run test:job-card-clarity && npm run test:booking-calendar-areas && npm run test:customer-sales-case && npm run test:mobile-feedback && npm run test:offer-travel && npm run test:offer-case-references && npm run test:planning-technician-workflow && npm run test:assistant-quality && npm run test:pump-stock-travel && npm run test:offer-job-evidence",
+    "test:offer-job-evidence": "node --test tests/offer-job-evidence.test.mjs",
     "test:lead-original-inquiry": "node --test tests/lead-original-inquiry.test.mjs",
     "test:job-card-clarity": "node --test tests/job-card-clarity.test.mjs",
     "test:booking-calendar-areas": "node --test tests/booking-calendar-areas.test.mjs",
@@ -178,7 +179,10 @@
     "test:booked-job-changes-sql": "node tools/run-local-sql-tests.mjs tests/booked-order-note-projection-integration.sql",
     "test:booked-job-changes-concurrency": "node tests/booked-order-note-concurrency.test.mjs --local",
     "test:booked-job-changes-chrome": "playwright test -c playwright.chrome.config.js tests/e2e/booked-job-changes.spec.js",
-    "test:offer-review-postgres": "node --test tests/offer-review-postgres-serialization.integration.mjs"
+    "test:offer-review-postgres": "node --test tests/offer-review-postgres-serialization.integration.mjs",
+    "test:technician-flexible-start": "node --test tests/technician-flexible-start-adapter.test.mjs",
+    "test:technician-flexible-start-sql": "node tools/run-local-sql-tests.mjs tests/technician-flexible-start-integration.sql",
+    "test:technician-flexible-start-concurrency": "node tests/technician-flexible-start-concurrency.test.mjs --local"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
