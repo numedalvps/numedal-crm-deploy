@@ -92,7 +92,7 @@
     "test:gmail-bridge": "node tests/gmail-crm-bridge.test.js",
     "test:sms-bridge": "node tests/google-messages-bridge.test.js && node --test tests/sms-bridge-feedback.test.mjs",
     "test:supabase-load": "node tests/supabase-load-concurrency.test.mjs",
-    "test:manual-booking-move": "node tests/manual-booking-move.test.mjs && node tests/manual-booking-move-sql.test.mjs",
+    "test:manual-booking-move": "node tests/manual-booking-move.test.mjs && node tests/manual-booking-move-sql.test.mjs && node --test tests/planning-resource-filter.test.mjs",
     "test:manual-booking-cancellation": "node --test tests/manual-booking-cancellation-adapter.test.mjs",
     "test:manual-booking-cancellation-sql": "node tools/run-local-sql-tests.mjs tests/manual-booking-cancellation-integration.sql",
     "test:manual-booking-cancellation-concurrency": "node tests/manual-booking-cancellation-concurrency.test.mjs --local",

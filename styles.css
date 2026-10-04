@@ -16792,7 +16792,8 @@ html:has(.manual-editor[open]) {
   .attachment-upload-item > img, .attachment-upload-file-icon { width: 48px; height: 48px; }
 }
 .planning-backlog { margin: 12px 0; padding: 12px; border: 1px solid var(--line, #d8e0e6); border-radius: 12px; background: #f7faf9; }
-.planning-backlog > summary { cursor: pointer; font-weight: 750; }
+.planning-backlog > summary { cursor: pointer; font-weight: 750; min-height: 44px; align-content: center; }
+#planningBacklogCount { display: inline-block; margin-left: 8px; padding: 2px 9px; border-radius: 999px; background: #e7eff9; color: var(--blue); font-variant-numeric: tabular-nums; }
 .planning-backlog > input { margin: 8px 0; max-width: 520px; width: 100%; }
 .planning-backlog-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; margin: 0; padding: 0; border: 0; min-width: 0; }
 .planning-backlog-filters legend { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
