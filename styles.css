@@ -6331,6 +6331,8 @@ label > .form-hint {
 
 .customer-title h2 {
   margin: 10px 0 4px;
+  min-width: 0;
+  overflow-wrap: anywhere;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -6339,6 +6341,8 @@ label > .form-hint {
 }
 
 .quick-title h3 {
+  min-width: 0;
+  overflow-wrap: anywhere;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -13639,9 +13643,6 @@ label {
 
   .view details > summary {
     min-height: 44px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
   }
 
   .booking-month-head button {
