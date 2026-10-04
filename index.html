@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css?v=1.9.4" />
-    <link rel="stylesheet" href="./styles.css?v=20261004-03" />
+    <link rel="stylesheet" href="./styles.css?v=20261004-04" />
     <link rel="preload" href="./vendor/inter/InterVariable.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="stylesheet" href="./crm-design.css?v=20261004-03" />
+    <link rel="stylesheet" href="./crm-design.css?v=20261004-04" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -1594,7 +1594,7 @@
           </div>
           <label><span id="completionOtherWorkText">Annet arbeid / plunder</span><textarea id="completionOtherWork" rows="2" maxlength="2000" placeholder="Kort beskjed til Gunnar for fakturering"></textarea></label>
           <label class="checkbox-line"><input id="completionCashReceived" type="checkbox" /><span id="completionCashReceivedText">Mottatt kontant fra kunden</span></label>
-          <label id="completionCashAmountLabel" class="hidden"><span id="completionCashAmountText">Kontantbeløp (kr)</span><input id="completionCashAmount" type="number" inputmode="decimal" min="0.01" max="1000000" step="0.01" /></label>
+          <label id="completionCashAmountLabel" class="hidden"><span id="completionCashAmountText">Kontantbeløp (kr)</span><input id="completionCashAmount" type="number" inputmode="decimal" min="0.01" max="1000000" step="0.01" disabled /></label>
           <p id="completionFieldReportHint" class="form-hint">Kontantbeløp og ekstraarbeid følger jobben til fakturering.</p>
           <p id="completionServiceDefault" class="form-hint"></p>
         </section>
@@ -2013,12 +2013,12 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20261004-03"></script>
-    <script src="./supabase-adapter.js?v=20261004-03"></script>
-    <script src="./intake-parser.js?v=20261004-03"></script>
-    <script src="./assistant-coordinator.js?v=20261004-03"></script>
-    <script src="./nearby-planning.js?v=20261004-03"></script>
-    <script src="./customer-reply-composer.js?v=20261004-03"></script>
-    <script src="./app-20261004-03.js"></script>
+    <script src="./supabase-config.js?v=20261004-04"></script>
+    <script src="./supabase-adapter.js?v=20261004-04"></script>
+    <script src="./intake-parser.js?v=20261004-04"></script>
+    <script src="./assistant-coordinator.js?v=20261004-04"></script>
+    <script src="./nearby-planning.js?v=20261004-04"></script>
+    <script src="./customer-reply-composer.js?v=20261004-04"></script>
+    <script src="./app-20261004-04.js"></script>
   </body>
 </html>
