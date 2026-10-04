@@ -11404,7 +11404,15 @@ label > .form-hint {
 }
 
 .planning-practical p:last-child { margin-bottom: 0; }
-.planning-comment { color: #7c3908; }
+.planning-comment {
+  margin: 0 0 7px;
+  color: #7c3908;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.planning-comment:last-child { margin-bottom: 0; }
+.planning-comment-text > summary { gap: 2px; }
+.planning-practical .planning-comment .planning-comment-text > summary em { max-width: 100%; white-space: normal; }
 .timeline-event .timeline-time-area {
   color: #134e4a;
   font-weight: 800;
