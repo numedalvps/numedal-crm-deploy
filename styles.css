@@ -16270,6 +16270,10 @@ html:has(.manual-editor[open]) {
   gap: 10px;
 }
 
+#customersView .customer-list-panel > :not(.customer-list) {
+  flex-shrink: 0;
+}
+
 #customersView .list-panel-toolbar .list-view-switch {
   grid-column: 1 / -1;
   width: 100%;
@@ -16283,6 +16287,14 @@ html:has(.manual-editor[open]) {
 #customerList {
   align-content: start;
   grid-auto-rows: max-content;
+}
+
+#customerList .customer-show-more {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+  text-align: center;
 }
 
 #customerDetail .customer-section-nav {
