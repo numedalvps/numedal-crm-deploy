@@ -9744,6 +9744,21 @@ label > .form-hint {
   user-select: text;
 }
 
+.job-card .job-note-unstructured {
+  white-space: normal;
+}
+
+.job-note-unstructured > summary > span {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
+  overflow: hidden;
+}
+
+.job-note-unstructured[open] > summary > span {
+  display: none;
+}
+
 .job-card .job-fact-warning {
   padding: 6px 8px;
   border-left: 3px solid var(--orange);
@@ -14709,6 +14724,10 @@ label,
   border-bottom: 1px solid var(--line);
   padding: 2px 2px 10px;
   background: #fff;
+}
+
+[data-customer-inline-recovery]:empty {
+  display: none;
 }
 
 .customer-section-nav {
