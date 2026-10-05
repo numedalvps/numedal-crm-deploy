@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css?v=1.9.4" />
-    <link rel="stylesheet" href="./styles.css?v=20261004-06" />
+    <link rel="stylesheet" href="./styles.css?v=20261005-01" />
     <link rel="preload" href="./vendor/inter/InterVariable.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="stylesheet" href="./crm-design.css?v=20261004-06" />
+    <link rel="stylesheet" href="./crm-design.css?v=20261005-01" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -1588,13 +1588,46 @@
             <p id="completionActualHint" class="form-hint">Tilbudets estimat er forhåndsutfylt. Endre til faktisk antall. Rør og kanal: kun meter utover de inkluderte 4 m.</p>
             <div id="completionActualControls" class="completion-actual-controls"></div>
           </section>
+          <div id="completionServiceTravel"></div>
           <div id="completionServiceExtras">
             <label class="checkbox-line"><input id="completionExtraCleaning" type="checkbox" /><span id="completionExtraCleaningText">Ekstra rens · 500 kr</span></label>
             <label class="checkbox-line"><input id="completionHousingRemoved" type="checkbox" /><span id="completionHousingRemovedText">Demontering av varmepumpehus</span></label>
           </div>
+          <details id="completionInvoiceNoteDetails" class="completion-actual-more"><summary id="completionInvoiceNoteTitle">Merknad til fakturering</summary>
           <label><span id="completionOtherWorkText">Annet arbeid / plunder</span><textarea id="completionOtherWork" rows="2" maxlength="2000" placeholder="Kort beskjed til Gunnar for fakturering"></textarea></label>
+          </details>
           <label class="checkbox-line"><input id="completionCashReceived" type="checkbox" /><span id="completionCashReceivedText">Mottatt kontant fra kunden</span></label>
           <label id="completionCashAmountLabel" class="hidden"><span id="completionCashAmountText">Kontantbeløp (kr)</span><input id="completionCashAmount" type="number" inputmode="decimal" min="0.01" max="1000000" step="0.01" disabled /></label>
+          <div id="completionPriceTotal" class="completion-price-total"></div>
+        <details id="completionPriceDetails" class="completion-price-details">
+          <summary>Endre avtalte priser / andre varer</summary>
+          <p class="form-hint">Timene og mengdene over styrer fakturagrunnlaget. Her kan du endre avtalte priser eller legge til andre varer.</p>
+          <div class="completion-price-controls">
+            <label>Søk eller skriv vare
+              <input id="completionPriceSearch" type="search" placeholder="Søk Panasonic HZ25, tak, varmepumpehus eller skriv egen vare" />
+            </label>
+            <label>Velg fra liste
+              <select id="completionPricePreset"></select>
+            </label>
+            <label>Antall
+              <input id="completionPriceQuantity" type="number" min="0" step="0.5" value="1" />
+            </label>
+            <label>Pris per enhet inkl. mva
+              <input id="completionPriceUnitPrice" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Skriv pris" />
+            </label>
+            <fieldset id="completionPriceDiscountField" class="price-discount-editor">
+              <legend>Rabatt</legend>
+              <div class="price-discount-mode" role="radiogroup" aria-label="Velg rabatt i prosent eller kroner">
+                <label><input name="completionPriceDiscountMode" type="radio" value="percent" checked /><span>%</span></label>
+                <label><input name="completionPriceDiscountMode" type="radio" value="amount" /><span>kr</span></label>
+              </div>
+              <input id="completionPriceDiscount" type="number" min="0" max="100" step="0.1" inputmode="decimal" value="0" aria-label="Rabattverdi" />
+              <small id="completionPriceDiscountHint">Prosent av varelinjen</small>
+            </fieldset>
+            <button id="completionAddPriceLine" class="secondary" type="button" title="Legg valgt tillegg eller egen vare inn i prisgrunnlaget for jobben.">Legg til prislinje</button>
+          </div>
+          <textarea id="completionPriceLines" rows="4" placeholder="Tillegg eller prisgrunnlag som bør kontrolleres før faktura."></textarea>
+        </details>
           <p id="completionFieldReportHint" class="form-hint">Kontantbeløp og ekstraarbeid følger jobben til fakturering.</p>
           <p id="completionServiceDefault" class="form-hint"></p>
         </section>
@@ -1622,7 +1655,7 @@
           </div>
         </details>
         <details id="completionBillingDetails" class="workflow-details completion-billing-details">
-          <summary><strong>Fakturering og tillegg</strong><span id="completionBillingSummary"></span></summary>
+          <summary><strong>Faktureringsstatus</strong><span id="completionBillingSummary"></span></summary>
           <div class="workflow-details-body">
         <label id="completionPaymentDoneLabel" class="checkbox-line completion-payment">
           <input id="completionPaymentDone" type="checkbox" />
@@ -1647,36 +1680,7 @@
           </label>
           <p id="completionNoInvoiceHint" class="form-hint hidden">Jobben ferdigstilles uten å havne i fakturakøen. Valget og årsaken logges.</p>
         </fieldset>
-        <details id="completionPriceDetails" class="completion-price-details">
-          <summary>Prisgrunnlag / tillegg</summary>
-          <div class="completion-price-controls">
-            <label>Søk eller skriv vare
-              <input id="completionPriceSearch" type="search" placeholder="Søk Panasonic HZ25, tak, varmepumpehus eller skriv egen vare" />
-            </label>
-            <label>Velg fra liste
-              <select id="completionPricePreset"></select>
-            </label>
-            <label>Antall
-              <input id="completionPriceQuantity" type="number" min="0" step="0.5" value="1" />
-            </label>
-            <label>Pris per enhet inkl. mva
-              <input id="completionPriceUnitPrice" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Skriv pris" />
-            </label>
-            <fieldset id="completionPriceDiscountField" class="price-discount-editor">
-              <legend>Rabatt</legend>
-              <div class="price-discount-mode" role="radiogroup" aria-label="Velg rabatt i prosent eller kroner">
-                <label><input name="completionPriceDiscountMode" type="radio" value="percent" checked /><span>%</span></label>
-                <label><input name="completionPriceDiscountMode" type="radio" value="amount" /><span>kr</span></label>
-              </div>
-              <input id="completionPriceDiscount" type="number" min="0" max="100" step="0.1" inputmode="decimal" value="0" aria-label="Rabattverdi" />
-              <small id="completionPriceDiscountHint">Prosent av varelinjen</small>
-            </fieldset>
-            <button id="completionAddPriceLine" class="secondary" type="button" title="Legg valgt tillegg eller egen vare inn i prisgrunnlaget for jobben.">Legg til prislinje</button>
-          </div>
-          <div id="completionServiceTravel"></div>
-          <textarea id="completionPriceLines" rows="4" placeholder="Tillegg eller prisgrunnlag som bør kontrolleres før faktura."></textarea>
-          <div id="completionPriceTotal" class="completion-price-total"></div>
-        </details>
+
           </div>
         </details>
         <div class="modal-actions">
@@ -2013,13 +2017,13 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20261004-06"></script>
-    <script src="./supabase-adapter.js?v=20261004-06"></script>
-    <script src="./intake-parser.js?v=20261004-06"></script>
-    <script src="./assistant-coordinator.js?v=20261004-06"></script>
-    <script src="./nearby-planning.js?v=20261004-06"></script>
-    <script src="./customer-reply-composer.js?v=20261004-06"></script>
-    <script src="./contextual-assistant.js?v=20261004-06"></script>
-    <script src="./app-20261004-06.js"></script>
+    <script src="./supabase-config.js?v=20261005-01"></script>
+    <script src="./supabase-adapter.js?v=20261005-01"></script>
+    <script src="./intake-parser.js?v=20261005-01"></script>
+    <script src="./assistant-coordinator.js?v=20261005-01"></script>
+    <script src="./nearby-planning.js?v=20261005-01"></script>
+    <script src="./customer-reply-composer.js?v=20261005-01"></script>
+    <script src="./contextual-assistant.js?v=20261005-01"></script>
+    <script src="./app-20261005-01.js"></script>
   </body>
 </html>

@@ -16842,3 +16842,9 @@ html:has(.manual-editor[open]) {
   .planning-backlog-job .section-actions > * { min-width: 0; min-height: 44px; white-space: normal; text-align: center; }
   .technician-period-list > article { align-items: flex-start; }
 }
+
+/* Completion work and travel share one compact invoice basis. */
+#completionFieldReport #completionPriceTotal { margin: 0; padding: 10px; background: #eef6f3; border-radius: 8px; overflow-wrap: anywhere; }
+#completionFieldReport #completionPriceDetails { margin: 0; }
+#completionFieldReport #completionPriceDetails > summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; }
+#completionServiceTravel:empty { display: none; }
