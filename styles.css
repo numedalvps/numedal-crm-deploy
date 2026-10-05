@@ -15837,6 +15837,8 @@ label,
 .nearby-jobs-map {
   flex: 1;
   min-height: 500px;
+  /* Leaflet pans with transforms; native scrolling moves popup hit targets. */
+  overflow: clip;
   background: #dce5e6;
 }
 
