@@ -187,7 +187,7 @@
     "test:technician-flexible-start": "node --test tests/technician-flexible-start-adapter.test.mjs",
     "test:technician-flexible-start-sql": "node tools/run-local-sql-tests.mjs tests/technician-flexible-start-integration.sql",
     "test:technician-flexible-start-concurrency": "node tests/technician-flexible-start-concurrency.test.mjs --local",
-    "test:customer-list": "node --test tests/customer-list-pagination.test.mjs tests/customer-location-search.test.mjs",
+    "test:customer-list": "node --test tests/customer-list-pagination.test.mjs tests/customer-location-search.test.mjs tests/customer-directory-lookup.test.mjs",
     "test:price-basis-catalog-lookup": "node --test tests/price-basis-catalog-lookup.test.mjs"
   },
   "devDependencies": {
