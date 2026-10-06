@@ -16703,6 +16703,7 @@ html:has(.manual-editor[open]) {
 .customer-list, .lead-list, .order-list { align-content: start; }
 #orderDetail > .action-row > .inline-more-actions > div { left: 0; right: auto; }
 #orderDetail > .action-row > .inline-more-actions > div > button { width: 100%; }
+#customerQuickContent .quick-customer-background .inline-more-actions > div { left: 0; right: auto; }
 #ordersView.order-focus-open .orders-layout { grid-template-columns: minmax(0, 1fr); }
 #ordersView.order-focus-open .order-list-panel { display: none; }
 #ordersView.order-focus-open .order-detail { width: 100%; max-width: 1080px; margin-inline: auto; }
