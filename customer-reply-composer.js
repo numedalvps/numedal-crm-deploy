@@ -45,6 +45,12 @@
       if (!sameSession(state)) return;
       const changed = state.action && snapshot(state.action) !== snapshot(row);
       state.action = row;
+      if (!state.dateEdited) {
+        const payload = row.payload_json || {};
+        const date = Object.prototype.hasOwnProperty.call(payload, "customerReplyProposedDate")
+          ? payload.customerReplyProposedDate : payload.proposedDate;
+        state.date = String(date || "");
+      }
       if (changed) state.display = null;
       bridge.accept(row);
     }
@@ -96,7 +102,7 @@
         ${state.action?.status === "needs_review" ? `<details class="customer-reply-date-options"><summary>Trenger du et nytt forslag?</summary><small>Assistenten bruker den ferske kundemeldingen og tilbudet. Teksten din beholdes som kopi.</small><button type="button" class="secondary" data-lead-reply-regenerate>Lag nytt svarforslag</button></details>` : ""}`;
       node.oninput = event => {
         if (event.target.matches("[data-lead-reply-body],[data-lead-reply-subject]")) {capture(state); state.message = ""; controls(state);}
-        if (event.target.matches("[data-lead-reply-date]")) state.date = event.target.value;
+        if (event.target.matches("[data-lead-reply-date]")) {state.date = event.target.value; state.dateEdited = true;}
       };
       node.onclick = event => {
         if (event.target.closest("[data-lead-reply-send]")) void send(state);
@@ -150,7 +156,6 @@
       }
       state.handled = result.alreadyHandled === true;
       accept(state, result.assistantAction);
-      state.date ||= state.action.payload_json?.customerReplyProposedDate || state.action.payload_json?.proposedDate || "";
       paint(state);
       await display(state);
     }
