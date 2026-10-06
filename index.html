@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css?v=1.9.4" />
-    <link rel="stylesheet" href="./styles.css?v=20261006-08" />
+    <link rel="stylesheet" href="./styles.css?v=20261006-09" />
     <link rel="preload" href="./vendor/inter/InterVariable.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="stylesheet" href="./crm-design.css?v=20261006-08" />
+    <link rel="stylesheet" href="./crm-design.css?v=20261006-09" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -1613,7 +1613,7 @@
               <select id="completionPricePreset"></select>
             </label>
             <label>Antall
-              <input id="completionPriceQuantity" type="number" min="0" step="0.5" value="1" />
+              <input id="completionPriceQuantity" type="number" min="0" step="0.01" value="1" />
             </label>
             <label>Pris per enhet inkl. mva
               <input id="completionPriceUnitPrice" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Skriv pris" />
@@ -1795,7 +1795,7 @@
             <select id="billingPricePreset"></select>
           </label>
           <label>Antall
-            <input id="billingPriceQuantity" type="number" min="0" step="0.5" value="1" />
+            <input id="billingPriceQuantity" type="number" min="0" step="0.01" value="1" />
           </label>
           <label>Pris per enhet inkl. mva
             <input id="billingPriceUnitPrice" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Skriv pris" />
@@ -2021,13 +2021,13 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20261006-08"></script>
-    <script src="./supabase-adapter.js?v=20261006-08"></script>
-    <script src="./intake-parser.js?v=20261006-08"></script>
-    <script src="./assistant-coordinator.js?v=20261006-08"></script>
-    <script src="./nearby-planning.js?v=20261006-08"></script>
-    <script src="./customer-reply-composer.js?v=20261006-08"></script>
-    <script src="./contextual-assistant.js?v=20261006-08"></script>
-    <script src="./app-20261006-08.js"></script>
+    <script src="./supabase-config.js?v=20261006-09"></script>
+    <script src="./supabase-adapter.js?v=20261006-09"></script>
+    <script src="./intake-parser.js?v=20261006-09"></script>
+    <script src="./assistant-coordinator.js?v=20261006-09"></script>
+    <script src="./nearby-planning.js?v=20261006-09"></script>
+    <script src="./customer-reply-composer.js?v=20261006-09"></script>
+    <script src="./contextual-assistant.js?v=20261006-09"></script>
+    <script src="./app-20261006-09.js"></script>
   </body>
 </html>
