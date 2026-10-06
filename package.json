@@ -34,7 +34,7 @@
     "test:nearby-planning": "node tests/nearby-planning.test.js",
     "test:service-day-route-quality": "node --test tests/service-day-route-quality.test.mjs",
     "test:job-priority-service-intake": "node tests/job-priority-service-intake.test.mjs",
-    "test:automatic-invoice-action": "node tests/automatic-invoice-action.test.mjs",
+    "test:automatic-invoice-action": "node tests/automatic-invoice-action.test.mjs && node --test tests/installation-title-invoice-basis.test.mjs tests/billing-canonical-preparation.test.mjs",
     "test:job-invoice-disposition": "node tests/job-invoice-disposition.test.mjs",
     "test:customer-information-enrichment": "node tests/customer-information-enrichment.test.mjs",
     "test:customer-message-contact-location": "node tests/customer-message-contact-location.test.mjs",
