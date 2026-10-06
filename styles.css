@@ -16738,6 +16738,7 @@ html:has(.manual-editor[open]) {
 .completion-field-report textarea { width: 100%; }
 .completion-actual-controls { display: grid; gap: 10px; }
 .completion-actual-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.completion-actual-grid > label:only-child { grid-column: 1 / -1; }
 .completion-actual-more > summary { min-height: 44px; padding: 10px; font-weight: 650; color: var(--primary, #17645b); cursor: pointer; overflow-wrap: anywhere; }
 .completion-actual-more[open] > summary { margin-bottom: 8px; }
 .completion-actual-controls label { min-width: 0; display: grid; gap: 4px; padding: 10px; background: #f6f9f9; border-radius: 8px; }
