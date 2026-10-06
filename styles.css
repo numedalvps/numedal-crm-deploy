@@ -7635,6 +7635,14 @@ label > .form-hint {
   color: inherit;
 }
 
+.timeline-note.email-preview > summary > span {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: normal;
+}
+
 .expandable-text > summary em {
   width: fit-content;
   border: 1px solid var(--line);
