@@ -11396,8 +11396,16 @@ label > .form-hint {
 }
 
 .job-customer-title .quick-job-name {
+  margin: 0 0 6px;
   color: var(--ink);
+  font-size: 13px;
   font-weight: 700;
+  line-height: 1.4;
+}
+
+.job-customer-title .quick-job-name > div {
+  max-height: min(45dvh, 320px);
+  overflow: auto;
 }
 
 .quick-job-contact-actions {
