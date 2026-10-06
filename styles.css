@@ -1285,6 +1285,9 @@ small {
   padding: 12px;
 }
 
+.dashboard-queue-focus-actions { padding: 12px 12px 0; }
+.dashboard-queue-details .dashboard-grid > .panel[hidden] { display: none; }
+
 .start-worklist {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -4614,6 +4617,37 @@ label > .form-hint {
   align-items: stretch;
 }
 
+.dashboard-queue-pagination {
+  display: grid;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  scroll-margin-top: 90px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.dashboard-queue-page-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.compact-list .dashboard-queue-pagination button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 8px 12px;
+  text-align: center;
+}
+
+.dashboard-queue-pagination:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
 .compact-list .billing-queue-main {
   width: 100%;
   grid-template-columns: 12px minmax(0, 1fr);
@@ -6560,6 +6594,11 @@ label > .form-hint {
 .browser-invoice-observations dd { margin: 2px 0 0; font-size: 12px; }
 .browser-invoice-observations details { min-width: 0; font-size: 12px; }
 .browser-invoice-observations summary { cursor: pointer; }
+.compact-list .browser-invoice-observations [data-refresh-browser-invoice] {
+  display: block;
+  min-height: 42px;
+  text-align: center;
+}
 .billing-queue-card > .browser-invoice-observations { grid-column: 1 / -1; }
 
 .customer-pulse-grid article > span {
