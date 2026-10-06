@@ -192,7 +192,7 @@
     "test:technician-flexible-start-sql": "node tools/run-local-sql-tests.mjs tests/technician-flexible-start-integration.sql",
     "test:technician-flexible-start-concurrency": "node tests/technician-flexible-start-concurrency.test.mjs --local",
     "test:customer-list": "node --test tests/customer-list-pagination.test.mjs tests/customer-location-search.test.mjs tests/customer-directory-lookup.test.mjs",
-    "test:price-basis-catalog-lookup": "node --test tests/price-basis-catalog-lookup.test.mjs tests/completion-price-search-preservation.test.mjs",
+    "test:price-basis-catalog-lookup": "node --test tests/price-basis-catalog-lookup.test.mjs tests/completion-price-search-preservation.test.mjs tests/billing-price-search-preservation.test.mjs",
     "test:customer-quick-edits": "node --test tests/customer-quick-edit-reliability.test.mjs",
     "test:offer-quantity": "node --test tests/offer-quantity-validation.test.mjs"
   },

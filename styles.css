@@ -3212,6 +3212,11 @@ label > .form-hint {
   overflow: auto;
 }
 
+/* Capped scroll areas must not shrink cards below their visible text and badges. */
+.lead-list {
+  grid-auto-rows: max-content;
+}
+
 .order-bulk-actions {
   display: grid;
   grid-template-columns: auto auto 1fr;
