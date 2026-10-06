@@ -91,6 +91,15 @@
     }
     if (job && order && !(jobOrder === refs.order || orderJob === refs.job)) return false;
     if ((jobOrder && refs.order && jobOrder !== refs.order) || (orderJob && refs.job && orderJob !== refs.job)) return false;
+    if (refs.lead) {
+      // Owning the same customer does not make another case part of this job.
+      // Include the canonical counterpart when an action supplies only one work ID.
+      for (const work of [job, order, jobOrder && indexes.order.get(jobOrder), orderJob && indexes.job.get(orderJob)]) {
+        if (!work) continue;
+        const workLead = oneId(ID_FIELDS.lead.map((key) => work[key]));
+        if (workLead === null || (workLead && workLead !== refs.lead)) return false;
+      }
+    }
     return true;
   }
 
