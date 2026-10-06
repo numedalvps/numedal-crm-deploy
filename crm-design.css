@@ -280,7 +280,7 @@ button:disabled, button[data-busy="true"] { cursor: default; }
 .lead-case-product { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-size: 14px; font-weight: 600; line-height: 1.45; overflow-wrap: anywhere; }
 .lead-case-identity, .lead-case-date { display: block; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; color: #586879; }
 .lead-list .lead-card-next { font-weight: 500; font-size: 13px; }
-.lead-list .lead-card-preview { -webkit-line-clamp: 2; font-size: 13px; color: #586879; }
+.lead-list .lead-card-preview { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-size: 13px; color: #586879; }
 .customer-order-list .lead-card-focus { display: inline-block; font-size: 12px; line-height: 1.5; color: var(--teal); }
 @media (max-width: 760px) {
   .lead-followup-controls { grid-template-columns: minmax(0, 1fr); gap: 4px; }
