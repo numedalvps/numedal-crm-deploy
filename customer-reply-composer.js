@@ -155,7 +155,7 @@
       if (!active(state) || state.busy || unknown(state) || state.action?.status !== "needs_review") return;
       capture(state);
       const before = state.action;
-      state.retained = {...(state.draft || {subject:before.subject || "", body:before.body || ""})};
+      state.retained = {...(state.draft || state.retained || {subject:before.subject || "", body:before.body || ""})};
       state.busy = true; state.message = "Lager et nytt svarforslag …"; controls(state);
       try {
         const result = await bridge.ensure({...state.context, regenerate:true, expectedActionId:before.id,
