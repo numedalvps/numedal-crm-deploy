@@ -6397,6 +6397,24 @@ label > .form-hint {
   margin: 0 0 12px;
 }
 
+#orderDetail .order-heading-preview {
+  min-width: 0;
+  flex: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.order-title-detail {
+  margin: 0 0 12px;
+}
+
+.order-title-detail > div {
+  max-height: min(45dvh, 320px);
+  overflow: auto;
+}
+
 .title-pills {
   display: flex;
   flex-wrap: wrap;

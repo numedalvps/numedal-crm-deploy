@@ -50,7 +50,9 @@
     }
     function capture(state) {
       const node = host(state);
-      if (!node || !state.action || !editable(state)) return;
+      // A previously rendered host can become visible before mount transfers
+      // this case's current draft into it. Its old fields must not replace it.
+      if (!node || node !== state.renderedHost || !state.action || !editable(state)) return;
       const subject = node.querySelector("[data-lead-reply-subject]");
       const body = node.querySelector("[data-lead-reply-body]");
       if (!subject || !body) return;
@@ -81,6 +83,7 @@
     function paint(state) {
       const node = host(state); if (!node) return;
       const value = state.draft || state.action || {};
+      state.renderedHost = node;
       node.innerHTML = `<div class="customer-reply-heading"><strong>Svar kunden</strong><span>Assistentens forslag · du kan redigere</span></div>
         ${state.action ? `<p class="customer-reply-recipient">Til: ${escape(state.action.recipient)}</p>
         <label>Emne<input data-lead-reply-subject value="${escape(value.subject)}" /></label>
