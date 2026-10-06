@@ -11351,6 +11351,28 @@ label > .form-hint {
   color: var(--muted);
 }
 
+.job-customer-title h3 {
+  margin: 0 0 4px;
+  font-size: 21px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.job-customer-title p {
+  margin: 0 0 6px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.job-customer-title .quick-job-name {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.quick-job-contact-actions {
+  margin-bottom: 12px;
+}
+
 .quick-job-focus {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
