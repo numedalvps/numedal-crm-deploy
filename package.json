@@ -7,7 +7,7 @@
     "test:supabase-refresh-session": "node --test tests/supabase-refresh-session.test.mjs",
     "test:offer-history-body-evidence": "node --test tests/offer-history-body-evidence.test.mjs",
     "test:offer-preview-freshness": "node --test tests/offer-preview-freshness.test.mjs",
-    "test:contextual-assistant": "node --check contextual-assistant.js && node --test tests/contextual-assistant.test.mjs tests/assistant-job-context.test.mjs tests/contextual-reply-bridge.test.mjs",
+    "test:contextual-assistant": "node --check contextual-assistant.js && node --test tests/contextual-assistant.test.mjs tests/assistant-job-context.test.mjs tests/contextual-reply-bridge.test.mjs tests/contact-log-save-session.test.mjs",
     "test:inline-customer-reply": "node --check customer-reply-composer.js && node --test tests/customer-reply-composer.test.mjs tests/customer-reply-adapter.test.mjs tests/case-email-reply-generation.test.mjs tests/case-email-reply-handler.test.mjs tests/customer-reply-review-claim-guard.test.mjs",
     "test:customer-job-flow": "node --test tests/customer-job-navigation.test.mjs tests/sent-offer-acceptance.test.mjs",
     "test:sent-offer-acceptance-sql": "node tools/run-local-sql-tests.mjs tests/sent-offer-acceptance-integration.sql",
