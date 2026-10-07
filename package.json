@@ -9,7 +9,7 @@
     "test:offer-preview-freshness": "node --test tests/offer-preview-freshness.test.mjs",
     "test:contextual-assistant": "node --check contextual-assistant.js && node --test tests/contextual-assistant.test.mjs tests/assistant-job-context.test.mjs tests/contextual-reply-bridge.test.mjs tests/contact-log-save-session.test.mjs",
     "test:inline-customer-reply": "node --check customer-reply-composer.js && node --test tests/customer-reply-composer.test.mjs tests/customer-reply-adapter.test.mjs tests/case-email-reply-generation.test.mjs tests/case-email-reply-handler.test.mjs tests/customer-reply-review-claim-guard.test.mjs",
-    "test:customer-job-flow": "node --test tests/customer-job-navigation.test.mjs tests/sent-offer-acceptance.test.mjs",
+    "test:customer-job-flow": "node --test tests/customer-job-navigation.test.mjs tests/sent-offer-acceptance.test.mjs tests/customer-history-pagination.test.mjs",
     "test:sent-offer-acceptance-sql": "node tools/run-local-sql-tests.mjs tests/sent-offer-acceptance-integration.sql",
     "test:offer-single-review-contract": "node --test tests/offer-review-display-adapter.test.mjs tests/offer-review-claim-guard.test.mjs",
     "test:service-location-routing": "node --test tests/nearby-road-ordering.test.mjs tests/nearby-road-ui-context.test.mjs tests/nearby-road-comparison-edge.test.mjs tests/service-road-insertion.test.mjs tests/service-road-insertion-edge.test.mjs tests/service-route-key-access.test.mjs tests/service-microcluster-priority.test.mjs tests/service-microcluster-sort.test.mjs tests/service-outreach-batch.test.mjs",

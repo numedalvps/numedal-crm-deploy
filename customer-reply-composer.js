@@ -54,6 +54,23 @@
       if (changed) state.display = null;
       bridge.accept(row);
     }
+    function captureDateInsertion(state, body) {
+      const inserted = state.dateInsertion;
+      if (!inserted || inserted.body === body) return;
+      const old = inserted.body;
+      let prefix = 0, suffix = 0;
+      while (prefix < Math.min(old.length, body.length) && old[prefix] === body[prefix]) prefix += 1;
+      while (suffix < Math.min(old.length, body.length) - prefix && old[old.length - suffix - 1] === body[body.length - suffix - 1]) suffix += 1;
+      const changedEnd = old.length - suffix;
+      const end = inserted.start + inserted.text.length;
+      const ambiguous = changedEnd !== prefix && changedEnd <= inserted.start
+        && (old.split(inserted.text).length > 2 || body.split(inserted.text).length > 2);
+      const start = ambiguous ? -1 : changedEnd <= inserted.start ? inserted.start + body.length - old.length : prefix >= end ? inserted.start : -1;
+      // Editing/moving the sentence makes it human text. Never guess which
+      // identical phrase elsewhere in the draft belongs to the date control.
+      state.dateInsertion = start >= 0 && body.slice(start, start + inserted.text.length) === inserted.text
+        ? {...inserted, body, start} : null;
+    }
     function capture(state) {
       const node = host(state);
       // A previously rendered host can become visible before mount transfers
@@ -62,6 +79,7 @@
       const subject = node.querySelector("[data-lead-reply-subject]");
       const body = node.querySelector("[data-lead-reply-body]");
       if (!subject || !body) return;
+      captureDateInsertion(state, body.value);
       const focused = document.activeElement;
       if (focused === subject || focused === body) state.focus = {field:focused === body ? "body" : "subject", start:focused.selectionStart, end:focused.selectionEnd};
       if (subject.value === String(state.action.subject || "") && body.value === String(state.action.body || "")) state.draft = null;
@@ -110,7 +128,8 @@
         if (event.target.closest("[data-lead-reply-generate]")) addDate(state);
         if (event.target.closest("[data-lead-reply-regenerate]")) void regenerate(state);
         if (event.target.closest("[data-lead-reply-restore]") && !state.busy && !unknown(state) && editable(state)) {
-          state.draft = {...state.retained}; state.retained = null; state.message = "Teksten din er gjenopprettet. Kontroller pris og dato før sending."; paint(state);
+          state.draft = {subject:state.retained.subject, body:state.retained.body}; state.dateInsertion = state.retained.dateInsertion || null;
+          state.retained = null; state.message = "Teksten din er gjenopprettet. Kontroller pris og dato før sending."; paint(state);
         }
       };
       controls(state);
@@ -127,7 +146,23 @@
       if (!date || Number.isNaN(date.getTime()) || !/^\d{4}-\d{2}-\d{2}$/.test(state.date)) {state.message = "Velg datoen du vil foreslå."; controls(state); return;}
       const label = date.toLocaleDateString("nb-NO", {weekday:"long", day:"numeric", month:"long"});
       const value = state.draft || state.action;
-      state.draft = {subject:String(value.subject || ""), body:`${String(value.body || "").trim()}\n\nPasser ${label}? Vi avtaler tidspunktet nærmere.`};
+      const body = String(value.body || "");
+      const sentence = `Passer ${label}? Vi avtaler tidspunktet nærmere.`;
+      let start = state.dateInsertion?.start;
+      let next;
+      if (state.dateInsertion && body.slice(start, start + state.dateInsertion.text.length) === state.dateInsertion.text) {
+        next = body.slice(0, start) + sentence + body.slice(start + state.dateInsertion.text.length);
+      } else {
+        const newline = body.includes("\r\n") ? "\r\n" : "\n";
+        const signature = [...body.matchAll(/(?:^|\r?\n)(?:Mvh|Med vennlig hilsen)(?:\s|$)/gi)].at(-1);
+        const index = signature ? signature.index + (signature[0].startsWith("\r\n") ? 2 : signature[0].startsWith("\n") ? 1 : 0) : body.length;
+        const before = body.slice(0, index);
+        const separator = !before || before.endsWith(newline + newline) ? "" : before.endsWith(newline) ? newline : newline + newline;
+        start = before.length + separator.length;
+        next = before + separator + sentence + (signature ? newline + newline : "") + body.slice(index);
+      }
+      state.draft = {subject:String(value.subject || ""), body:next};
+      state.dateInsertion = {body:next, start, text:sentence};
       state.message = "Datoforslaget er lagt til. Kontroller teksten før sending.";
       paint(state);
     }
@@ -163,7 +198,8 @@
       if (!active(state) || state.busy || unknown(state) || state.action?.status !== "needs_review") return;
       capture(state);
       const before = state.action;
-      state.retained = {...(state.draft || state.retained || {subject:before.subject || "", body:before.body || ""})};
+      state.retained = {...(state.draft || state.retained || {subject:before.subject || "", body:before.body || ""}),
+        dateInsertion:state.draft ? state.dateInsertion : state.retained?.dateInsertion || state.dateInsertion};
       state.busy = true; state.message = "Lager et nytt svarforslag …"; controls(state);
       try {
         const result = await bridge.ensure({...state.context, regenerate:true, expectedActionId:before.id,
@@ -174,7 +210,7 @@
           || result.assistantAction?.id !== before.id || result.assistantAction?.status !== "needs_review") {
           throw new Error("Serveren bekreftet ikke det nye forslaget på samme kundemelding.");
         }
-        accept(state, result.assistantAction); state.draft = null; state.display = null; state.showStored = false;
+        accept(state, result.assistantAction); state.draft = null; state.dateInsertion = null; state.display = null; state.showStored = false;
         paint(state); await display(state);
         state.message = "Nytt forslag er klart. Kontroller teksten; den er ikke sendt.";
       } catch (error) {if (sameSession(state)) {
