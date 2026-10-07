@@ -2028,6 +2028,49 @@
       if (invoiceResult.error) throw invoiceResult.error;
       if (serviceResult.error) throw serviceResult.error;
       if (activityResult.error) throw activityResult.error;
+      const activities = [...(activityResult.data || [])];
+      const missingSmsIds = activities.filter((row) =>
+        row.customer_id === customerId && isUuid(row.id)
+        && ["contact_sms", "sms_sent"].includes(row.activity_type)
+        && !String(row.body || "").trim()
+        && (row.metadata?.assistantActionId || row.metadata?.observation_id)
+      ).map((row) => row.id);
+      if (missingSmsIds.length) {
+        try {
+          const { data: contents, error } = await withDbTimeout(supabase.rpc(
+            "load_customer_sms_history_content_v1",
+            { p_customer_id: customerId, p_activity_ids: missingSmsIds },
+          ), "hente original SMS-tekst", 30000);
+          if (error) throw error;
+          const requested = new Set(missingSmsIds), byId = new Map();
+          for (const content of contents || []) {
+            if (!requested.has(content.activity_id) || byId.has(content.activity_id)
+              || typeof content.body !== "string" || !content.body.trim()
+              || !["execution_snapshot", "canonical_approval_snapshot"].includes(content.content_source)
+              || content.direction !== "outgoing") {
+              throw new Error("SMS-teksten kunne ikke knyttes sikkert til riktig historikkhendelse. Prøv å laste historikken på nytt.");
+            }
+            byId.set(content.activity_id, content);
+          }
+          // Display-only enrichment: canonical evidence rows and their hashes
+          // remain unchanged, and editable action drafts are never substituted.
+          for (let index = 0; index < activities.length; index += 1) {
+            const row = activities[index], content = byId.get(row.id);
+            if (content) activities[index] = {
+              ...row, body: content.body,
+              metadata: { ...row.metadata, sms_content_source: content.content_source, direction: content.direction },
+            };
+          }
+        } catch {
+          const requested = new Set(missingSmsIds);
+          for (let index = 0; index < activities.length; index += 1) {
+            const row = activities[index];
+            if (requested.has(row.id)) activities[index] = {
+              ...row, body: null, metadata: { ...row.metadata, sms_content_load_failed: true },
+            };
+          }
+        }
+      }
       return {
         invoices: (invoiceResult.data || []).map((row) => ({
           ...row,
@@ -2035,7 +2078,7 @@
           date: row.invoice_date,
         })),
         serviceEvents: serviceResult.data || [],
-        activities: activityResult.data || [],
+        activities,
       };
     },
     async loadJobComments(jobIds) {
