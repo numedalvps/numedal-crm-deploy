@@ -2058,6 +2058,7 @@
             const row = activities[index], content = byId.get(row.id);
             if (content) activities[index] = {
               ...row, body: content.body,
+              sms_content_read_snapshot: JSON.stringify(row),
               metadata: { ...row.metadata, sms_content_source: content.content_source, direction: content.direction },
             };
           }
@@ -2066,7 +2067,8 @@
           for (let index = 0; index < activities.length; index += 1) {
             const row = activities[index];
             if (requested.has(row.id)) activities[index] = {
-              ...row, body: null, metadata: { ...row.metadata, sms_content_load_failed: true },
+              ...row, body: null, sms_content_read_snapshot: JSON.stringify(row),
+              metadata: { ...row.metadata, sms_content_load_failed: true },
             };
           }
         }
