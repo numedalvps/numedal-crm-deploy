@@ -1897,6 +1897,52 @@
     };
   }
 
+  function invoiceCompletionCoverageBlockers(reports = [], invoiceLines = []) {
+    reports = Array.isArray(reports) ? reports : [];
+    const labels = {
+      extra_pipe: "ekstra rør og kabel", extra_channel: "ekstra PVC-kanal", pvc_flex: "flexkanal",
+      connection_extra_meter: "ekstra nettkabel", technician_hour: "ekstra arbeid (timer)",
+      wood_wall_bracket: "dempet veggbrakett med fjærer", ground_stand: "bakkestativ",
+      heatpump_house_installation: "montering varmepumpehus (timer)", timber_core_drilling: "kjerneboring tømmer",
+      old_pump_removal: "demontering og gasstømming", extra_heat_cable_75w: "ekstra varmekabel 75 W med termostat",
+    };
+    const requirements = [], blockers = [];
+    for (const report of Array.isArray(reports) ? reports : []) {
+      if (!report || typeof report !== "object" || Array.isArray(report)) continue;
+      if (report.extra_cleaning === true) requirements.push({ id: "extra_cleaning", description: "Ekstra rens", label: "ekstra rens", quantity: 1 });
+      if (report.housing_removed === true) requirements.push({ id: "housing_removed", description: "Demontering av varmepumpehus", label: "demontering av varmepumpehus", quantity: 1 });
+      if (report.actual_quantities != null && !Array.isArray(report.actual_quantities)) {
+        blockers.push("Rapportert materiell og ekstraarbeid mangler gyldige antall. Kontroller fullføringsrapporten.");
+        continue;
+      }
+      for (const actual of report.actual_quantities || []) {
+        const label = Object.hasOwn(labels, actual?.id) ? labels[actual.id] : "";
+        if (!label || typeof actual.quantity !== "number" || !Number.isFinite(actual.quantity) || actual.quantity < 0) {
+          blockers.push("Rapportert materiell og ekstraarbeid mangler gyldig varekobling eller antall. Kontroller fullføringsrapporten.");
+        } else if (actual.quantity > 0) requirements.push({ id: actual.id, label, quantity: actual.quantity });
+      }
+    }
+    // Receipts are alternatives, not amounts to add together. A human must resolve
+    // conflicting reports before any quantity can attest the current invoice basis.
+    if (reports.length > 1 && requirements.length) return ["Flere fullføringsrapporter finnes for samme jobb. Avklar hvilken som gjelder før fakturagrunnlaget klargjøres.", ...blockers];
+    for (const required of requirements) {
+      const matches = (Array.isArray(invoiceLines) ? invoiceLines : []).filter(line => {
+        if (!line || typeof line !== "object") return false;
+        if (line.sourceProductId !== required.id && !(required.description && String(line.description || "").trim() === required.description)) return false;
+        const quantity = line.quantity, price = line.unitPriceInclVat, total = line.lineTotalInclVat, discount = line.discountPercent ?? 0;
+        return Boolean(String(line.articleNumber || "").trim()) && typeof quantity === "number" && quantity > 0
+          && Number.isFinite(quantity) && typeof price === "number" && price >= 0 && Number.isFinite(price)
+          && typeof total === "number" && total >= 0 && Number.isFinite(total)
+          && typeof discount === "number" && discount >= 0 && discount <= 100 && Number.isFinite(discount)
+          && Math.abs(Math.round(quantity * price * (1 - discount / 100) * 100) / 100 - total) <= 0.02;
+      });
+      if (!matches.length) blockers.push(`Rapportert ${required.label} mangler en egen, gyldig varelinje. Kontroller tillegget i fakturagrunnlaget.`);
+      else if (matches.length > 1) blockers.push(`Flere varelinjer gjelder rapportert ${required.label}. Kontroller antallet; tillegget skal ikke faktureres to ganger.`);
+      else if (Math.abs(matches[0].quantity - required.quantity) > 0.000001) blockers.push(`Rapportert ${required.label}: ${required.quantity}. Varelinjen har ${matches[0].quantity}. Endre til faktisk antall i fakturagrunnlaget.`);
+    }
+    return [...new Set(blockers)];
+  }
+
   function buildInvoiceDraft(context = {}) {
     const customer = context.customer || {};
     const booking = context.booking || {};
@@ -1920,6 +1966,7 @@
     if (!invoiceLines.length) blockers.push("Mangler strukturerte varelinjer");
     if (!Number.isFinite(expectedTotalInclVat) || expectedTotalInclVat <= 0) blockers.push("Summen må kontrolleres");
     blockers.push(...invoiceLineBlockers);
+    blockers.push(...invoiceCompletionCoverageBlockers(context.completionReports, invoiceLines));
     return {
       version: "2026-08-21-1",
       actionType: "invoice_draft",
@@ -1967,6 +2014,7 @@
     historicalSmsActionSafety,
     buildIntakeSuggestion,
     buildInvoiceDraft,
+    invoiceCompletionCoverageBlockers,
     contactValues,
     coordinatesFromText,
     intentValues,

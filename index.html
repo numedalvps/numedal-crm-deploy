@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css?v=1.9.4" />
-    <link rel="stylesheet" href="./styles.css?v=20261007-27" />
+    <link rel="stylesheet" href="./styles.css?v=20261007-28" />
     <link rel="preload" href="./vendor/inter/InterVariable.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="stylesheet" href="./crm-design.css?v=20261007-27" />
+    <link rel="stylesheet" href="./crm-design.css?v=20261007-28" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -349,7 +349,7 @@
                   <p>Arbeid som er avtalt eller solgt, uavhengig av om det er planlagt i kalenderen ennå.</p>
                 </div>
               </div>
-              <div class="order-metrics" role="tablist" aria-label="Jobbfilter">
+              <div class="order-metrics" role="group" aria-label="Jobbfilter">
                 <button data-order-filter-shortcut="active" type="button" title="Jobber som fortsatt skal planlegges, utføres eller faktureres."><strong id="orderActiveMetric">0</strong><span>Aktive</span></button>
                 <button data-order-filter-shortcut="unscheduled" type="button"><strong id="orderUnscheduledMetric">0</strong><span>Ikke planlagt</span></button>
                 <button data-order-filter-shortcut="scheduled" type="button"><strong id="orderScheduledMetric">0</strong><span>Planlagt</span></button>
@@ -358,7 +358,7 @@
                 <button data-order-filter-shortcut="all" type="button"><strong id="orderAllMetric">0</strong><span>Alle</span></button>
               </div>
               <div class="search-row">
-                <input id="orderSearch" type="search" placeholder="Søk jobb, kunde, telefon, sted" />
+                <input id="orderSearch" type="search" aria-label="Søk jobb, kunde, telefon eller sted" placeholder="Søk jobb, kunde, telefon, sted" />
                 <details class="order-filter-details">
                   <summary title="Vis sjeldnere jobbfiltre.">Flere filtre</summary>
                   <select id="orderStatusFilter" aria-label="Flere jobbfiltre">
@@ -2021,13 +2021,13 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20261007-27"></script>
-    <script src="./supabase-adapter.js?v=20261007-27"></script>
-    <script src="./intake-parser.js?v=20261007-27"></script>
-    <script src="./assistant-coordinator.js?v=20261007-27"></script>
-    <script src="./nearby-planning.js?v=20261007-27"></script>
-    <script src="./customer-reply-composer.js?v=20261007-27"></script>
-    <script src="./contextual-assistant.js?v=20261007-27"></script>
-    <script src="./app-20261007-27.js"></script>
+    <script src="./supabase-config.js?v=20261007-28"></script>
+    <script src="./supabase-adapter.js?v=20261007-28"></script>
+    <script src="./intake-parser.js?v=20261007-28"></script>
+    <script src="./assistant-coordinator.js?v=20261007-28"></script>
+    <script src="./nearby-planning.js?v=20261007-28"></script>
+    <script src="./customer-reply-composer.js?v=20261007-28"></script>
+    <script src="./contextual-assistant.js?v=20261007-28"></script>
+    <script src="./app-20261007-28.js"></script>
   </body>
 </html>

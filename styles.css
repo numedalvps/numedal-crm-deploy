@@ -13622,11 +13622,53 @@ label {
   }
 
   #ordersView .order-metrics {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin: 8px 0;
   }
 
   #ordersView .order-metrics button {
-    min-height: 64px;
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: 2px;
+    min-width: 0;
+    min-height: 56px;
+    padding: 5px;
+  }
+
+  #ordersView .order-metrics strong {
+    font-size: 16px;
+    line-height: 1.1;
+  }
+
+  #ordersView .order-metrics span {
+    font-size: 12px;
+    line-height: 1.2;
+  }
+
+  #ordersView .order-list-panel > .search-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px;
+    align-items: start;
+  }
+
+  #ordersView #orderSearch,
+  #ordersView .order-filter-details > summary {
+    min-height: 44px;
+  }
+
+  #ordersView .order-filter-details > summary {
+    font-size: 12px;
+    padding-inline: 8px;
+  }
+
+  #ordersView .order-filter-details {
+    min-width: 0;
+  }
+
+  #ordersView .order-list-panel > .search-row:has(.order-filter-details[open]) {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   #leadsView .lead-list-panel > #websiteSubmissionInbox {
