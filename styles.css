@@ -3249,6 +3249,17 @@ label > .form-hint {
   align-items: stretch;
 }
 
+.order-list-summary {
+  margin: 4px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.order-list .order-show-more {
+  text-align: center;
+  width: 100%;
+}
+
 .order-list-row.active button {
   border-color: var(--teal);
   background: #e7f4f2;
