@@ -1897,7 +1897,41 @@
     };
   }
 
-  function invoiceCompletionCoverageBlockers(reports = [], invoiceLines = []) {
+  function quotedCompletionCoverageItem(id, context = {}) {
+    const catalog = Array.isArray(context.productCatalogItems) ? context.productCatalogItems.filter(item => item && typeof item === "object") : [];
+    const exact = value => String(value || "").trim().toLowerCase().replace(/[‐‑‒–—−]/g, "-").replace(/[ \t\u00a0\u202f]+/g, " ");
+    const candidates = catalog.filter(item => String(item.id || "").trim() === id);
+    if (candidates.length !== 1) return null;
+    const item = candidates[0], articleNo = String(item.articleNo || "").trim();
+    const labels = value => [value.label, value.offerNote ? `${value.label} (${value.offerNote})` : ""].map(exact).filter(Boolean);
+    const units = { time: "tim", timer: "tim", sett: "stk", g: "gr" };
+    const unit = units[item.unit] || item.unit;
+    if (item.kind !== "addition" || ["service_heatpump", "standard_installation", "driving_km", "no_show"].includes(id)
+      || !/^[a-z0-9][a-z0-9_-]{0,79}$/.test(id) || typeof item.articleNo !== "string" || !/^\d{3,6}$/.test(item.articleNo)
+      || typeof item.label !== "string" || !item.label.trim() || item.label.length > 160
+      || typeof item.unit !== "string" || !["stk", "m", "time", "tim", "timer", "g", "gr", "sett"].includes(item.unit)) return null;
+    const legacyAlias = /^(ekstra rør( og.*)?|ekstra rørstrekk|ekstra (pvc[- ]?)?kanal(er)?|pvc[- ]kanal(er)?|bakkestativ|flexkanal( 600 mm)?|kjerneboring i tømmer( - pris avtales)?)$/;
+    if (labels(item).some(label => legacyAlias.test(label))) return null;
+    if (catalog.some(other => other !== item && (String(other.articleNo || "").trim() === articleNo
+      || labels(other).some(label => labels(item).includes(label))))) return null;
+    return { ...item, articleNo, coverageUnit: unit, coverageLabels: labels(item) };
+  }
+
+  function quotedCompletionCoverageRows(item, basis) {
+    const exact = value => String(value || "").trim().toLowerCase().replace(/[‐‑‒–—−]/g, "-").replace(/[ \t\u00a0\u202f]+/g, " ");
+    const rows = String(basis || "").split(/\r?\n/).filter(Boolean).map(text => {
+      const raw = text.replace(/^\s*-\s*/, "").trim();
+      const number = raw.match(/^(\d{3,6})\s+/)?.[1] || "";
+      const label = exact(raw.replace(/^\d{3,6}\s+/, "").split(":")[0]);
+      const quantity = raw.match(/:\s*((?:\d{1,3}(?:[ \u00a0\u202f]\d{3})+|\d+)(?:[,.]\d{1,2})?)\s+(\S+)\s+(?:x|à|a)\s/i);
+      const aliases = { time: "tim", timer: "tim", sett: "stk", g: "gr" };
+      return { number, label, quantity: quantity ? Number(quantity[1].replace(/[ \u00a0\u202f]/g, "").replace(",", ".")) : NaN,
+        unit: aliases[quantity?.[2]] || quantity?.[2] };
+    });
+    return rows.filter(row => row.number === item.articleNo || item.coverageLabels.includes(row.label));
+  }
+
+  function invoiceCompletionCoverageBlockers(reports = [], invoiceLines = [], context = {}) {
     reports = Array.isArray(reports) ? reports : [];
     const labels = {
       extra_pipe: "ekstra rør og kabel", extra_channel: "ekstra PVC-kanal", pvc_flex: "flexkanal",
@@ -1917,8 +1951,35 @@
       }
       for (const actual of report.actual_quantities || []) {
         const label = Object.hasOwn(labels, actual?.id) ? labels[actual.id] : "";
-        if (!label || typeof actual.quantity !== "number" || !Number.isFinite(actual.quantity) || actual.quantity < 0) {
+        const quotedItem = !label && typeof actual?.id === "string" ? quotedCompletionCoverageItem(actual.id, context) : null;
+        if ((!label && !quotedItem) || typeof actual.quantity !== "number" || !Number.isFinite(actual.quantity) || actual.quantity < 0
+          || (quotedItem && (actual.quantity > 1000 || Math.abs(actual.quantity * 100 - Math.round(actual.quantity * 100)) > 0.000001
+            || Object.keys(actual).some(key => !["id", "quantity"].includes(key))
+            || report.actual_quantities.filter(candidate => candidate?.id === actual.id).length !== 1))) {
           blockers.push("Rapportert materiell og ekstraarbeid mangler gyldig varekobling eller antall. Kontroller fullføringsrapporten.");
+        } else if (quotedItem) {
+          const candidates = (Array.isArray(invoiceLines) ? invoiceLines : []).filter(line => line
+            && (line.sourceProductId === actual.id || String(line.articleNumber || "").trim() === quotedItem.articleNo));
+          if (actual.quantity === 0) {
+            // Zero removes the source row. Use a canonical server receipt, or
+            // the captured canonical basis during successful admin completion.
+            // This price-coverage check grants no completion authority.
+            const verified = Array.isArray(context.verifiedReports) && context.verifiedReports.some(candidate => candidate === report
+              || JSON.stringify(candidate) === JSON.stringify(report));
+            const original = quotedCompletionCoverageRows(quotedItem, context.originalBasis);
+            const quoted = original.length === 1 && (!original[0].number || original[0].number === quotedItem.articleNo)
+              && quotedItem.coverageLabels.includes(original[0].label) && original[0].unit === quotedItem.coverageUnit
+              && original[0].quantity > 0 && original[0].quantity <= 1000;
+            if ((!verified && !quoted) || candidates.length) blockers.push(`Rapportert ${quotedItem.label} er fjernet. Kontroller serverkvitteringen og at varen ikke er med i fakturagrunnlaget.`);
+          } else {
+            const rows = quotedCompletionCoverageRows(quotedItem, context.canonicalBasis);
+            if (rows.length !== 1 || (rows[0].number && rows[0].number !== quotedItem.articleNo)
+              || !quotedItem.coverageLabels.includes(rows[0].label) || rows[0].unit !== quotedItem.coverageUnit
+              || rows[0].quantity !== actual.quantity || candidates.length !== 1
+              || candidates[0].sourceProductId !== actual.id || String(candidates[0].articleNumber || "").trim() !== quotedItem.articleNo) {
+              blockers.push(`Rapportert ${quotedItem.label} mangler en entydig varelinje med faktisk antall. Kontroller fakturagrunnlaget.`);
+            } else requirements.push({ id: actual.id, label: quotedItem.label, quantity: actual.quantity });
+          }
         } else if (actual.quantity > 0) requirements.push({ id: actual.id, label, quantity: actual.quantity });
       }
     }
@@ -1966,7 +2027,7 @@
     if (!invoiceLines.length) blockers.push("Mangler strukturerte varelinjer");
     if (!Number.isFinite(expectedTotalInclVat) || expectedTotalInclVat <= 0) blockers.push("Summen må kontrolleres");
     blockers.push(...invoiceLineBlockers);
-    blockers.push(...invoiceCompletionCoverageBlockers(context.completionReports, invoiceLines));
+    blockers.push(...invoiceCompletionCoverageBlockers(context.completionReports, invoiceLines, context.completionCoverageContext));
     return {
       version: "2026-08-21-1",
       actionType: "invoice_draft",
