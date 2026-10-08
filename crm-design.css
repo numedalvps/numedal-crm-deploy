@@ -208,6 +208,36 @@ button:disabled, button[data-busy="true"] { cursor: default; }
 .quick-job-sections { display: flex; flex-wrap: wrap; gap: 6px; margin-block: 14px; }
 .quick-job-sections button { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
 .quick-job-sections button[aria-pressed="true"] { background: var(--teal); color: #fff; border-color: var(--teal); }
+
+/* One reported quantity per material; keep the agreed job and raw price text optional. */
+#completionDialog .completion-summary > em { font-style: normal; font-weight: 650; }
+#completionDialog .completion-work-context > summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; color: var(--teal); font-weight: 650; }
+#completionDialog .completion-work-context p { overflow-wrap: anywhere; }
+#completionDialog .completion-actual-grid { grid-template-columns: minmax(0, 1fr); }
+#completionDialog .completion-actual-grid > label {
+  grid-template-columns: minmax(0, 1fr) 84px;
+  grid-template-areas: "name caption" "estimate quantity" "price quantity";
+  column-gap: 10px;
+  align-items: start;
+}
+#completionDialog .completion-material-name { grid-area: name; font-weight: 650; }
+#completionDialog .completion-actual-grid > label > small { grid-area: estimate; }
+#completionDialog .completion-actual-caption { grid-area: caption; font-size: 12px; color: var(--muted); }
+#completionDialog .completion-actual-grid input { grid-area: quantity; text-align: right; }
+#completionDialog .completion-material-price { grid-area: price; width: fit-content; min-height: 36px; padding: 5px 8px; font-size: 12px; }
+#completionDialog .completion-price-review { min-width: 0; border-block: 1px solid var(--border); padding-block: 8px; }
+#completionDialog .completion-price-review > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-height: 44px; cursor: pointer; }
+#completionDialog .completion-price-review > summary > span { color: var(--muted); font-size: 13px; }
+#completionDialog .completion-reviewed-line { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; padding-block: 10px; border-top: 1px solid var(--border); overflow-wrap: anywhere; }
+#completionDialog .completion-reviewed-line small { display: block; color: var(--muted); margin-top: 4px; }
+#completionDialog .completion-reviewed-line > span { font-weight: 650; }
+#completionDialog .completion-price-problem { color: #9a4c08; }
+#completionDialog .completion-raw-price-details { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border); }
+#completionDialog .completion-raw-price-details > summary { min-height: 44px; display: flex; align-items: center; font-size: 14px; cursor: pointer; }
+@media (max-width: 600px) {
+  #completionDialog .technician-completion-form { gap: 8px; }
+  #completionDialog .technician-completion-form .completion-summary { padding: 10px; }
+}
 [data-quick-job-panel][hidden] { display: none !important; }
 .quick-job-picture-summary { width: 100%; text-align: left; white-space: normal; }
 .crm-assistant-button { background: #fff; color: var(--blue-dark); border-color: #bed0ec; }
