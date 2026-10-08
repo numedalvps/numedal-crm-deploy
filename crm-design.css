@@ -150,6 +150,29 @@ button:disabled, button[data-busy="true"] { cursor: default; }
 #customerDetail .customer-action-bar > .customer-offer-primary, #customerDetail .customer-action-bar > .book-primary { background: var(--blue); color: #fff; border-color: var(--blue); }
 .customer-action-bar .customer-edit-primary { background: #fff; color: var(--ink); border-color: var(--line); }
 .customer-action-bar .map-primary-action, .map-primary-action { background: var(--blue-soft) !important; color: var(--blue) !important; border-color: #8ca9ca !important; }
+
+/* Compact customer commands leave room for the selected tab's actual work. */
+#customerDetail .customer-action-bar { align-items: stretch; gap: 6px; }
+#customerDetail .customer-action-bar > .inline-more-actions:not([open]) { grid-column: auto; }
+#customerDetail .customer-action-bar > .inline-more-actions[open] { grid-column: 1 / -1; }
+#customerDetail .customer-action-bar > a,
+#customerDetail .customer-action-bar > button,
+#customerDetail .customer-action-bar > details > summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  min-height: 44px;
+  font-size: 13px;
+  line-height: 1.35;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+.customer-workspace-toggle { background: #fff; color: var(--ink); border: 1px solid var(--line-strong); font-size: 13px; }
+.customer-workspace-toggle[aria-pressed="true"] { background: var(--blue-soft); color: var(--blue-dark); border-color: var(--blue); }
+@media (max-width: 600px) {
+  #customerDetail .customer-action-bar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
 .crm-detail-table th { background: var(--soft); color: var(--muted); font-size: 13px; font-weight: 600; text-transform: none; }
 .crm-detail-table td { font-size: 14px; color: var(--ink); }
 .crm-detail-table tbody tr:hover td { background: #f5f8fc; }
