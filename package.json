@@ -130,7 +130,7 @@
     "test:service-acceptance-booking": "node --test tests/service-acceptance-booking-ui.test.mjs",
     "test:service-booking-sql": "node tools/run-local-sql-tests.mjs tests/service-reply-date-price-integration.sql tests/service-booking-linkage-integration.sql tests/service-booking-route-linkage-integration.sql tests/service-booking-legacy-link-reconciliation-integration.sql",
     "test:service-booking-concurrency": "node tests/service-booking-concurrency.test.mjs --local && node tests/service-booking-lock-order.test.mjs --local",
-    "test:manual-entity-acceptance": "node --test tests/manual-entity-acceptance-ui.test.mjs",
+    "test:manual-entity-acceptance": "node --test tests/manual-entity-acceptance-ui.test.mjs tests/accepted-job-type.test.mjs",
     "test:manual-entity-concurrency": "node tests/manual-entity-concurrency.test.mjs --local",
     "test:manual-entity-sql": "node tools/run-local-sql-tests.mjs tests/manual-customer-location-editing-integration.sql tests/manual-acceptance-priority-integration.sql tests/manual-acceptance-location-integration.sql",
     "test:prior-decline-sql": "node tools/run-local-sql-tests.mjs tests/verified-prior-decline-integration.sql",
