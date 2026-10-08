@@ -17024,6 +17024,10 @@ html:has(dialog:modal) {
 .attachment-upload-item small { color: var(--muted); }
 .attachment-upload-item p { margin: 4px 0 0; color: #b91c1c; overflow-wrap: anywhere; }
 .attachment-upload-item.saved { background: #f0fdf4; }
+.installation-attachments:has(.installation-photo-group) { align-content: start; grid-auto-rows: min-content; }
+.installation-photo-group, .installation-photo-upload-options { min-width: 0; align-self: start; }
+.installation-photo-group > summary, .installation-photo-upload-options > summary { min-height: 44px; padding: 10px 0; box-sizing: border-box; overflow-wrap: anywhere; cursor: pointer; }
+.installation-photo-upload-options .section-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .attachment-upload-file-icon { display: grid; place-items: center; height: 64px; background: #f1f5f9; border-radius: 5px; font-weight: 700; }
 .attachment-upload-item button, #crmAttachmentUploadChoose { min-height: 44px; }
 #crmAttachmentUploadChoose { width: 100%; }

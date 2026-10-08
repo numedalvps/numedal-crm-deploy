@@ -779,15 +779,15 @@
     if (error) throw error;
     if (!data) return null;
     const fields = ["customer_id", "job_id", "installation_id", "lead_id", "intake_id", "website_submission_id",
-      "source_kind", "storage_bucket", "storage_path", "original_filename", "mime_type", "size_bytes", "title", "note", "source_order"];
+      "source_kind", "photo_role", "storage_bucket", "storage_path", "original_filename", "mime_type", "size_bytes", "title", "note", "source_order"];
     // A preparation PDF is identified by its exact job and source-state digest.
     // Canvas rendering differs between phones; replay the first confirmed PDF
     // for the same semantic state rather than duplicating it or overwriting it.
     const logicalPdfReplay = expected.source_kind === "installation_plan_pdf"
       && /^installation_instruction_v1:[a-f0-9]{64}:[a-f0-9,-]+$/.test(expected.note || "")
       && fields.filter(key => !["storage_path", "size_bytes"].includes(key))
-        .every(key => (data[key] ?? null) === (expected[key] ?? null));
-    if (data.deleted_at || (!logicalPdfReplay && fields.some((key) => (data[key] ?? null) !== (expected[key] ?? null)))) {
+        .every(key => (key === "photo_role" ? data[key] || "other" : data[key] ?? null) === (key === "photo_role" ? expected[key] || "other" : expected[key] ?? null));
+    if (data.deleted_at || (!logicalPdfReplay && fields.some((key) => (key === "photo_role" ? data[key] || "other" : data[key] ?? null) !== (key === "photo_role" ? expected[key] || "other" : expected[key] ?? null)))) {
       const conflict = new Error("Vedleggets lagringsnøkkel tilhører et annet innhold eller en annen jobb.");
       conflict.code = "40001";
       throw conflict;
@@ -1563,6 +1563,32 @@
   }
 
   window.NumedalStore = {
+    async readInstallationSerials(installationId, attachmentIds, options = {}) {
+      if (!isUuid(installationId) || !Array.isArray(attachmentIds) || attachmentIds.length < 1 || attachmentIds.length > 4
+        || attachmentIds.some(id => !isUuid(id)) || new Set(attachmentIds).size !== attachmentIds.length || !isUuid(options.clientEventId)) throw new Error("Velg lagrede serienummerbilder på riktig anlegg.");
+      const supabase = await requireClient();
+      const { data, error } = await withTimeout(supabase.functions.invoke("read-installation-serial", {
+        body: { installation_id: installationId, attachment_ids: attachmentIds, client_event_id: options.clientEventId },
+      }), "Serienummerlesingen mangler svar. Bildet er lagret; prøv å lese det igjen.", 60000);
+      if (error) throw new Error(await crmAssistantErrorMessage(error, "Klarte ikke lese serienummerbildet."));
+      if (data?.installation_id !== installationId || !Array.isArray(data.results) || data.results.length !== attachmentIds.length || new Set(data.results.map(row => row.attachment_id)).size !== attachmentIds.length
+        || data.results.some(row => !attachmentIds.includes(row.attachment_id) || !["ready", "unreadable", "needs_review", "already_read", "failed", "processing"].includes(row.status)
+          || !["indoor", "outdoor", "unknown"].includes(row.side) || (row.suggestion_id != null && !isUuid(row.suggestion_id)))) {
+        throw new Error("Serienummerlesingen ga ikke et gyldig resultat for disse bildene.");
+      }
+      return data;
+    },
+    async applyInstallationSerialSuggestion(suggestionId, options = {}) {
+      if (!isUuid(suggestionId) || !isUuid(options.clientEventId)) throw new Error("Serienummerforslaget mangler lagringsnøkkel.");
+      const supabase = await requireClient();
+      const { data, error } = await withDbTimeout(supabase.rpc("apply_installation_serial_suggestion_v1", {
+        p_suggestion_id: suggestionId, p_event_id: options.clientEventId,
+      }), "lagre lest serienummer");
+      if (error) throw error;
+      if (data?.suggestion_id !== suggestionId || !["applied", "already_applied", "conflict", "needs_review"].includes(data.status)
+        || !isUuid(data.installation?.id)) throw new Error("Serienummeret mangler en bekreftet lagringskvittering.");
+      return data;
+    },
     async listPumpStock() {
       const supabase = await requireClient();
       const { data, error } = await withDbTimeout(supabase.rpc("list_pump_stock_v1"), "hente lagerstatus");
@@ -2614,6 +2640,8 @@
           brand: dbInstallation.brand,
           model: dbInstallation.model,
           serial_number: dbInstallation.serial_number,
+          ...(Object.hasOwn(dbInstallation, "indoor_serial_number") ? { indoor_serial_number: dbInstallation.indoor_serial_number } : {}),
+          ...(Object.hasOwn(dbInstallation, "outdoor_serial_number") ? { outdoor_serial_number: dbInstallation.outdoor_serial_number } : {}),
           installed_at: dbInstallation.installed_at,
           last_service_at: dbInstallation.last_service_at,
           next_service_due: dbInstallation.next_service_due,
@@ -4537,6 +4565,8 @@
       const allowed = ["image/png", "image/jpeg", "image/webp", "image/heic", "image/heif", "application/pdf"];
       if (!allowed.includes(file.type)) throw new Error(`Filtypen ${file.type || "ukjent"} støttes ikke som CRM-vedlegg.`);
       if (file.size > 10 * 1024 * 1024) throw new Error("Vedlegget er over 10 MB.");
+      if (links.photo_role && !["indoor", "outdoor", "indoor_label", "outdoor_label", "other"].includes(links.photo_role)) throw new Error("Velg hva bildet viser.");
+      if (links.photo_role && links.photo_role !== "other" && !file.type.startsWith("image/")) throw new Error("Serienummer og monteringsbilder må være bildefiler.");
       const customerId = isUuid(links.customer_id || links.customerId) ? (links.customer_id || links.customerId) : null;
       const leadId = isUuid(links.lead_id || links.leadId) ? (links.lead_id || links.leadId) : null;
       const installationId = isUuid(links.installation_id || links.installationId) ? (links.installation_id || links.installationId) : null;
@@ -4563,6 +4593,7 @@
         intake_id: intakeId,
         website_submission_id: websiteSubmissionId,
         source_kind: links.source_kind || links.sourceKind || "manual",
+        photo_role: links.photo_role || "other",
         title: links.title || file.name || "Vedlegg",
         note: links.note || null,
         storage_bucket: "crm-attachments",
