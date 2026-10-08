@@ -325,7 +325,7 @@ button:disabled, button[data-busy="true"] { cursor: default; }
   #leadsView .lead-list-panel > .lead-followup-controls { order: 5; width: 100%; min-width: 0; }
   .lead-list .lead-priority-heading { font-size: 13px; }
 }
-/* Keep road suggestions readable inside the booking agenda on phone and PC. */
+/* Road choices belong to the booking form, outside the scrollable agenda. */
 .booking-road-preview { margin: 12px 0; padding: 12px; border: 1px solid var(--border, #d7e3e1); border-radius: 10px; background: #f3f8f7; min-width: 0; }
 .booking-road-preview > button { width: 100%; white-space: normal; }
 .booking-road-slots { display: grid; gap: 8px; }
@@ -333,6 +333,11 @@ button:disabled, button[data-busy="true"] { cursor: default; }
 .booking-road-slot span, .booking-road-slot strong { white-space: normal; overflow-wrap: anywhere; }
 .booking-road-slot span { font-size: .85rem; line-height: 1.4; }
 .booking-road-slot:first-child { border-color: #0b7669; }
+.booking-road-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.booking-road-head > strong { font-size: 1rem; }
+.booking-road-head > button { max-width: 100%; white-space: normal; }
+.booking-road-help > summary { padding-block: 10px; cursor: pointer; font-size: .85rem; }
+.booking-road-preview > .form-hint { margin: 8px 0; }
 .nearby-road-status {
   margin: 0 16px 12px;
   padding: 12px;
