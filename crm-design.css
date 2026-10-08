@@ -347,6 +347,31 @@ button:disabled, button[data-busy="true"] { cursor: default; }
 .lead-list .lead-card-next { font-weight: 500; font-size: 13px; }
 .lead-list .lead-card-preview { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-size: 13px; color: #586879; }
 .customer-order-list .lead-card-focus { display: inline-block; font-size: 12px; line-height: 1.5; color: var(--teal); }
+/* Each active sale keeps its alternatives, next step and case identity together. */
+#customerOffersSection .customer-sales-case-card { grid-template-columns: minmax(0, 1fr) auto; gap: 14px 20px; align-items: start; border-left: 3px solid var(--blue); }
+#customerOffersSection .customer-sales-case-card > div { min-width: 0; }
+#customerOffersSection .customer-case-actions { display: flex; flex-wrap: wrap; align-items: start; gap: 8px; }
+#customerOffersSection .customer-case-actions > button { min-height: 44px; white-space: normal; }
+#customerOffersSection .customer-case-quoted-offers { margin-top: 10px; }
+#customerOffersSection .customer-case-quoted-offers > small { font-size: 12px; font-weight: 600; color: var(--muted); }
+#customerOffersSection .customer-case-quoted-offers ul { display: grid; gap: 7px; margin: 5px 0 0; padding: 0; list-style: none; }
+#customerOffersSection .customer-case-quoted-offers li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 9px 10px; background: var(--blue-soft); border-radius: 7px; overflow-wrap: anywhere; }
+#customerOffersSection .customer-case-quoted-offers li strong { font-size: 13px; font-weight: 600; }
+#customerOffersSection .customer-case-quoted-offers li span { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+#customerOffersSection .customer-case-quoted-offers li time { grid-column: 1 / -1; font-size: 12px; color: var(--muted); }
+#customerOffersSection .customer-case-note { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; margin-top: 9px; color: var(--muted); font-size: 13px; }
+#customerOffersSection .customer-pending-offers article { border-left-color: #bd7a17; }
+#customerOffersSection .customer-pending-offers article.error { border-left-color: #b91c1c; background: #fff7f6; }
+#customerOffersSection .customer-pending-offers article.approved { border-left-color: var(--blue); }
+#customerOffersSection .customer-pending-offers time { display: block; font-size: 12px; color: var(--muted); }
+#customerOffersSection .customer-offer-state { font-weight: 600; }
+#customerOffersSection .customer-pending-offers button { min-height: 44px; }
+@media (max-width: 760px) {
+  #customerOffersSection .customer-sales-case-card { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  #customerOffersSection .customer-case-actions > button { flex: 1 1 160px; }
+  #customerOffersSection .customer-case-quoted-offers li { grid-template-columns: minmax(0, 1fr); }
+  #customerOffersSection .customer-case-quoted-offers li time { grid-column: 1; }
+}
 @media (max-width: 760px) {
   .lead-followup-controls { grid-template-columns: minmax(0, 1fr); gap: 4px; }
   #leadsView .lead-list-panel > .lead-followup-controls { order: 5; width: 100%; min-width: 0; }
