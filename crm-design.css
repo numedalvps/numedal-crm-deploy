@@ -231,6 +231,10 @@ button:disabled, button[data-busy="true"] { cursor: default; }
 #completionDialog .completion-reviewed-line { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; padding-block: 10px; border-top: 1px solid var(--border); overflow-wrap: anywhere; }
 #completionDialog .completion-reviewed-line small { display: block; color: var(--muted); margin-top: 4px; }
 #completionDialog .completion-reviewed-line > span { font-weight: 650; }
+#completionDialog .completion-reviewed-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+#completionDialog .completion-reviewed-actions button { min-height: 40px; padding: 6px 12px; }
+#completionDialog .completion-reviewed-line.is-replacing { border-left: 3px solid var(--teal); padding-left: 10px; }
+#completionCancelPriceEdit[hidden] { display: none !important; }
 #completionDialog .completion-price-problem { color: #9a4c08; }
 #completionDialog .completion-raw-price-details { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border); }
 #completionDialog .completion-raw-price-details > summary { min-height: 44px; display: flex; align-items: center; font-size: 14px; cursor: pointer; }
