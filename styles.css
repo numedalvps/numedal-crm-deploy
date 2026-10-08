@@ -13155,6 +13155,12 @@ label > .form-hint {
   color: #991b1b;
 }
 
+.day-agenda-preview.unchecked {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  color: #475569;
+}
+
 .free-slot {
   border: 0;
   border-radius: 999px;
