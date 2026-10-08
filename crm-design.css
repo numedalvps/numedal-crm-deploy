@@ -205,6 +205,11 @@ button:disabled, button[data-busy="true"] { cursor: default; }
 .preparation-plan-history > summary, .quick-job-equipment > summary { padding-block: 12px; font-weight: 600; color: var(--ink); cursor: pointer; overflow-wrap: anywhere; }
 .preparation-plan-history { margin-block: 12px; border-top: 1px solid var(--line); }
 .quick-job-equipment { padding-inline: 14px; border: 1px solid var(--line); border-radius: var(--surface-radius); }
+.quick-job-sections { display: flex; flex-wrap: wrap; gap: 6px; margin-block: 14px; }
+.quick-job-sections button { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.quick-job-sections button[aria-pressed="true"] { background: var(--teal); color: #fff; border-color: var(--teal); }
+[data-quick-job-panel][hidden] { display: none !important; }
+.quick-job-picture-summary { width: 100%; text-align: left; white-space: normal; }
 .crm-assistant-button { background: #fff; color: var(--blue-dark); border-color: #bed0ec; }
 .crm-assistant-kicker { color: var(--muted); font-size: 12px; font-weight: 600; text-transform: none; letter-spacing: 0; }
 .crm-assistant-queue-button span { background: var(--warning-soft); color: var(--warning); font-size: 12px; font-weight: 650; }
