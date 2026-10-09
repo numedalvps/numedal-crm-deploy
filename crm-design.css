@@ -447,6 +447,12 @@ button:disabled, button[data-busy="true"] { cursor: default; }
   .offer-review-dialog .modal-actions [data-offer-review-send] { flex: 1 1 100%; }
 }
 /* Replies belong to the open case, beside the customer's latest email. */
+.customer-reply-source { display:grid; gap:6px; min-width:0; margin-top:10px; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; background:#fff; color:#334155; }
+.lead-next-action .customer-reply-source strong { margin:0; font-size:13px; }
+.customer-reply-source small { color:#64748b; font-size:12px; }
+.customer-reply-source-preview { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; overflow:hidden; overflow-wrap:anywhere; font-size:13px; line-height:1.5; }
+.customer-reply-source summary { color:#0f766e; font-size:13px; cursor:pointer; }
+.customer-reply-source pre { max-height:220px; overflow:auto; margin:8px 0 0; white-space:pre-wrap; overflow-wrap:anywhere; font:inherit; font-size:13px; line-height:1.5; }
 .customer-reply-composer { margin-top:16px; padding:16px; border:1px solid #b4d9d4; border-radius:12px; background:#fff; color:#1f2937; min-width:0; max-width:100%; }
 .lead-next-action .customer-reply-composer strong { color:#1f2937; font-size:16px; }
 .customer-reply-heading { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 12px; margin-bottom:10px; }

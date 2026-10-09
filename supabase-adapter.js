@@ -1347,7 +1347,7 @@
     return { data: [], error: new Error("Kontrollkøen er for stor til å lastes fullstendig. Ingen forslag er fjernet; kontakt administrator.") };
   }
 
-  async function fetchAllRows(queryFactory, pageSize = 1000, maxRows = 20000) {
+  async function fetchAllRows(queryFactory, pageSize = 1000, maxRows = 20000, requireComplete = false) {
     const rows = [];
     const loadPage = (from) => withDbTimeout(queryFactory().range(from, from + pageSize - 1), "laste CRM-data");
 
@@ -1358,7 +1358,46 @@
       rows.push(...pageRows);
       if (pageRows.length < pageSize) return { data: rows, error: null };
     }
-    return { data: rows, error: null };
+    return requireComplete
+      ? { data: [], error: new Error("E-postgrunnlaget er for stort til å lastes fullstendig. Prøv igjen eller kontakt administrator.") }
+      : { data: rows, error: null };
+  }
+
+  function mergeIntakeSourceEvidence(openRows, sourceRows) {
+    const rows = new Map(openRows.map((row) => [row.id, row]));
+    for (const source of sourceRows) {
+      if (!source.id || source.status !== "committed" || source.source_kind !== "email"
+          || !source.linked_lead_id || !source.linked_customer_id) continue;
+      const current = rows.get(source.id);
+      // Separate reads can straddle a reopen/commit. Prefer a newer open row,
+      // including equal/unknown revisions; the server revalidates before any send.
+      if (current && !(Date.parse(source.updated_at) > Date.parse(current.updated_at))) continue;
+      rows.set(source.id, {
+        id: source.id,
+        source_kind: source.source_kind,
+        status: source.status,
+        linked_lead_id: source.linked_lead_id,
+        linked_customer_id: source.linked_customer_id,
+        source_received_at: source.source_received_at,
+        created_at: source.created_at,
+        updated_at: source.updated_at,
+        analysis_json: {
+          supplier_internal_triage_v1: source.supplier_internal_triage === true,
+          unlinked_triage_v1: source.unlinked_triage === true,
+          source: {
+            direction: source.source_direction,
+            identityStatus: source.source_identity_status,
+            recipientMatchesLinkedRecord: source.source_recipient_matches === true,
+            transportIdentity: { fromEmail: source.source_from_email },
+            sender_email: source.source_sender_email,
+            supplierMessage: source.source_supplier_message === true,
+            supplierLead: source.source_supplier_lead === true,
+            schema: source.source_schema,
+          },
+        },
+      });
+    }
+    return [...rows.values()];
   }
 
   async function crmAssistantErrorMessage(error, fallback = "CRM-assistenten svarte ikke.") {
@@ -1746,6 +1785,7 @@
         { data: websiteSubmissionRows, error: websiteSubmissionError },
         { data: profileRows, error: profileError },
         intakeResult,
+        committedEmailSourceResult,
         assistantActionResult,
         attachmentResult,
         settingsResult,
@@ -1775,6 +1815,12 @@
         () => supabase.from("website_submissions").select("*").order("received_at", { ascending: false }).limit(200),
         () => supabase.from("profiles").select("*").order("display_name"),
         () => supabase.from("intake_items").select("*").in("status", ["draft", "needs_review", "ready", "failed"]).order("created_at", { ascending: false }).limit(100),
+        // Identity evidence for canonical cases; historical bodies stay in customer history.
+        () => fetchAllRows(() => supabase.from("intake_items")
+          .select("id,source_kind,status,linked_lead_id,linked_customer_id,source_received_at,created_at,updated_at,source_direction:analysis_json->source->>direction,source_identity_status:analysis_json->source->>identityStatus,source_recipient_matches:analysis_json->source->recipientMatchesLinkedRecord,source_from_email:analysis_json->source->transportIdentity->>fromEmail,source_sender_email:analysis_json->source->>sender_email,supplier_internal_triage:analysis_json->supplier_internal_triage_v1,unlinked_triage:analysis_json->unlinked_triage_v1,source_supplier_message:analysis_json->source->supplierMessage,source_supplier_lead:analysis_json->source->supplierLead,source_schema:analysis_json->source->>schema")
+          .eq("status", "committed").eq("source_kind", "email")
+          .not("linked_lead_id", "is", null).not("linked_customer_id", "is", null)
+          .order("created_at").order("id"), 1000, 20000, true),
         () => includeAssistantActions
           ? assistantActionQueueQuery(supabase)
           : Promise.resolve({ data: [], error: null }),
@@ -1800,6 +1846,7 @@
       if (websiteSubmissionError) throw websiteSubmissionError;
       if (profileError) throw profileError;
       if (intakeResult.error && !isOptionalIntakeError(intakeResult.error)) throw intakeResult.error;
+      if (committedEmailSourceResult.error && !isOptionalIntakeError(committedEmailSourceResult.error)) throw committedEmailSourceResult.error;
       if (assistantActionResult.error && !isOptionalAssistantActionsError(assistantActionResult.error)) throw assistantActionResult.error;
       if (attachmentResult.error && !isOptionalCrmAttachmentsError(attachmentResult.error)) throw attachmentResult.error;
       if (settingsResult.error && !isOptionalSettingsError(settingsResult.error)) throw settingsResult.error;
@@ -1827,7 +1874,10 @@
         accessNotes: accessNoteRows || [],
         websiteSubmissions: websiteSubmissionRows || [],
         profiles: profileRows || [],
-        intakeItems: intakeResult.error ? [] : intakeResult.data || [],
+        intakeItems: mergeIntakeSourceEvidence(
+          intakeResult.error ? [] : intakeResult.data || [],
+          committedEmailSourceResult.error ? [] : committedEmailSourceResult.data || [],
+        ),
         assistantActions: includeAssistantActions
           ? (assistantActionResult.error ? [] : assistantActionResult.data || [])
           : null,
