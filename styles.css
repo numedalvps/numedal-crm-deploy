@@ -10998,6 +10998,10 @@ label > .form-hint {
   font-size: 11px;
 }
 
+.crm-assistant-review-tools .crm-assistant-review-task {
+  grid-column: 1 / -1;
+}
+
 .crm-assistant-review-tools input,
 .crm-assistant-review-tools select {
   width: 100%;

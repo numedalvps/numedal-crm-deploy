@@ -3027,7 +3027,38 @@
         || (booking.installation_id || null) !== (job.installation_id || null) || (booking.location_id || null) !== (job.location_id || null)) {
         throw new Error("Booking og jobb har ikke samme tilknytning. Kontroller jobblisten.");
       }
-      return { booking: bookingFromDb(booking), job };
+      // Creating an installation also guards the customer's/site's versions and
+      // the complete installation inventory. Refresh all of those together.
+      const [context, orderResult] = await Promise.all([
+        this.loadManualCustomerContext(booking.customer_id),
+        job.source_table === "orders"
+          ? withDbTimeout(supabase.from("orders").select("*").eq("id", job.source_id).single(), "hente jobbens ordre") : null,
+      ]);
+      if (orderResult?.error) throw orderResult.error;
+      const order = orderResult?.data || null;
+      if (job.source_table === "orders" && (!order || order.id !== job.source_id || order.customer_id !== booking.customer_id
+        || (order.location_id && booking.location_id && order.location_id !== booking.location_id)
+        || (order.installation_id && booking.installation_id && order.installation_id !== booking.installation_id))) {
+        throw new Error("Ordre, booking og jobb har ikke samme tilknytning. Utkastet er beholdt; kontroller jobblisten.");
+      }
+      if (context.customer?.id !== booking.customer_id || context.customer.is_inactive
+        || !Array.isArray(context.locations) || !Array.isArray(context.installations)
+        || context.locations.some(row => !row?.id || row.customer_id !== booking.customer_id)
+        || context.installations.some(row => !row?.id || row.customer_id !== booking.customer_id)) {
+        throw new Error("Kunden er endret eller inaktiv. Utkastet er beholdt; kontroller kundekortet.");
+      }
+      const locationId = booking.location_id || order?.location_id;
+      const installationId = booking.installation_id || order?.installation_id;
+      const location = context.locations.find(row => row.id === locationId);
+      const installation = context.installations.find(row => row.id === installationId);
+      if ((locationId && !location) || (installationId && (!installation
+        || installation.active === false || installation.removed_at
+        || (locationId && installation.location_id !== locationId)))) {
+        throw new Error("Jobbens anlegg eller anleggssted er endret. Utkastet er beholdt; kontroller tilknytningen.");
+      }
+      return { booking: { ...bookingFromDb(booking), ...(order ? { orderId: order.id } : {}) },
+        job, ...context, order: order ? { ...orderFromDb(order), jobId: job.id, job_id: job.id,
+          leadId: job.lead_id || "", lead_id: job.lead_id || "" } : null };
     },
     async startAssignedFlexibleOrder(request, options = {}) {
       const result = await manualReceiptRpc("start_assigned_flexible_order_v1", request, options, ["order", "job", "booking", "appointment"]);
