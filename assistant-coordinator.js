@@ -1939,6 +1939,7 @@
       wood_wall_bracket: "dempet veggbrakett med fjærer", ground_stand: "bakkestativ",
       heatpump_house_installation: "montering varmepumpehus (timer)", timber_core_drilling: "kjerneboring tømmer",
       old_pump_removal: "demontering og gasstømming", extra_heat_cable_75w: "ekstra varmekabel 75 W med termostat",
+      styrofoam: "Styrofoam",
     };
     const requirements = [], blockers = [];
     for (const report of Array.isArray(reports) ? reports : []) {
