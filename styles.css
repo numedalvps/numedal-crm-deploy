@@ -16956,6 +16956,22 @@ html:has(dialog:modal) {
 .flexible-note { white-space: pre-line; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin: 4px 0; }
 .order-badge.flexible { color: #203e5c; background: #e0ecf7; border: 1px dashed #577da3; }
 
+/* Completed work with no appointment stays outside the clock and capacity. */
+.planning-completed { min-width: 0; margin: 10px 0; padding: 10px; border: 1px solid #bed5c9; border-radius: 12px; background: #f0f7f3; color: #254a39; }
+.planning-completed > h3 { margin: 0; font-size: 14px; line-height: 1.4; overflow-wrap: anywhere; }
+.planning-completed > h3 span { padding: 2px 6px; border-radius: 10px; background: #deede4; font-size: 12px; }
+.planning-completed-job { display: flex; flex-direction: column; gap: 5px; min-width: 0; margin-top: 8px; padding: 10px; border-left: 3px solid #6e9b80; border-radius: 8px; background: #fff; overflow-wrap: anywhere; }
+.planning-completed-job b { font-size: 13px; font-weight: 500; }
+.planning-completed-job small { line-height: 1.4; }
+.planning-completed-job button { align-self: flex-start; min-height: 44px; max-width: 100%; margin-top: 3px; padding: 8px 10px; font-size: 12px; white-space: normal; }
+.planning-completed-count, #planningDayPicker [data-completed-planning-count] { color: #31694a; font-size: 11px; line-height: 1.3; }
+#planningDayPicker [data-completed-planning-count] { min-width: 0; max-width: 100%; overflow-wrap: anywhere; font-size: 9px; }
+.planning-month-grid .month-day .planning-completed-count { display: block; min-height: 0; color: #31694a; overflow-wrap: anywhere; }
+@media (max-width: 760px) { .planning-month-grid .month-day .planning-completed-count { font-size: 9px; } }
+.completed-order-aftercare { padding: 12px; margin: 12px 0; border: 1px solid #bed5c9; border-radius: 10px; background: #f0f7f3; line-height: 1.5; }
+.completed-order-aftercare p { margin: 5px 0 10px; }
+.completed-order-aftercare button { min-height: 44px; }
+
 .offer-travel { margin: 14px 0; padding: 14px; border: 1px solid #bdd6d3; border-radius: 12px; background: #f0f8f6; }
 .offer-travel .lead-offer-builder-head { display:flex; flex-wrap:wrap; gap:12px; justify-content:space-between; }
 .offer-travel .lead-offer-builder-head > div { display:flex; flex-direction:column; gap:5px; flex:1; min-width:180px; }
