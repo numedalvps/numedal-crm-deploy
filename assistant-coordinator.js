@@ -2022,7 +2022,12 @@
     const organizationNumber = String(customer.organization_number || customer.organizationNumber || "").trim();
     const blockers = [];
     if (!customerName) blockers.push("Mangler kundenavn");
-    if (!customerEmail) blockers.push("Kundekortet mangler e-postadresse");
+    // This is an internal, unsent invoice basis. The existing provider identity
+    // contract also supports a Norwegian phone; an email is required by sending,
+    // not by preparing a draft. Keep the actual source values unchanged.
+    if (!customerEmail && !normalizedNorwegianPhone(customerPhone)) {
+      blockers.push("Kundekortet mangler e-postadresse eller gyldig norsk telefonnummer");
+    }
     if (!body || /mangler prislinjer/i.test(body)) blockers.push("Prislinjer må kontrolleres");
     if (!jobId) blockers.push("Mangler koblet jobb");
     if (!invoiceLines.length) blockers.push("Mangler strukturerte varelinjer");
