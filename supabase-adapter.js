@@ -2043,7 +2043,7 @@
       if (error) throw error;
       return data || null;
     },
-    async loadCustomerHistory(customerId) {
+    async loadCustomerHistory(customerId, { includeCorrespondenceContent = true } = {}) {
       const supabase = await requireClient();
       if (!isUuid(customerId)) return { invoices: [], serviceEvents: [], activities: [] };
       const [invoiceResult, serviceResult, activityResult] = await withDbTimeout(Promise.all([
@@ -2095,6 +2095,61 @@
             if (requested.has(row.id)) activities[index] = {
               ...row, body: null, sms_content_read_snapshot: JSON.stringify(row),
               metadata: { ...row.metadata, sms_content_load_failed: true },
+            };
+          }
+        }
+      }
+      const missingCorrespondenceIds = includeCorrespondenceContent ? activities.filter((row) =>
+        row.customer_id === customerId && isUuid(row.id)
+        && ["email_received", "email_sent", "contact_email", "email_history"].includes(row.activity_type)
+        && (row.body == null || typeof row.body === "string" && !row.body.trim())
+      ).map((row) => row.id) : [];
+      if (missingCorrespondenceIds.length) {
+        try {
+          const { data: contents, error } = await withDbTimeout(supabase.rpc(
+            "load_customer_correspondence_content_v1",
+            { p_customer_id: customerId, p_activity_ids: missingCorrespondenceIds },
+          ), "hente original e-posttekst", 30000);
+          if (error) throw error;
+          if (!Array.isArray(contents)) throw new Error("Ugyldig korrespondanselesing.");
+          const requested = new Set(missingCorrespondenceIds), byId = new Map();
+          for (const content of contents) {
+            const metadata = content.metadata;
+            const original = activities.find(row => row.id === content.activity_id);
+            const knownDirection = original?.metadata?.direction || original?.metadata?.evidence_direction
+              || (original?.activity_type === "email_sent" ? "outgoing" : original?.activity_type === "email_received" ? "incoming" : "");
+            if (!requested.has(content.activity_id) || byId.has(content.activity_id)
+              || typeof content.body !== "string"
+              || !metadata || typeof metadata !== "object" || Array.isArray(metadata)
+              || metadata.source !== "customer_correspondence_history_v1" || metadata.channel !== "email"
+              || !["incoming", "outgoing"].includes(metadata.direction) || !isUuid(metadata.correspondence_id)
+              || ["incoming", "outgoing"].includes(knownDirection) && metadata.direction !== knownDirection
+              || metadata.timestamp_precision !== "provider" || metadata.provider_timestamp_verified !== true) {
+              throw new Error("E-postteksten kunne ikke knyttes sikkert til riktig historikkhendelse.");
+            }
+            byId.set(content.activity_id, content);
+          }
+          for (let index = 0; index < activities.length; index += 1) {
+            const row = activities[index], content = byId.get(row.id);
+            if (content) activities[index] = {
+              ...row, body: content.body,
+              correspondence_content_read_snapshot: JSON.stringify(row),
+              metadata: { ...row.metadata, ...content.metadata,
+                // Original text is provider-proven; the preserved legacy activity date is not.
+                ...(row.metadata?.source !== "customer_correspondence_history_v1" ? {
+                  source_provider_timestamp_verified: true, provider_timestamp_verified: false,
+                  timestamp_precision: "activity_receipt", activity_timestamp_authority: "original_activity_receipt",
+                } : {}),
+              },
+            };
+          }
+        } catch {
+          const requested = new Set(missingCorrespondenceIds);
+          for (let index = 0; index < activities.length; index += 1) {
+            const row = activities[index];
+            if (requested.has(row.id)) activities[index] = {
+              ...row, correspondence_content_read_snapshot: JSON.stringify(row),
+              metadata: { ...row.metadata, correspondence_content_load_failed: true },
             };
           }
         }
