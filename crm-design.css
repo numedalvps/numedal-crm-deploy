@@ -134,6 +134,7 @@ button:disabled, button[data-busy="true"] { cursor: default; }
 .customer-list button, .lead-list button, .order-list-row > button { border-color: var(--line); background: #fff; color: var(--ink); border-radius: 10px; }
 .customer-list button.active, .lead-list button.active, .order-list button.active, .order-list-row.active > button { border-color: #bed0ec; background: var(--blue-soft); box-shadow: inset 3px 0 var(--blue); }
 .customer-list small, .lead-list small, .lead-list span, .order-list small, .order-list span { color: var(--muted); line-height: 1.45; }
+.order-list-row > button .order-card-title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; min-width: 0; max-width: 100%; color: inherit; font-size: inherit; }
 .customer-title h2 { font-size: 24px; font-weight: 600; }
 .customer-title p { font-size: 14px; line-height: 1.5; }
 .customer-key-facts { border-radius: 10px; }
