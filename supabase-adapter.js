@@ -1929,6 +1929,32 @@
       }
       return data;
     },
+    async ensureWebsiteCustomerReply(request = {}) {
+      if (!isUuid(request.leadId) || !isUuid(request.customerId) || !isUuid(request.sourceWebsiteSubmissionId)
+        || request.sourceActivityId || request.sourceIntakeId || request.regenerate) {
+        throw new Error("Svarforslaget mangler en entydig nettsidehenvendelse.");
+      }
+      const supabase = await requireClient();
+      const {data, error} = await withDbTimeout(supabase.rpc("ensure_website_customer_reply_v1", {
+        p_lead_id:request.leadId, p_submission_id:request.sourceWebsiteSubmissionId,
+      }), "hente svar på nettsidehenvendelsen", 15000);
+      if (error) throw error;
+      const row = data?.assistantAction, payload = row?.payload_json || {};
+      if (data?.ok !== true || data.sourceWebsiteSubmissionId !== request.sourceWebsiteSubmissionId
+        || !isUuid(row?.id) || row.action_type !== "email_reply" || row.channel !== "email"
+        || row.linked_customer_id !== request.customerId || row.linked_lead_id !== request.leadId
+        || row.source_kind !== "crm_assistant_website_reply" || row.source_intake_id != null
+        || row.source_website_submission_id !== request.sourceWebsiteSubmissionId
+        || row.source_ref !== `website-reply:v1:${request.sourceWebsiteSubmissionId}`
+        || payload.customerReplyContract !== "website_customer_reply_v1"
+        || payload.customerReplyWebsiteSubmissionId !== request.sourceWebsiteSubmissionId
+        || payload.inlineCustomerReplyVersion !== "inline-customer-reply-v1"
+        || !/^[a-f0-9]{64}$/.test(payload.customerReplyContextHash || "")
+        || payload.sourceContextHash !== payload.customerReplyContextHash) {
+        throw new Error("Serveren bekreftet ikke et svar på den riktige nettsidehenvendelsen.");
+      }
+      return data;
+    },
     async recordCustomerReplyDisplay(id, request = {}) {
       if (!isUuid(id) || !isUuid(request.clientEventId)) throw new Error("Svarkontrollen mangler en gyldig id.");
       if (!["needs_review", "approved"].includes(request.expectedStatus)

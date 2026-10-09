@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css?v=1.9.4" />
-    <link rel="stylesheet" href="./styles.css?v=20261009-05" />
+    <link rel="stylesheet" href="./styles.css?v=20261009-06" />
     <link rel="preload" href="./vendor/inter/InterVariable.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="stylesheet" href="./crm-design.css?v=20261009-05" />
+    <link rel="stylesheet" href="./crm-design.css?v=20261009-06" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -300,11 +300,12 @@
                 <button data-lead-inbox-tab="archive" type="button" title="Ferdig koblede og tapte saker. Arkiv er ikke en aktiv arbeidsliste."><strong id="leadLostMetric">0</strong><span>Arkiv</span></button>
               </div>
               <div id="leadStageFilters" class="lead-stage-filters hidden" role="group" aria-label="Velg neste oppgave"></div>
-              <div id="leadFollowupControls" class="lead-followup-controls hidden">
+              <div id="leadFollowupControls" class="lead-followup-controls">
                 <label>Sortering
                   <select id="leadFollowupSort">
+                    <option value="newest">Nyeste først</option>
+                    <option value="oldest">Eldste først</option>
                     <option value="priority">Handling først</option>
-                    <option value="newest">Nyest aktivitet</option>
                   </select>
                 </label>
                 <label class="lead-attention-toggle"><input id="leadAttentionOnly" type="checkbox" /> Kun handling nå</label>
@@ -313,7 +314,7 @@
               <div class="search-row">
                 <input id="leadSearch" type="search" placeholder="Søk i innboksen" />
                 <details class="lead-filter-details">
-                  <summary title="Filtrer på kilde eller en bestemt status.">Flere filtre</summary>
+                  <summary title="Filtrer på kilde eller en bestemt status.">Kilde og status</summary>
                   <div class="lead-source-filters" aria-label="Filtrer etter kilde">
                     <button data-lead-inbox-tab="email" type="button" title="Vis bare saker fra e-post eller CRM-innboks."><strong id="leadEmailMetric">0</strong> E-post</button>
                     <button data-lead-inbox-tab="website" type="button" title="Vis bare meldinger fra nettsiden."><strong id="leadWebsiteMetric">0</strong> Nettside</button>
@@ -374,6 +375,12 @@
                   </select>
                 </details>
               </div>
+              <label class="order-sort-row" for="orderSort"><span>Sorter jobber</span><select id="orderSort">
+                <option value="newest">Nyeste opprettet først</option>
+                <option value="oldest">Eldste opprettet først</option>
+                <option value="planned">Planlagt dato først</option>
+                <option value="workflow">Arbeidsrekkefølge</option>
+              </select></label>
               <details class="order-admin-tools">
                 <summary>Flere valg</summary>
                 <div class="order-bulk-actions">
@@ -2058,13 +2065,13 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20261009-05"></script>
-    <script src="./supabase-adapter.js?v=20261009-05"></script>
-    <script src="./intake-parser.js?v=20261009-05"></script>
-    <script src="./assistant-coordinator.js?v=20261009-05"></script>
-    <script src="./nearby-planning.js?v=20261009-05"></script>
-    <script src="./customer-reply-composer.js?v=20261009-05"></script>
-    <script src="./contextual-assistant.js?v=20261009-05"></script>
-    <script src="./app-20261009-05.js"></script>
+    <script src="./supabase-config.js?v=20261009-06"></script>
+    <script src="./supabase-adapter.js?v=20261009-06"></script>
+    <script src="./intake-parser.js?v=20261009-06"></script>
+    <script src="./assistant-coordinator.js?v=20261009-06"></script>
+    <script src="./nearby-planning.js?v=20261009-06"></script>
+    <script src="./customer-reply-composer.js?v=20261009-06"></script>
+    <script src="./contextual-assistant.js?v=20261009-06"></script>
+    <script src="./app-20261009-06.js"></script>
   </body>
 </html>

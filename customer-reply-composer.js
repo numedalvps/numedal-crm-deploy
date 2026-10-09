@@ -25,12 +25,18 @@
     const requireActive = state => { if (!active(state)) throw new Error("Saken eller CRM-brukeren er endret. Åpne saken på nytt."); };
     const validate = (state, action) => {
       const p = action?.payload_json || {};
+      const website = state.context.sourceWebsiteSubmissionId;
       const handledLegacy = state.handled && !["needs_review", "approved"].includes(action?.status);
       if (!action?.id || action.action_type !== "email_reply" || action.channel !== "email"
         || action.linked_lead_id !== state.context.leadId || action.linked_customer_id !== state.context.customerId
-        || action.source_kind !== "crm_assistant_email_triage" || !action.source_ref
-        || (!handledLegacy && (p.customerReplyContract !== "case_email_reply_v1" || p.inlineCustomerReplyVersion !== "inline-customer-reply-v1"
-          || p.customerReplySourceActivityId !== state.context.sourceActivityId))
+        || !action.source_ref
+        || (website ? action.source_kind !== "crm_assistant_website_reply" || action.source_website_submission_id !== website
+          || action.source_intake_id != null || p.customerReplyContract !== "website_customer_reply_v1"
+          || action.source_ref !== `website-reply:v1:${website}` || p.sourceContextHash !== p.customerReplyContextHash
+          || p.customerReplyWebsiteSubmissionId !== website || p.inlineCustomerReplyVersion !== "inline-customer-reply-v1"
+          : action.source_kind !== "crm_assistant_email_triage" || (!handledLegacy
+            && (p.customerReplyContract !== "case_email_reply_v1" || p.inlineCustomerReplyVersion !== "inline-customer-reply-v1"
+              || p.customerReplySourceActivityId !== state.context.sourceActivityId)))
         || (state.context.sourceIntakeId && action.source_intake_id !== state.context.sourceIntakeId)
         || (!handledLegacy && (!/^[a-f0-9]{64}$/.test(p.customerReplyContextHash || "") || !/^[a-f0-9]{64}$/.test(p.sourceContextHash || "")))
         || !Number.isSafeInteger(action.review_revision) || action.review_revision < 1
@@ -117,7 +123,7 @@
         <details class="customer-reply-date-options"><summary>Legg til datoforslag</summary><div><label>Dato som skal foreslås<input type="date" data-lead-reply-date value="${escape(state.date || "")}" /></label><button type="button" class="secondary" data-lead-reply-generate>Legg dato til teksten</button></div><small>Dette foreslår en dag til kunden. Jobben bookes senere i Planning.</small></details>` : ""}
         <p class="customer-reply-status" data-lead-reply-status role="status" aria-live="polite"></p>
         <div class="customer-reply-actions"><button type="button" class="order-primary" data-lead-reply-send>Send e-post</button><button type="button" class="secondary" data-lead-reply-refresh>${unknown(state) ? "Hent sendestatus" : "Hent utkast på nytt"}</button></div>
-        ${state.action?.status === "needs_review" ? `<details class="customer-reply-date-options"><summary>Trenger du et nytt forslag?</summary><small>Assistenten bruker den ferske kundemeldingen og tilbudet. Teksten din beholdes som kopi.</small><button type="button" class="secondary" data-lead-reply-regenerate>Lag nytt svarforslag</button></details>` : ""}`;
+        ${state.action?.status === "needs_review" && !state.context.sourceWebsiteSubmissionId ? `<details class="customer-reply-date-options"><summary>Trenger du et nytt forslag?</summary><small>Assistenten bruker den ferske kundemeldingen og tilbudet. Teksten din beholdes som kopi.</small><button type="button" class="secondary" data-lead-reply-regenerate>Lag nytt svarforslag</button></details>` : ""}`;
       node.oninput = event => {
         if (event.target.matches("[data-lead-reply-body],[data-lead-reply-subject]")) {capture(state); state.message = ""; controls(state);}
         if (event.target.matches("[data-lead-reply-date]")) {state.date = event.target.value; state.dateEdited = true;}
@@ -185,7 +191,9 @@
     async function ensure(state) {
       const result = await bridge.ensure(state.context);
       requireActive(state);
-      if (result?.ok !== true || result.sourceActivityId !== state.context.sourceActivityId
+      if (result?.ok !== true || (state.context.sourceWebsiteSubmissionId
+        ? result.sourceWebsiteSubmissionId !== state.context.sourceWebsiteSubmissionId
+        : result.sourceActivityId !== state.context.sourceActivityId)
         || (state.context.sourceIntakeId && result.sourceIntakeId !== state.context.sourceIntakeId)) {
         throw new Error("Serveren bekreftet ikke riktig kundemelding.");
       }
@@ -195,7 +203,7 @@
       await display(state);
     }
     async function regenerate(state) {
-      if (!active(state) || state.busy || unknown(state) || state.action?.status !== "needs_review") return;
+      if (!active(state) || state.busy || unknown(state) || state.action?.status !== "needs_review" || state.context.sourceWebsiteSubmissionId) return;
       capture(state);
       const before = state.action;
       state.retained = {...(state.draft || state.retained || {subject:before.subject || "", body:before.body || ""}),
@@ -306,7 +314,7 @@
     return {
       capture() {for (const state of forms.values()) capture(state);},
       mount(context) {
-        const key = `${context.leadId}:${context.sourceActivityId}`;
+        const key = `${context.leadId}:${context.sourceWebsiteSubmissionId ? "website:" + context.sourceWebsiteSubmissionId : context.sourceActivityId}`;
         let state = forms.get(key);
         if (!state) {state = {context, actorId:bridge.actorId(), generation:bridge.generation(), epoch,
           action:null, draft:null, display:null, date:"", busy:false, reviewUnknown:null, message:""}; forms.set(key, state);}

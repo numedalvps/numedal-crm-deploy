@@ -2255,6 +2255,24 @@ textarea {
   margin-top: 8px;
 }
 
+.order-sort-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.order-sort-row > span { flex: 0 0 auto; }
+.order-sort-row > select { flex: 1; min-width: 0; min-height: 44px; margin: 0; }
+.order-sort-help { margin: 0 0 6px; color: var(--muted); font-size: 11px; line-height: 1.35; }
+
+@media (max-width: 760px) {
+  /* The page title already identifies Jobs. Keep its filters and first job close. */
+  #ordersView .order-list-panel > .section-head { display: none; }
+}
+
 .ai-attachment-list {
   display: grid;
   gap: 8px;

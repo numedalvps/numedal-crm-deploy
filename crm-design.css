@@ -331,12 +331,13 @@ button:disabled, button[data-busy="true"] { cursor: default; }
 .view .expandable-text > summary { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; }
 .view .expandable-text > summary em { display: inline-flex; align-items: center; min-height: 44px; white-space: nowrap; overflow-wrap: normal; font-weight: 600; }
 
-/* Sales work is ordered by its next action; dates and case identity stay visible. */
+/* Inbox chronology and optional action priority stay visible in every tab. */
 .lead-followup-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 16px; align-items: end; margin-block: 12px; }
 .lead-followup-controls label { min-width: 0; font-size: 13px; font-weight: 600; }
 .lead-followup-controls select { width: 100%; min-height: 44px; margin-top: 4px; }
 .lead-followup-controls .lead-attention-toggle { display: flex; align-items: center; gap: 8px; min-height: 44px; }
 .lead-followup-controls .lead-attention-toggle input { width: 18px; height: 18px; margin: 0; }
+.lead-followup-controls .lead-attention-toggle.hidden { display: none; }
 .lead-followup-controls p { grid-column: 1 / -1; margin: 0; font-weight: 400; }
 .lead-list .lead-priority-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 14px 0 4px; padding: 9px 10px; border-left: 3px solid var(--teal); background: #f0f6f5; font-size: 14px; line-height: 1.4; }
 .lead-list .lead-priority-heading.priority-overdue { border-color: #b91c1c; background: #fff1f0; color: #922b24; }
@@ -374,7 +375,7 @@ button:disabled, button[data-busy="true"] { cursor: default; }
 }
 @media (max-width: 760px) {
   .lead-followup-controls { grid-template-columns: minmax(0, 1fr); gap: 4px; }
-  #leadsView .lead-list-panel > .lead-followup-controls { order: 5; width: 100%; min-width: 0; }
+  #leadsView .lead-list-panel > .lead-followup-controls { order: 2; width: 100%; min-width: 0; }
   .lead-list .lead-priority-heading { font-size: 13px; }
 }
 /* Road choices belong to the booking form, outside the scrollable agenda. */
