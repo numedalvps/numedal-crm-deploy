@@ -12728,13 +12728,44 @@ label > .form-hint {
 .completion-attachment-list li {
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 34px;
+  grid-template-columns: 64px minmax(0, 1fr) 34px;
   gap: 8px;
   align-items: center;
   padding: 6px 7px;
   border: 1px solid var(--line);
   border-radius: 7px;
   background: var(--soft);
+}
+
+.crm-attachment-list article:has(.attachment-thumbnail) {
+  grid-template-columns: 60px minmax(0, 1fr) auto;
+}
+
+.completion-attachment-list [data-completion-photo-preview] {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 6px;
+  background: #fff;
+}
+
+[data-installation-photo-status]:not(:empty) {
+  display: block;
+  margin-top: 0.4rem;
+}
+
+.attachment-thumbnail {
+  width: 60px;
+  height: 60px;
+  min-width: 60px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.attachment-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .completion-attachment-list li > span {
@@ -13652,6 +13683,10 @@ label {
   .crm-attachment-list.compact article {
     grid-template-columns: 36px minmax(0, 1fr);
     align-items: start;
+  }
+
+  .crm-attachment-list article:has(.attachment-thumbnail) {
+    grid-template-columns: 60px minmax(0, 1fr);
   }
 
   .crm-attachment-list .crm-attachment-actions {
