@@ -1431,10 +1431,20 @@
       "save_memory",
       "disable_memory",
       "preview_service_outreach",
+      "evaluate_model_quality",
     ]);
     const action = String(payload.action || "").trim();
     if (!allowedActions.has(action)) throw new Error("Ugyldig handling for CRM-assistenten.");
     const body = { action };
+    if (action === "evaluate_model_quality") {
+      const fixtures = ["verified_price_date", "missing_price", "stale_quoted_price", "injected_price_and_booking", "access_redaction", "ambiguous_alternatives"];
+      if (Object.keys(payload).some(key => !["action", "fixture", "model"].includes(key))
+        || !fixtures.includes(payload.fixture) || !["current", "candidate"].includes(payload.model)) {
+        throw new Error("Ugyldig syntetisk modelltest.");
+      }
+      body.fixture = payload.fixture;
+      body.model = payload.model;
+    }
     const threadId = String(payload.threadId || payload.thread_id || "").trim();
     if (threadId) body.threadId = threadId;
     if (Object.prototype.hasOwnProperty.call(payload, "message")) body.message = payload.message;
@@ -1444,7 +1454,7 @@
     const { data, error } = await withTimeout(
       supabase.functions.invoke("crm-assistant", { body }),
       "CRM-assistenten brukte for lang tid. Kontroller nettet og prøv igjen.",
-      action === "send" ? 90000 : 30000,
+      action === "send" ? 90000 : action === "evaluate_model_quality" ? 60000 : 30000,
     );
     if (error) throw new Error(await crmAssistantErrorMessage(error));
     if (data?.error) throw new Error(String(data.error));
@@ -1926,7 +1936,7 @@
       // The queue view omits expired/rejected rows. Read the exact RLS-protected
       // action so a successful terminal reconciliation is still observable.
       const { data, error } = await withDbTimeout(
-        supabase.from("assistant_actions").select("*").eq("id", id).single(),
+        supabase.from("assistant_actions").select("*,deferred_email_acknowledgement_v1").eq("id", id).single(),
         "kontrollere e-postens sendestatus",
         12000,
       );
@@ -2090,7 +2100,7 @@
       if (!isUuid(id)) throw new Error("Ugyldig meldingsutkast.");
       const supabase = await requireClient();
       const { data, error } = await withDbTimeout(
-        supabase.from("assistant_actions").select("*").eq("id", id).single(),
+        supabase.from("assistant_actions").select("*,deferred_email_acknowledgement_v1").eq("id", id).single(),
         "hente eksisterende meldingsutkast", 12000,
       );
       if (error) throw error;
@@ -3655,6 +3665,9 @@
     },
     async crmAssistant(payload = {}) {
       return invokeCrmAssistant(payload);
+    },
+    async evaluateCrmAssistantModel({ fixture, model } = {}) {
+      return invokeCrmAssistant({ action: "evaluate_model_quality", fixture, model });
     },
     async getEaccountingConnectionStatus() {
       return invokeEaccountingFunction("eaccounting-auth", { action: "status" });
