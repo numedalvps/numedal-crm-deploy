@@ -8337,6 +8337,35 @@ label > .form-hint {
   overflow-wrap: anywhere;
 }
 
+.installation-card .installation-product-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  min-width: 0;
+}
+
+.installation-product-title > span {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.installation-card .installation-brand-logo {
+  display: block;
+  flex: 0 0 104px;
+  width: 104px;
+  height: 28px;
+  max-width: 104px;
+  object-fit: contain;
+  object-position: center;
+  box-sizing: content-box;
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: #fff;
+}
+
 .installation-card .installation-kind-icon {
   border: 1px solid #99f6e4;
   border-radius: 7px;

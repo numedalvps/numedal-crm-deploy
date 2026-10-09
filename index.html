@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css?v=1.9.4" />
-    <link rel="stylesheet" href="./styles.css?v=20261009-12" />
+    <link rel="stylesheet" href="./styles.css?v=20261009-13" />
     <link rel="preload" href="./vendor/inter/InterVariable.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="stylesheet" href="./crm-design.css?v=20261009-12" />
+    <link rel="stylesheet" href="./crm-design.css?v=20261009-13" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -1129,9 +1129,14 @@
             <label>Navn på anlegg<input id="installationLabel" placeholder="F.eks. Bolig · stue eller Hytte · kjeller" required aria-describedby="installationIdentityHelp" /></label>
             <label>Merke<input id="installationBrand" /></label>
             <label>Modell<input id="installationModel" /></label>
-            <label>Serienummer (eldre / felles)<input id="installationSerial" maxlength="240" /></label>
-            <label>Serienummer inne<input id="installationIndoorSerial" maxlength="240" /></label>
-            <label>Serienummer ute<input id="installationOutdoorSerial" maxlength="240" /></label>
+            <label>Serienummer inne<input id="installationIndoorSerial" maxlength="240" aria-describedby="installationSerialHelp" /></label>
+            <label>Serienummer ute<input id="installationOutdoorSerial" maxlength="240" aria-describedby="installationSerialHelp" /></label>
+            <p id="installationSerialHelp" class="manual-section-help form-wide">Numrene fra tydelige serienummerskilt lagres her automatisk. Du kan også skrive eller rette dem manuelt. Et manglende nummer hindrer ikke fullføring.</p>
+            <details id="installationLegacySerial" class="form-wide">
+              <summary>Eldre serienummer</summary>
+              <label>Serienummer uten angitt inne-/utedel<input id="installationSerial" maxlength="240" /></label>
+              <p class="manual-section-help">Beholdes fra eldre registreringer. Bruk feltene inne og ute for nye opplysninger.</p>
+            </details>
             <label>Installert<input id="installationInstalledAt" type="date" /></label>
             <label class="check-row form-wide"><input id="installationActive" type="checkbox" checked aria-describedby="installationActiveHint" /> Aktiv varmepumpe/anlegg</label>
             <p id="installationActiveHint" class="manual-section-help form-wide">Fjerner du avhukingen, arkiveres anlegget når du lagrer. Historikken beholdes. Gjenaktivering er ikke tilgjengelig her.</p>
@@ -2065,13 +2070,13 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20261009-12"></script>
-    <script src="./supabase-adapter.js?v=20261009-12"></script>
-    <script src="./intake-parser.js?v=20261009-12"></script>
-    <script src="./assistant-coordinator.js?v=20261009-12"></script>
-    <script src="./nearby-planning.js?v=20261009-12"></script>
-    <script src="./customer-reply-composer.js?v=20261009-12"></script>
-    <script src="./contextual-assistant.js?v=20261009-12"></script>
-    <script src="./app-20261009-12.js"></script>
+    <script src="./supabase-config.js?v=20261009-13"></script>
+    <script src="./supabase-adapter.js?v=20261009-13"></script>
+    <script src="./intake-parser.js?v=20261009-13"></script>
+    <script src="./assistant-coordinator.js?v=20261009-13"></script>
+    <script src="./nearby-planning.js?v=20261009-13"></script>
+    <script src="./customer-reply-composer.js?v=20261009-13"></script>
+    <script src="./contextual-assistant.js?v=20261009-13"></script>
+    <script src="./app-20261009-13.js"></script>
   </body>
 </html>

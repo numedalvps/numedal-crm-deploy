@@ -2,3 +2,4 @@
 *.png binary
 *.jpg binary
 *.jpeg binary
+documents/brand/heatpump/*.svg -text
