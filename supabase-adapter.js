@@ -3347,6 +3347,21 @@
       return { job, customer: customerFromDb(customer), locations,
         order: { ...orderFromDb(order), jobId: job.id, job_id: job.id, leadId: job.lead_id || "", lead_id: job.lead_id || "" } };
     },
+    async loadInstallationPhotoEvidence(customerId, installationId) {
+      if (!isUuid(customerId) || !isUuid(installationId)) throw new Error("Velg et lagret anlegg før bilder kontrolleres.");
+      const supabase = await requireClient();
+      // One positive/negative lookup per role avoids the global attachment list's
+      // size limit concealing older evidence for this particular installation.
+      const results = await Promise.all(["indoor", "outdoor", "indoor_label", "outdoor_label"].map(async role => {
+        const { data, error } = await withDbTimeout(supabase.from("crm_attachments")
+          .select("id,customer_id,installation_id,photo_role,mime_type")
+          .eq("customer_id", customerId).eq("installation_id", installationId).eq("photo_role", role)
+          .is("deleted_at", null).like("mime_type", "image/%").limit(1), "kontrollere anleggsbilder");
+        if (error) throw error;
+        return data || [];
+      }));
+      return results.flat();
+    },
     async loadPreparationAttachments(jobId) {
       const supabase = await requireClient();
       const { data, error } = await withDbTimeout(supabase.from("crm_attachments").select("*")

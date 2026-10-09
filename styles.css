@@ -12682,6 +12682,41 @@ label > .form-hint {
   font-weight: 800;
 }
 
+.completion-photo-checklist {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
+.completion-photo-heading,
+.completion-photo-check > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+  overflow-wrap: anywhere;
+}
+
+.completion-photo-heading > span,
+.completion-photo-check small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.completion-photo-check {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.completion-photo-check > button {
+  min-height: 44px;
+  max-width: 116px;
+  white-space: normal;
+}
+
 .completion-attachment-list ul {
   display: grid;
   gap: 4px;
