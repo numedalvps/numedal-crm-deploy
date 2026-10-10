@@ -286,7 +286,7 @@ button:disabled, button[data-busy="true"] { cursor: default; }
   #completionDialog #completionDoneDateLabel { grid-template-columns: minmax(0,1fr); row-gap: 4px; }
 }
 #completionDialog #completionPhotoRoleButtons { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
-#completionDialog #completionPhotoRoleButtons.completion-photo-guidance { grid-template-columns: minmax(0,1fr); }
+#completionDialog #completionPhotoRoleButtons.completion-photo-checklist { grid-template-columns: minmax(0,1fr); }
 #completionDialog #completionPhotoRoleButtons button { min-width: 0; min-height: 44px; padding: 8px; font-size: 12px; line-height: 1.35; white-space: normal; }
 #completionDialog .completion-field-report { gap: 8px; padding: 12px; }
 @media (min-width: 601px) {
