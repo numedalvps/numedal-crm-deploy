@@ -10126,6 +10126,38 @@ label > .form-hint {
   background: #f8fafc;
 }
 
+.attachment-open-gallery {
+  min-height: 44px;
+  margin-bottom: 10px;
+}
+
+.attachment-preview-gallery-nav {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.attachment-preview-gallery-nav[hidden] {
+  display: none;
+}
+
+.attachment-preview-gallery-nav button {
+  min-height: 44px;
+  padding: 8px;
+}
+
+#attachmentPreviewPosition {
+  font-size: 13px;
+  font-weight: 750;
+  text-align: center;
+}
+
+.attachment-preview-dialog:has(.attachment-preview-gallery-nav:not([hidden])) .attachment-preview-body img {
+  max-height: calc(100dvh - 280px);
+}
+
 .attachment-preview-body img {
   display: block;
   width: 100%;
