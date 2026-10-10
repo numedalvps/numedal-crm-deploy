@@ -556,7 +556,7 @@
     const utcGuess = new Date(`${date}T${cleanTime}:00Z`);
     if (Number.isNaN(utcGuess.getTime())) return "+01:00";
     try {
-      const parts = new Intl.DateTimeFormat("en-CA", {
+      const formatter = new Intl.DateTimeFormat("en-CA", {
         timeZone,
         year: "numeric",
         month: "2-digit",
@@ -565,19 +565,24 @@
         minute: "2-digit",
         second: "2-digit",
         hour12: false,
-      }).formatToParts(utcGuess).reduce((result, part) => {
-        if (part.type !== "literal") result[part.type] = part.value;
-        return result;
-      }, {});
-      const asUtc = Date.UTC(
-        Number(parts.year),
-        Number(parts.month) - 1,
-        Number(parts.day),
-        Number(parts.hour),
-        Number(parts.minute),
-        Number(parts.second),
-      );
-      const offsetMinutes = Math.round((asUtc - utcGuess.getTime()) / 60000);
+      });
+      const localAsUtc = instant => {
+        const parts = formatter.formatToParts(new Date(instant)).reduce((result, part) => {
+          if (part.type !== "literal") result[part.type] = part.value;
+          return result;
+        }, {});
+        return Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), Number(parts.hour), Number(parts.minute), Number(parts.second));
+      };
+      const guess = utcGuess.getTime();
+      let offsetMinutes = Math.round((localAsUtc(guess) - guess) / 60000);
+      let candidate = guess - offsetMinutes * 60000;
+      // The first valid roundtrip keeps the existing autumn-fold choice. A
+      // nonexistent spring clock retains its initial offset on nonconvergence.
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const delta = localAsUtc(candidate) - guess;
+        if (delta === 0) { offsetMinutes = Math.round((guess - candidate) / 60000); break; }
+        candidate -= delta;
+      }
       const sign = offsetMinutes >= 0 ? "+" : "-";
       const abs = Math.abs(offsetMinutes);
       return `${sign}${String(Math.floor(abs / 60)).padStart(2, "0")}:${String(abs % 60).padStart(2, "0")}`;

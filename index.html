@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css?v=1.9.4" />
-    <link rel="stylesheet" href="./styles.css?v=20261010-02" />
+    <link rel="stylesheet" href="./styles.css?v=20261010-03" />
     <link rel="preload" href="./vendor/inter/InterVariable.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="stylesheet" href="./crm-design.css?v=20261010-02" />
+    <link rel="stylesheet" href="./crm-design.css?v=20261010-03" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -1547,6 +1547,7 @@
               <option value="180">3 timer</option>
               <option value="240">4 timer</option>
               <option value="480">Hel dag</option>
+              <option value="720">12 timer</option>
             </select>
           </label>
           <label>Ansatt
@@ -1850,7 +1851,7 @@
             <input id="billingPriceUnitPrice" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Skriv pris" />
           </label>
           <label>Rabatt %
-            <input id="billingPriceDiscount" type="number" min="0" max="100" step="0.1" inputmode="decimal" value="0" />
+            <input id="billingPriceDiscount" type="number" min="0" max="100" step="0.01" inputmode="decimal" value="0" />
           </label>
           <button id="billingAddPriceLine" class="secondary" type="button" title="Legg valgt produkt, tillegg eller egen vare inn i fakturagrunnlaget.">Legg til fakturalinje</button>
         </div>
@@ -2070,13 +2071,13 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20261010-02"></script>
-    <script src="./supabase-adapter.js?v=20261010-02"></script>
-    <script src="./intake-parser.js?v=20261010-02"></script>
-    <script src="./assistant-coordinator.js?v=20261010-02"></script>
-    <script src="./nearby-planning.js?v=20261010-02"></script>
-    <script src="./customer-reply-composer.js?v=20261010-02"></script>
-    <script src="./contextual-assistant.js?v=20261010-02"></script>
-    <script src="./app-20261010-02.js"></script>
+    <script src="./supabase-config.js?v=20261010-03"></script>
+    <script src="./supabase-adapter.js?v=20261010-03"></script>
+    <script src="./intake-parser.js?v=20261010-03"></script>
+    <script src="./assistant-coordinator.js?v=20261010-03"></script>
+    <script src="./nearby-planning.js?v=20261010-03"></script>
+    <script src="./customer-reply-composer.js?v=20261010-03"></script>
+    <script src="./contextual-assistant.js?v=20261010-03"></script>
+    <script src="./app-20261010-03.js"></script>
   </body>
 </html>
