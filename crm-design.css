@@ -240,7 +240,7 @@ button:disabled, button[data-busy="true"] { cursor: default; }
 #completionDialog .completion-actual-grid { grid-template-columns: minmax(0, 1fr); }
 #completionDialog .completion-actual-grid > label {
   grid-template-columns: minmax(0, 1fr) 84px;
-  grid-template-areas: "name caption" "estimate quantity" "price quantity";
+  grid-template-areas: "name caption" "estimate quantity" "amount actions";
   column-gap: 10px;
   align-items: start;
 }
@@ -248,9 +248,12 @@ button:disabled, button[data-busy="true"] { cursor: default; }
 #completionDialog .completion-actual-grid > label > small { grid-area: estimate; }
 #completionDialog .completion-actual-caption { grid-area: caption; font-size: 12px; color: var(--muted); }
 #completionDialog .completion-actual-grid input { grid-area: quantity; text-align: right; }
-#completionDialog .completion-material-price { grid-area: price; width: fit-content; min-height: 36px; padding: 5px 8px; font-size: 12px; }
-#completionDialog .completion-price-review { min-width: 0; border-block: 1px solid var(--border); padding-block: 8px; }
-#completionDialog .completion-price-review > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-height: 44px; cursor: pointer; }
+#completionDialog .completion-material-price { width: fit-content; }
+#completionDialog .completion-material-price-total { grid-area: amount; align-self: center; color: var(--muted); font-size: 12px; font-weight: 500; }
+#completionDialog .completion-material-actions { grid-area: actions; display: flex; gap: 4px; justify-content: end; }
+#completionDialog .completion-material-actions button { min-height: 44px; padding: 5px 8px; font-size: 12px; }
+#completionDialog .completion-price-review { min-width: 0; border: 0; padding: 0; }
+#completionDialog .completion-price-review > summary { display: none; }
 #completionDialog .completion-price-review > summary > span { color: var(--muted); font-size: 13px; }
 #completionDialog .completion-reviewed-line { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; padding-block: 10px; border-top: 1px solid var(--border); overflow-wrap: anywhere; }
 #completionDialog .completion-reviewed-line small { display: block; color: var(--muted); margin-top: 4px; }
@@ -258,6 +261,39 @@ button:disabled, button[data-busy="true"] { cursor: default; }
 #completionDialog .completion-reviewed-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 #completionDialog .completion-reviewed-actions button { min-height: 40px; padding: 6px 12px; }
 #completionDialog .completion-reviewed-line.is-replacing { border-left: 3px solid var(--teal); padding-left: 10px; }
+#completionDialog .completion-items { display: grid; gap: 8px; min-width: 0; }
+#completionDialog .completion-summary { grid-template-columns: minmax(0,1fr) auto; gap: 2px 8px; padding: 8px 10px; }
+#completionDialog .completion-summary > strong { grid-column: 1; grid-row: 1; }
+#completionDialog .completion-summary > em { grid-column: 2; grid-row: 1; align-self: center; font-size: 12px; }
+#completionDialog .completion-summary > span, #completionDialog .completion-summary > details { grid-column: 1 / -1; }
+#completionDialog .completion-actual-controls { gap: 6px; }
+#completionDialog .completion-actual-grid { gap: 4px; }
+#completionDialog .completion-actual-grid > label { margin: 0; padding: 6px 0; border-radius: 0; background: none; border-bottom: 1px solid var(--border); }
+#completionDialog .completion-actual-caption { display: none; }
+#completionDialog .completion-actual-grid > label { grid-template-areas: "name quantity" "estimate quantity" "amount actions"; }
+#completionDialog #completionActualMoreDetails > summary { display: none; }
+#completionDialog .completion-material-picker { padding: 4px 0; background: none; }
+#completionDialog .completion-unified-items #completionPriceDetails > summary { display: none; }
+#completionDialog #completionPriceDetails[open] { padding: 10px; margin: 0; background: var(--blue-soft); border-color: #bed0ec; }
+#completionDialog #completionPriceDetails { grid-column: 1 / -1; min-width: 0; }
+#completionDialog #completionPriceDetails:not([open]) > #completionPriceEditorTitle { display: none; }
+#completionDialog #completionPriceEditorTitle { display: block; margin-bottom: 8px; font-size: 14px; overflow-wrap: anywhere; }
+#completionDialog #completionPriceEditorDock:has(> details:not([open])) { display: none; }
+#completionDialog .completion-field-report:not(.completion-unified-items) #completionPriceEditorDock { display: block; }
+#completionDialog .completion-core-fields textarea { min-height: 64px; }
+#completionDialog #completionDoneDateLabel { display: grid; grid-template-columns: auto minmax(0,1fr); align-items: center; column-gap: 10px; }
+#completionDialog #completionPhotoRoleButtons { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
+#completionDialog #completionPhotoRoleButtons button { min-width: 0; min-height: 44px; padding: 8px; font-size: 12px; line-height: 1.35; white-space: normal; }
+#completionDialog .completion-field-report { gap: 8px; padding: 12px; }
+@media (min-width: 601px) {
+  #completionDialog .completion-actual-grid > label { grid-template-columns: minmax(0,1fr) 90px 110px auto; grid-template-areas: "name quantity amount actions" "estimate quantity amount actions"; column-gap: 10px; }
+  #completionDialog .completion-reviewed-line { grid-template-columns: minmax(0,1fr) 110px auto; align-items: center; gap: 10px; }
+}
+@media (max-width: 600px) {
+  #completionDialog .completion-actual-grid > label { grid-template-columns: minmax(0,1fr) 100px; }
+  #completionDialog .completion-price-controls { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  #completionDialog .completion-price-controls > label:nth-child(-n+2) { grid-column: 1 / -1; }
+}
 #completionCancelPriceEdit[hidden] { display: none !important; }
 #completionDialog .completion-price-problem { color: #9a4c08; }
 #completionDialog .completion-raw-price-details { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border); }

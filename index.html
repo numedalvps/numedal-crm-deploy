@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css?v=1.9.4" />
-    <link rel="stylesheet" href="./styles.css?v=20261010-08" />
+    <link rel="stylesheet" href="./styles.css?v=20261010-09" />
     <link rel="preload" href="./vendor/inter/InterVariable.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="stylesheet" href="./crm-design.css?v=20261010-08" />
+    <link rel="stylesheet" href="./crm-design.css?v=20261010-09" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -1616,34 +1616,24 @@
         </section>
         <div class="completion-core-fields">
           <label id="completionDoneDateLabel"><span>Utført dato</span><input id="completionDoneDate" type="date" required /></label>
-          <label id="completionNoteLabel"><span>Hva ble gjort?</span><textarea id="completionNote" rows="3" placeholder="Beskriv utført arbeid og eventuelle avvik."></textarea></label>
+          <label id="completionNoteLabel"><span>Hva ble gjort?</span><textarea id="completionNote" rows="2" placeholder="Beskriv utført arbeid og eventuelle avvik."></textarea></label>
         </div>
         <section id="completionFieldReport" class="completion-field-report">
+          <div id="completionItems" class="completion-items">
           <section id="completionActualMaterials" class="hidden" aria-labelledby="completionActualTitle">
             <h3 id="completionActualTitle">Faktisk brukt materiell og ekstraarbeid</h3>
             <p id="completionActualHint" class="form-hint">Tilbudets estimat er forhåndsutfylt. Endre til faktisk antall. Rør og kanal: kun meter utover de inkluderte 4 m.</p>
             <div id="completionActualControls" class="completion-actual-controls"></div>
           </section>
           <section id="completionQuotedOtherMaterials" class="completion-quoted-materials hidden"></section>
-          <div id="completionServiceTravel"></div>
-          <div id="completionServiceExtras">
-            <label class="checkbox-line"><input id="completionExtraCleaning" type="checkbox" /><span id="completionExtraCleaningText">Ekstra rens · 500 kr</span></label>
-            <label class="checkbox-line"><input id="completionHousingRemoved" type="checkbox" /><span id="completionHousingRemovedText">Demontering av varmepumpehus</span></label>
-          </div>
-          <details id="completionInvoiceNoteDetails" class="completion-actual-more"><summary id="completionInvoiceNoteTitle">Merknad til fakturering</summary>
-          <label><span id="completionOtherWorkText">Annet arbeid / plunder</span><textarea id="completionOtherWork" rows="2" maxlength="2000" placeholder="Kort beskjed til Gunnar for fakturering"></textarea></label>
-          </details>
-          <label class="checkbox-line"><input id="completionCashReceived" type="checkbox" /><span id="completionCashReceivedText">Mottatt kontant fra kunden</span></label>
-          <label id="completionCashAmountLabel" class="hidden"><span id="completionCashAmountText">Kontantbeløp (kr)</span><input id="completionCashAmount" type="number" inputmode="decimal" min="0.01" max="1000000" step="0.01" disabled /></label>
-          <div id="completionPriceTotal" class="completion-price-total"></div>
-          <details id="completionPriceReview" class="completion-price-review">
+          <details id="completionPriceReview" class="completion-price-review" open>
             <summary><strong>Varer til fakturering</strong><span id="completionPriceReviewSummary"></span></summary>
-            <p class="form-hint">Kontroller faktisk antall og avtalte priser. Bruk Endre på en vare for å rette den. Ingenting faktureres når du åpner oversikten.</p>
             <div id="completionPriceReviewLines"></div>
           </details>
+        <div id="completionPriceEditorDock">
         <details id="completionPriceDetails" class="completion-price-details">
-          <summary>Endre avtalte priser / andre varer</summary>
-          <p class="form-hint">Timene og mengdene over styrer fakturagrunnlaget. Her kan du endre avtalte priser eller legge til andre varer.</p>
+          <summary>Legg til vare eller timer</summary>
+          <strong id="completionPriceEditorTitle">Varelinje</strong>
           <div class="completion-price-controls">
             <label>Søk eller skriv vare
               <input id="completionPriceSearch" type="search" placeholder="Søk Panasonic HZ25, tak, varmepumpehus eller skriv egen vare" />
@@ -1679,6 +1669,19 @@
             <textarea id="completionPriceLines" rows="4" aria-label="Hele prisgrunnlaget" placeholder="Tillegg eller prisgrunnlag som bør kontrolleres før faktura."></textarea>
           </details>
         </details>
+        </div>
+          <div id="completionPriceTotal" class="completion-price-total"></div>
+          </div>
+          <div id="completionServiceTravel"></div>
+          <div id="completionServiceExtras">
+            <label class="checkbox-line"><input id="completionExtraCleaning" type="checkbox" /><span id="completionExtraCleaningText">Ekstra rens · 500 kr</span></label>
+            <label class="checkbox-line"><input id="completionHousingRemoved" type="checkbox" /><span id="completionHousingRemovedText">Demontering av varmepumpehus</span></label>
+          </div>
+          <details id="completionInvoiceNoteDetails" class="completion-actual-more"><summary id="completionInvoiceNoteTitle">Merknad til fakturering</summary>
+          <label><span id="completionOtherWorkText">Annet arbeid / plunder</span><textarea id="completionOtherWork" rows="2" maxlength="2000" placeholder="Kort beskjed til Gunnar for fakturering"></textarea></label>
+          </details>
+          <label class="checkbox-line"><input id="completionCashReceived" type="checkbox" /><span id="completionCashReceivedText">Mottatt kontant fra kunden</span></label>
+          <label id="completionCashAmountLabel" class="hidden"><span id="completionCashAmountText">Kontantbeløp (kr)</span><input id="completionCashAmount" type="number" inputmode="decimal" min="0.01" max="1000000" step="0.01" disabled /></label>
           <p id="completionFieldReportHint" class="form-hint">Kontantbeløp og ekstraarbeid følger jobben til fakturering.</p>
           <p id="completionServiceDefault" class="form-hint"></p>
         </section>
@@ -2071,13 +2074,13 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20261010-08"></script>
-    <script src="./supabase-adapter.js?v=20261010-08"></script>
-    <script src="./intake-parser.js?v=20261010-08"></script>
-    <script src="./assistant-coordinator.js?v=20261010-08"></script>
-    <script src="./nearby-planning.js?v=20261010-08"></script>
-    <script src="./customer-reply-composer.js?v=20261010-08"></script>
-    <script src="./contextual-assistant.js?v=20261010-08"></script>
-    <script src="./app-20261010-08.js"></script>
+    <script src="./supabase-config.js?v=20261010-09"></script>
+    <script src="./supabase-adapter.js?v=20261010-09"></script>
+    <script src="./intake-parser.js?v=20261010-09"></script>
+    <script src="./assistant-coordinator.js?v=20261010-09"></script>
+    <script src="./nearby-planning.js?v=20261010-09"></script>
+    <script src="./customer-reply-composer.js?v=20261010-09"></script>
+    <script src="./contextual-assistant.js?v=20261010-09"></script>
+    <script src="./app-20261010-09.js"></script>
   </body>
 </html>
