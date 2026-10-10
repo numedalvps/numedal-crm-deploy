@@ -3369,6 +3369,28 @@ label > .form-hint {
   border-left-width: 5px;
 }
 
+.inbox-case-card {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.lead-list button.inbox-case-cleanup {
+  min-height: 44px;
+  width: fit-content;
+  max-width: 100%;
+  justify-self: end;
+  padding: 8px 12px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--teal);
+}
+
+.inbox-detail-table .inbox-case-cleanup {
+  margin-top: 6px;
+  white-space: normal;
+}
+
 .lead-list button.status-followup {
   border-left-color: #f97316;
 }
