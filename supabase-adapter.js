@@ -3115,6 +3115,7 @@
           p_expected_job_updated_at: options.expectedJobUpdatedAt || null,
           p_client_event_id: isUuid(options.clientEventId) ? options.clientEventId : null,
           p_operation_key: options.operationKey || null,
+          p_completion_report: options.completionReport || null,
         }),
         "fullføre jobb",
       );
