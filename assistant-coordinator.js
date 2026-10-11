@@ -2031,6 +2031,11 @@
     if (!body || /mangler prislinjer/i.test(body)) blockers.push("Prislinjer må kontrolleres");
     if (!jobId) blockers.push("Mangler koblet jobb");
     if (!invoiceLines.length) blockers.push("Mangler strukturerte varelinjer");
+    if ((order.type || booking.type) === "service" && invoiceLines.filter(line =>
+      line.sourceProductId === "service_heatpump" || String(line.articleNumber || "") === "9402"
+      || /^(?:Standard service|Service varmepumpe|Service)(?:\s*\([^:]*\))?$/i.test(String(line.description || "").trim())).length !== 1) {
+      blockers.push("Standardservicen må ha én egen varelinje. Kjøring og tillegg erstatter ikke serviceprisen.");
+    }
     if (!Number.isFinite(expectedTotalInclVat) || expectedTotalInclVat <= 0) blockers.push("Summen må kontrolleres");
     blockers.push(...invoiceLineBlockers);
     blockers.push(...invoiceCompletionCoverageBlockers(context.completionReports, invoiceLines, context.completionCoverageContext));
