@@ -17223,6 +17223,9 @@ html:has(dialog:modal) {
 .installation-photo-upload-options .section-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .attachment-upload-file-icon { display: grid; place-items: center; height: 64px; background: #f1f5f9; border-radius: 5px; font-weight: 700; }
 .attachment-upload-item button, #crmAttachmentUploadChoose { min-height: 44px; }
+.attachment-photo-purpose { grid-column: 2 / -1; min-width: 0; }
+.attachment-photo-purpose label { margin: 0; }
+.attachment-photo-purpose small:empty { display: none; }
 #crmAttachmentUploadChoose { width: 100%; }
 #crmAttachmentUploadStatus { white-space: pre-wrap; overflow-wrap: anywhere; }
 #customerHistorySection .expandable-text > div { max-height: min(55dvh, 480px); overflow: auto; overflow-wrap: anywhere; }
@@ -17230,6 +17233,7 @@ html:has(dialog:modal) {
 @media (max-width: 480px) {
   .attachment-upload-item { grid-template-columns: 48px minmax(0, 1fr) auto; gap: 7px; }
   .attachment-upload-item > img, .attachment-upload-file-icon { width: 48px; height: 48px; }
+  .attachment-photo-purpose { grid-column: 1 / -1; }
 }
 .planning-backlog { margin: 12px 0; padding: 12px; border: 1px solid var(--line, #d8e0e6); border-radius: 12px; background: #f7faf9; }
 .planning-backlog > summary { cursor: pointer; font-weight: 750; min-height: 44px; align-content: center; }
