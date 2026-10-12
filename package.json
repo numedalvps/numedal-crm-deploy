@@ -47,6 +47,8 @@
     "test:website-service-classification-harness": "node tools/website-service-classification-harness.mjs --install-migration",
     "test:automatic-invoice-action": "node tests/automatic-invoice-action.test.mjs && node --test tests/standard-service-price-default.test.mjs tests/installation-title-invoice-basis.test.mjs tests/billing-canonical-preparation.test.mjs tests/invoice-draft-identity.test.mjs tests/invoice-completion-coverage.test.mjs tests/billing-completion-history-freshness.test.mjs tests/completion-extra-cleaning.test.mjs",
     "test:service-extra-cleaning-sql": "node tools/run-local-sql-tests.mjs tests/service-extra-cleaning-basis-integration.sql",
+    "test:precreation-extra-cleaning-sql": "node tools/run-local-sql-tests.mjs tests/precreation-extra-cleaning-integration.sql",
+    "test:precreation-extra-cleaning-roundtrip": "node tests/precreation-extra-cleaning-roundtrip.test.mjs --local",
     "test:standard-service-price-sql": "node tools/run-local-sql-tests.mjs tests/standard-service-price-default-integration.sql tests/standard-service-completion-materials-integration.sql tests/admin-service-completion-scope-integration.sql tests/admin-repair-completion-scope-integration.sql tests/manual-completion-recovery-integration.sql",
     "test:admin-completion-report-sql": "node tools/run-local-sql-tests.mjs tests/admin-completion-report-persistence-integration.sql",
     "test:job-invoice-disposition": "node tests/job-invoice-disposition.test.mjs",

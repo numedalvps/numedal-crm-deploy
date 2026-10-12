@@ -5470,7 +5470,8 @@ label > .form-hint {
   text-align: center;
 }
 
-.job-flow-steps li span {
+/* The direct child is the marker; nested invoice-status spans remain text. */
+.job-flow-steps li > span {
   width: 18px;
   height: 18px;
   border: 2px solid #cbd5e1;
@@ -5482,7 +5483,7 @@ label > .form-hint {
   color: #166534;
 }
 
-.job-flow-steps li.done span {
+.job-flow-steps li.done > span {
   border-color: var(--green);
   background: var(--green);
 }
@@ -5491,7 +5492,7 @@ label > .form-hint {
   color: #1d4ed8;
 }
 
-.job-flow-steps li.current span {
+.job-flow-steps li.current > span {
   border-color: #2563eb;
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
 }
@@ -5500,7 +5501,7 @@ label > .form-hint {
   color: #9a3412;
 }
 
-.job-flow-steps li.warn span {
+.job-flow-steps li.warn > span {
   border-color: var(--orange);
   background: var(--orange);
   box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.16);
@@ -13670,7 +13671,8 @@ label {
   }
 
   .job-flow-steps {
-    grid-template-columns: repeat(auto-fit, minmax(46px, 1fr));
+    /* Keep whole status words readable; wrap the steps on narrow screens. */
+    grid-template-columns: repeat(auto-fit, minmax(86px, 1fr));
     gap: 8px 4px;
     overflow-x: visible;
     padding-bottom: 0;
