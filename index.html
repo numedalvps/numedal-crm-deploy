@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css?v=1.9.4" />
-    <link rel="stylesheet" href="./styles.css?v=20261012-11" />
+    <link rel="stylesheet" href="./styles.css?v=20261021-01" />
     <link rel="preload" href="./vendor/inter/InterVariable.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="stylesheet" href="./crm-design.css?v=20261012-11" />
+    <link rel="stylesheet" href="./crm-design.css?v=20261021-01" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -253,7 +253,7 @@
             <summary class="ai-registration-summary">
               <span>
                 <strong>Lim inn melding</strong>
-                <small>SMS, e-post, notat eller bilde til kontrollert forslag.</small>
+                <small>Registrer SMS, e-post, notat eller bilde på riktig kunde.</small>
               </span>
             </summary>
             <div class="ai-registration-body">
@@ -296,7 +296,7 @@
               <div class="lead-metrics inbox-filter-cards" role="tablist" aria-label="Innboksfilter">
                 <button class="active" data-lead-inbox-tab="new" type="button" title="Nye meldinger fra kunder som ikke er behandlet ennå."><strong id="leadFollowupMetric">0</strong><span>Nye meldinger</span></button>
                 <button data-lead-inbox-tab="followup" type="button" title="Opprettede kundesaker som må kontaktes, tilbys eller planlegges."><strong id="leadNeedsOfferMetric">0</strong><span>Oppfølging / tilbud</span></button>
-                <button data-lead-inbox-tab="drafts" type="button" title="Svar, jobber og andre forslag som trenger en beslutning."><strong id="leadDraftMetric">0</strong><span>Til kontroll</span></button>
+                <button hidden class="hidden" data-lead-inbox-tab="drafts" type="button" title="Svar, jobber og andre forslag som trenger en beslutning."><strong id="leadDraftMetric">0</strong><span>Til kontroll</span></button>
                 <button data-lead-inbox-tab="archive" type="button" title="Ferdig koblede og tapte saker. Arkiv er ikke en aktiv arbeidsliste."><strong id="leadLostMetric">0</strong><span>Arkiv</span></button>
               </div>
               <div id="leadStageFilters" class="lead-stage-filters hidden" role="group" aria-label="Velg neste oppgave"></div>
@@ -947,13 +947,13 @@
         <header class="crm-assistant-head">
           <div>
             <span class="crm-assistant-kicker">Arbeidshjelp</span>
-            <h2 id="crmAssistantTitle">CRM-assistent</h2>
+            <h2 id="crmAssistantTitle">Tilbud og fakturagrunnlag</h2>
             <p>Forslag må kontrolleres før noe sendes eller endres.</p>
           </div>
           <div class="crm-assistant-head-actions">
             <button id="crmAssistantThreadsButton" class="secondary crm-assistant-chat-tool" type="button" aria-label="Samtaler og historikk" aria-controls="crmAssistantThreadDrawer" aria-expanded="false">Samtaler</button>
             <button id="crmAssistantNewThreadButton" class="secondary crm-assistant-chat-tool" type="button">Ny</button>
-            <button id="closeCrmAssistantButton" class="crm-assistant-close" type="button" aria-label="Lukk CRM-assistent">×</button>
+            <button id="closeCrmAssistantButton" class="crm-assistant-close" type="button" aria-label="Lukk tilbud og fakturagrunnlag">×</button>
           </div>
         </header>
 
@@ -2080,13 +2080,13 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20261012-11"></script>
-    <script src="./supabase-adapter.js?v=20261012-11"></script>
-    <script src="./intake-parser.js?v=20261012-11"></script>
-    <script src="./assistant-coordinator.js?v=20261012-11"></script>
-    <script src="./nearby-planning.js?v=20261012-11"></script>
-    <script src="./customer-reply-composer.js?v=20261012-11"></script>
-    <script src="./contextual-assistant.js?v=20261012-11"></script>
-    <script src="./app-20261012-11.js"></script>
+    <script src="./supabase-config.js?v=20261021-01"></script>
+    <script src="./supabase-adapter.js?v=20261021-01"></script>
+    <script src="./intake-parser.js?v=20261021-01"></script>
+    <script src="./assistant-coordinator.js?v=20261021-01"></script>
+    <script src="./nearby-planning.js?v=20261021-01"></script>
+    <script src="./customer-reply-composer.js?v=20261021-01"></script>
+    <script src="./contextual-assistant.js?v=20261021-01"></script>
+    <script src="./app-20261021-01.js"></script>
   </body>
 </html>

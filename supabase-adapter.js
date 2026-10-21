@@ -1199,6 +1199,16 @@
     return client;
   }
 
+  async function readInstallationPreparationJob(supabase, jobId) {
+    // This row replaces the browser's worklist mirror. A raw jobs row lacks
+    // derived priority, so always read the current RLS-aware projection.
+    const { data, error } = await withDbTimeout(
+      supabase.from("job_priority_worklist_v1").select("*").eq("id", jobId).single(), "hente monteringsplan");
+    if (error) throw error;
+    if (!data || data.id !== jobId) throw new Error("Fant ikke riktig jobb ved oppdatering av monteringsplanen.");
+    return data;
+  }
+
   function isOptionalTimeEntriesError(error) {
     return error && (
       error.code === "42P01"
@@ -1338,10 +1348,12 @@
     return results;
   }
 
-  async function assistantActionQueueQuery(supabase) {
+  async function assistantActionQueueQuery(supabase, options = {}) {
     const rows = [], pageSize = 250;
     for (let from = 0; from < 5000; from += pageSize) {
-      const page = await supabase.from("assistant_review_queue_v1").select("*")
+      let query = supabase.from("assistant_review_queue_v1").select("*");
+      if (options.operationalOnly) query = query.in("action_type", ["offer_draft", "invoice_draft"]);
+      const page = await query
         .order("created_at", { ascending: false }).order("id", { ascending: false })
         .range(from, from + pageSize - 1);
       if (page.error) return { data: [], error: page.error };
@@ -1925,10 +1937,10 @@
         activities: activityResult.data || [],
       };
     },
-    async loadAssistantActions() {
+    async loadAssistantActions(options = {}) {
       const supabase = await requireClient();
       const { data, error } = await withDbTimeout(
-        assistantActionQueueQuery(supabase),
+        assistantActionQueueQuery(supabase, options),
         "laste assistentens kontrollkø",
         12000,
       );
@@ -2414,7 +2426,9 @@
       };
       const [booking, linkedOrders, appointments, members] = await Promise.all([
         bookingId ? read(supabase.from("bookings").select("*").eq("id", bookingId).single()) : null,
-        bookingId ? read(supabase.from("orders").select("id").contains("booking_ids", [bookingId])) : [],
+        // booking_ids is jsonb. A JS array is encoded as a PostgreSQL array
+        // by PostgREST's contains(), which is not valid JSON for this column.
+        bookingId ? read(supabase.from("orders").select("id").contains("booking_ids", JSON.stringify([bookingId]))) : [],
         bookingId ? read(supabase.from("appointments").select("*").eq("source_table", "bookings").eq("source_id", bookingId).neq("status", "cancelled")) : [],
         campaignMemberId ? read(supabase.from("service_campaign_members").select("*").eq("id", campaignMemberId).single()) : null,
       ]);
@@ -3357,13 +3371,18 @@
         p_power_source: request.powerSource, p_power_note: request.powerNote,
       }), "lagre monteringsplan");
       if (error) throw error;
-      return data;
+      try {
+        const job = await readInstallationPreparationJob(supabase, request.jobId);
+        return { ...data, job };
+      } catch (cause) {
+        // The write succeeded. Even a coded read error must retain the exact
+        // idempotent request, rather than being treated as a rejected save.
+        throw new Error("Monteringsplanen kunne ikke kontrolleres etter lagring.", { cause });
+      }
     },
     async loadInstallationPreparation(jobId) {
       const supabase = await requireClient();
-      const { data, error } = await withDbTimeout(supabase.from("jobs").select("*").eq("id", jobId).single(), "hente monteringsplan");
-      if (error) throw error;
-      return data;
+      return readInstallationPreparationJob(supabase, jobId);
     },
     async loadInstallationInstructionContext(jobId) {
       const supabase = await requireClient();
@@ -3372,7 +3391,7 @@
         if (error) throw error;
         return data;
       };
-      const job = await read(supabase.from("jobs").select("*").eq("id", jobId).single());
+      const job = await readInstallationPreparationJob(supabase, jobId);
       if (job.source_table !== "orders" || !isUuid(job.source_id) || !isUuid(job.customer_id)) {
         throw new Error("Jobben mangler en entydig ordrekobling. Kontroller jobben før du lager bilde-PDF.");
       }

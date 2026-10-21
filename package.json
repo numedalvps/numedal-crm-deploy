@@ -4,6 +4,7 @@
   "private": true,
   "description": "Intern CRM-webapp for Numedal Varmepumpeservice.",
   "scripts": {
+    "test:parked-assistant": "node --test tests/assistant-parked-sql.test.mjs tests/crm-parked-performance.test.mjs tests/email-intake-lazy-reply.test.mjs",
     "test:completed-job-installation-mirror-sql": "node tools/run-local-sql-tests.mjs tests/completed-job-installation-mirror-integration.sql",
     "test:completed-job-installation-mirror-concurrency": "node tests/completed-job-installation-mirror-concurrency.test.mjs --local",
     "test:sms-history-content": "node --test tests/sms-history-content-adapter.test.mjs tests/sms-history-content.test.mjs",
@@ -48,6 +49,8 @@
     "test:automatic-invoice-action": "node tests/automatic-invoice-action.test.mjs && node --test tests/standard-service-price-default.test.mjs tests/installation-title-invoice-basis.test.mjs tests/billing-canonical-preparation.test.mjs tests/invoice-draft-identity.test.mjs tests/invoice-completion-coverage.test.mjs tests/billing-completion-history-freshness.test.mjs tests/completion-extra-cleaning.test.mjs",
     "test:service-extra-cleaning-sql": "node tools/run-local-sql-tests.mjs tests/service-extra-cleaning-basis-integration.sql",
     "test:precreation-extra-cleaning-sql": "node tools/run-local-sql-tests.mjs tests/precreation-extra-cleaning-integration.sql",
+    "test:precreation-included-installation-sql": "node tools/run-local-sql-tests.mjs tests/precreation-included-installation-integration.sql",
+    "test:precreation-included-installation-roundtrip": "node tests/precreation-included-installation-roundtrip.test.mjs --local",
     "test:precreation-extra-cleaning-roundtrip": "node tests/precreation-extra-cleaning-roundtrip.test.mjs --local",
     "test:standard-service-price-sql": "node tools/run-local-sql-tests.mjs tests/standard-service-price-default-integration.sql tests/standard-service-completion-materials-integration.sql tests/admin-service-completion-scope-integration.sql tests/admin-repair-completion-scope-integration.sql tests/manual-completion-recovery-integration.sql",
     "test:admin-completion-report-sql": "node tools/run-local-sql-tests.mjs tests/admin-completion-report-persistence-integration.sql",
@@ -112,7 +115,7 @@
     "test:sms-bridge": "node tests/google-messages-bridge.test.js && node --test tests/sms-bridge-feedback.test.mjs",
     "test:supabase-load": "node tests/supabase-load-concurrency.test.mjs && node --test tests/startup-phase-timing.test.mjs",
     "test:manual-booking-move": "node tests/manual-booking-move.test.mjs && node tests/manual-booking-move-sql.test.mjs && node --test tests/planning-resource-filter.test.mjs",
-    "test:manual-booking-cancellation": "node --test tests/manual-booking-cancellation-adapter.test.mjs",
+    "test:manual-booking-cancellation": "node --test tests/manual-booking-cancellation-adapter.test.mjs tests/manual-booking-cancellation-ui.test.mjs tests/booking-context-jsonb.test.mjs",
     "test:manual-booking-cancellation-sql": "node tools/run-local-sql-tests.mjs tests/manual-booking-cancellation-integration.sql",
     "test:manual-booking-cancellation-concurrency": "node tests/manual-booking-cancellation-concurrency.test.mjs --local",
     "test:technician-users": "node tests/technician-timesheets-users.test.mjs",
@@ -135,7 +138,7 @@
     "check:release": "npm run check && npm run test:e2e && npm run test:performance",
     "check:release:chrome": "npm run check && playwright test --config=playwright.chrome.config.js && npm run test:performance:chrome",
     "precheck": "npm run test:inline-customer-reply && npm run test:eaccounting && npm run test:internal-command-policies && npm run test:automatic-invoice-action && npm run test:customer-information-enrichment && npm run test:installation-photo-serial && npm run test:installation-serial-edge",
-    "check": "npm run check:core && npm run check:flows",
+    "check": "npm run test:parked-assistant && npm run check:core && npm run check:flows",
     "test:service-acceptance-booking": "node --test tests/service-acceptance-booking-ui.test.mjs",
     "test:service-booking-sql": "node tools/run-local-sql-tests.mjs tests/service-reply-date-price-integration.sql tests/service-booking-linkage-integration.sql tests/service-booking-route-linkage-integration.sql tests/service-booking-legacy-link-reconciliation-integration.sql",
     "test:service-booking-concurrency": "node tests/service-booking-concurrency.test.mjs --local && node tests/service-booking-lock-order.test.mjs --local",
@@ -224,7 +227,9 @@
     "check:flows": "node --test tests/completion-compact-layout92.test.mjs tests/round91-inbox-cleanup.test.mjs tests/round90-planning-profile-refresh.test.mjs tests/round90-completion-item-replacement.test.mjs tests/round90-billing-pending-article.test.mjs tests/round90-thumbnail-retry.test.mjs tests/round89-planning-collision-identity.test.mjs tests/round89-completion-new-draft.test.mjs tests/round89-billing-correction-status.test.mjs tests/round88-completion-pending-delete.test.mjs tests/round88-billing-preparation-revision.test.mjs && node tests/ui-flow.test.js && node --test tests/service-inquiry-gmail-reconciliation.test.mjs && node --test tests/service-acceptance-booking-ui.test.mjs && npm run test:manual-entity-acceptance && node --test tests/email-template-action-type.test.mjs && node --test tests/manual-usability-flow.test.mjs && node --test tests/manual-workspace-layout.test.mjs && npm run test:manual-history && node --test tests/service-history-priority-projection.test.mjs && node --test tests/inbound-triage-ui.test.mjs && node --test tests/manual-editor-recovery.test.mjs tests/manual-order-recovery.test.mjs tests/manual-order-adapter.test.mjs tests/manual-completion-recovery.test.mjs tests/manual-completion-site-scope.test.mjs && node --test tests/lean-customer-sites.test.mjs && npm run test:manual-acceptance-booking-recovery && node --test tests/internal-data-review-ui.test.mjs tests/local-sql-test-source.test.mjs && node --test tests/browser-invoice-observation-ui.test.mjs && node --test tests/invoice-basis-review-ui.test.mjs && npm run test:assistant-existing-drafts && npm run test:customer-quick-edits && npm run test:offer-preview-freshness && node --test tests/customer-quick-caller-context.test.mjs && npm run test:supabase-refresh-session && npm run test:offer-history-body-evidence && node --test tests/customer-history-loading-recovery.test.mjs && node --test tests/completion-price-line-removal.test.mjs tests/round87-price-editor-validity.test.mjs tests/completion-photo-feedback.test.mjs && node --test tests/planning-day-disclosure-redraw.test.mjs tests/planning-cross-day-conflicts.test.mjs tests/planning-move-recovery.test.mjs"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.10",
     "@playwright/test": "^1.62.1",
+    "@supabase/postgrest-js": "2.118.0",
     "esbuild": "0.28.1"
   }
 }

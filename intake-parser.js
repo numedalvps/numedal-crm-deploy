@@ -175,10 +175,13 @@
 
   function extractPhones(text) {
     const raw = String(text || "");
+    // Mask the entire reference before scanning so its date/ID cannot become a phone.
+    // Keep offsets and newlines intact for evidence and genuine adjacent numbers.
+    const phoneText = raw.replace(/\bNVS(?:-[A-Z0-9]+)+\b/gi, (reference) => "#".repeat(reference.length));
     const candidates = [];
     const dateRegex = /\b(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})\b/g;
     let dateMatch;
-    while ((dateMatch = dateRegex.exec(raw))) {
+    while ((dateMatch = dateRegex.exec(phoneText))) {
       const day = dateMatch[1].padStart(2, "0");
       const month = dateMatch[2].padStart(2, "0");
       const year = dateMatch[3].length === 2 ? `20${dateMatch[3]}` : dateMatch[3];
@@ -192,7 +195,7 @@
     }
     const phoneLabelRegex = /^\s*(?:telefon|tlf\.?|mobil|mob\.?)\s*:?\s*([^\n\r]+)/gim;
     let labelMatch;
-    while ((labelMatch = phoneLabelRegex.exec(raw))) {
+    while ((labelMatch = phoneLabelRegex.exec(phoneText))) {
       const originalLabelValue = cleanLine(labelMatch[1]);
       const corrected = originalLabelValue.replace(/[Oo]/g, "0").replace(/[Il|]/g, "1");
       if (corrected === originalLabelValue || (corrected.match(/\d/g) || []).length < 8) continue;
@@ -213,7 +216,7 @@
     }
     const regex = /(?:\+47|0047)\s*(?:\d[\s().-]*){8}|(?:\d[\s().-]*){8,11}/g;
     let match;
-    while ((match = regex.exec(raw))) {
+    while ((match = regex.exec(phoneText))) {
       const original = match[0];
       const digits = original.replace(/\D/g, "");
       const compact = compactPhone(original);
@@ -424,15 +427,18 @@
 
   function inferIntent(text, options = {}) {
     const n = normalize(text);
+    const wishedOfferAcceptance = String(text || '').split(/(?<=[.!?;,\n])/).some(part =>
+      !/\?\s*$/.test(part) && /^(?:jeg|vi)\s+onsker a takke ja til\s+(?:det |dette |deres |ditt )?tilbud(?:et)?(?: (?:ditt|deres))?$/.test(normalize(part)));
     const explicitAcceptance = /\b(?:(?:jeg|vi)\s+(?:aksepterer|godtar|godkjenner)|tilbudet\s+(?:er\s+)?(?:akseptert|godkjent)|bekrefter tilbudet|onsker a bestille|sett (?:oss|meg) opp)\b/.test(n)
       || /\b(?:(?:jeg|vi)\s+(?:vil|onsker a)\s+(?:bestille|ga for)\s+(?:(?:losningen|alternativet)\s+i\s+)?(?:det|dette|deres|ditt)\s+tilbud(?:et)?|(?:jeg|vi)\s+takker ja til\s+(?:det |dette |deres |ditt )?tilbud(?:et)?|(?:aksepterer|godtar|godkjenner)\s+(?:det |dette |deres |ditt )?tilbud(?:et)?|tilbudet\s+aksepteres)\b/.test(n)
       || (options.offerReferenced && /\b(?:jeg|vi)\s+(?:vil|onsker a)\s+(?:bestille|ga for)\s+(?:det|dette|den|denne)\b/.test(n))
+      || wishedOfferAcceptance
       || /^(?:akseptert|godkjent|ja takk)$/.test(n);
     const directPositiveReply = /\b(?:jo fortere jo bedre|sa fort som mulig|gjerne sa fort som mulig|kjor pa|ja takk|vi tar den|det gar vi for|sett i gang|bestill den)\b/.test(n);
     const positiveConfirmation = /\b(?:det hores fornuftig ut|det hores greit ut|det hores bra ut|det ser greit ut|det ser bra ut|det ser fint ut|det passer bra|dette virker fornuftig|dette virker greit)\b/.test(n);
     const installationTimingRequested = /\b(?:nar|hvilken dag|hvilket tidspunkt)\b.{0,80}\b(?:monter|montere|monteres|montering|installer|installere|installeres|installasjon)\b|\b(?:nar kan dette|nar kan den|nar kan dere)\b.{0,80}\b(?:monteres|installeres|gjores)\b/.test(n);
     const conditionalQuestion = /\b(?:hvis|dersom|om jeg|om vi|eventuelt|kanskje)\b.{0,100}\b(?:bestill\w*|ga for|aksepter\w*|monter\w*|installer\w*)\b/.test(n);
-    const conditionalAcceptance = /\b(?:hvis|dersom|om|eventuelt|kanskje)\b.{0,100}\b(?:aksepter\w*|godtar|godkjenner|takker ja|vil bestille|vil ga for)\b|\b(?:aksepter\w*|godtar|godkjenner|takker ja|vil bestille|vil ga for)\b.{0,120}\b(?:hvis|dersom|forutsatt|forutsetning|forbehold|sa lenge|safremt|pa betingelse|forutsetter)\b/.test(n);
+    const conditionalAcceptance = /\b(?:hvis|dersom|om|eventuelt|kanskje)\b.{0,100}\b(?:aksepter\w*|godtar|godkjenner|takke(?:r)? ja|vil bestille|vil ga for)\b|\b(?:aksepter\w*|godtar|godkjenner|takke(?:r)? ja|vil bestille|vil ga for)\b.{0,120}\b(?:hvis|dersom|forutsatt|forutsetning|forbehold|sa lenge|safremt|pa betingelse|forutsetter)\b/.test(n);
     const deferred = /\b(?:vil vente|onsker a vente|venter med|vente litt|utsett|utsette|utsettes|utsettelse|sette dette pa vent|ikke na|kommer tilbake|ma tenke|vil tenke|avventer)\b/.test(n);
     const declined = /\b(?:takker nei|ikke aktuelt|onsker ikke|vil ikke bestille|vil ikke ga for|gar ikke videre|dropper dette|godtar ikke|godkjenner ikke|aksepterer ikke|ikke akseptert|ikke godkjent)\b/.test(n);
     const priceQuestion = /\b(?:hva koster|pris pa|pris for|tillegg|ekstra kostnad|inkludert i prisen|med i prisen|prisforbehold|forbehold om pris)\b/.test(n);
@@ -460,7 +466,7 @@
     const accepted = !declined && !conditionalAcceptance && !offerChangeRequested
       && (explicitAcceptance || (referencedOfferAcceptance && !(deferred && !explicitAcceptance)));
     const offerAcceptanceCertain = Boolean(options.offerReferenced) && accepted
-      && (String(text || '').split(/[.!?;,\n]/).some(part => /\b(?:aksepterer|godtar|godkjenner|bekrefter)\s+(?:det |dette |deres |ditt )?tilbud(?:et)?$|\btilbudet\s+(?:er\s+)?(?:akseptert|godkjent|aksepteres)$|\b(?:jeg|vi)\s+takker ja til\s+(?:det |dette |deres |ditt )?tilbud(?:et)?$/.test(normalize(part)))
+      && (wishedOfferAcceptance && !/\b(?:styre\w*|tillatelse\w*|sertif\w*)\b/.test(n) || String(text || '').split(/[.!?;,\n]/).some(part => /\b(?:aksepterer|godtar|godkjenner|bekrefter)\s+(?:det |dette |deres |ditt )?tilbud(?:et)?$|\btilbudet\s+(?:er\s+)?(?:akseptert|godkjent|aksepteres)$|\b(?:jeg|vi)\s+takker ja til\s+(?:det |dette |deres |ditt )?tilbud(?:et)?$/.test(normalize(part)))
         || String(text || '').split(/[.!?;,\n]/).some(part => /\b(?:jeg|vi)\s+(?:vil|onsker a)\s+(?:bestille|ga for)\s+(?:(?:losningen|alternativet)\s+i\s+)?(?:det|dette|den|denne)(?:\s+tilbudet)?$/.test(normalize(part)))
         || /^(?:akseptert|godkjent|ja takk)$/.test(n))
     && !/\b(?:avlys\w*|avbestill\w*|kansell\w*)\b/.test(n)
@@ -479,6 +485,7 @@
       clarificationTopics,
       customerDecisionState: accepted ? "accepted" : declined ? "declined" : deferred || needsClarification ? "waiting_customer_decision" : "undetermined",
       intentVersion: "2026-10-03.1",
+      parserVersion: "2026-10-15.1",
     };
     if (/\b(?:ignorer|slett alle|returner telefonnummeret|tidligere instruksjoner|sett status til vunnet)\b/.test(n)) {
       return { category: "general_history", confidence: "low", ...acceptanceFields, explicitAcceptance: false, warning: "Mulig instruksjon i kildetekst. Behandles kun som kundemelding." };
@@ -802,6 +809,7 @@
         clarificationTopics: intent.clarificationTopics,
         customerDecisionState: intent.customerDecisionState,
         intentVersion: intent.intentVersion,
+        parserVersion: intent.parserVersion,
       },
       equipment,
       project: project.details,
