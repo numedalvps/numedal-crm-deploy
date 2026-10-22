@@ -2373,6 +2373,18 @@
     async saveManualCustomerLocation(request, options = {}) {
       return manualReceiptRpc("save_manual_customer_location_v1", request, options, ["location"]);
     },
+    async ensureCustomerMainLocation(customerId, expectedUpdatedAt) {
+      if (!isUuid(customerId) || !expectedUpdatedAt) throw new Error("Hent oppdaterte kundeopplysninger før anleggssted registreres.");
+      const supabase = await requireClient();
+      const { data, error } = await withDbTimeout(supabase.rpc("ensure_customer_main_location_v1", {
+        p_customer_id: customerId, p_expected_customer_updated_at: expectedUpdatedAt,
+      }), "registrere kundens adresse som anleggssted");
+      if (error) throw error;
+      if (!Array.isArray(data?.locations) || data.locations.some(row => !isUuid(row?.id) || row.customer_id !== customerId)) {
+        throw new Error("Anleggsstedet kunne ikke bekreftes. Hent oppdaterte opplysninger før du fortsetter.");
+      }
+      return data.locations;
+    },
     async acceptLeadUnscheduledJob(request, options = {}) {
       const result = await manualReceiptRpc("accept_lead_unscheduled_job_v1", request, options, ["customer", "lead", "order", "job"]);
       return { ...result, customer: customerFromDb(result.customer), order: orderFromDb(result.order) };

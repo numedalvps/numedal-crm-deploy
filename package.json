@@ -175,7 +175,7 @@
     "test:invoice-basis-concurrency": "node tests/invoice-basis-concurrency.test.mjs --local",
     "test:gmail-reconciliation-sql": "node tools/run-local-sql-tests.mjs tests/gmail-recipient-regex-integration.sql tests/gmail-connector-reconciliation-integration.sql tests/legacy-gmail-reply-reconciliation-integration.sql",
     "test:customer-tags": "node --test tests/customer-tag-picker.test.mjs",
-    "test:installation-completion-selection": "node --test tests/installation-completion-selection.test.mjs tests/installation-site-default.test.mjs",
+    "test:installation-completion-selection": "node --test tests/installation-completion-selection.test.mjs tests/installation-site-default.test.mjs tests/customer-main-location-default.test.mjs tests/customer-main-location-ui.test.mjs",
     "postcheck": "node --test tests/email-history-attachments.test.mjs && npm run test:customer-tags && npm run test:installation-completion-selection && npm run test:lead-original-inquiry && npm run test:job-card-clarity && npm run test:booking-calendar-areas && npm run test:customer-sales-case && npm run test:mobile-feedback && npm run test:offer-travel && npm run test:offer-case-references && npm run test:planning-technician-workflow && npm run test:completion-quoted-materials && npm run test:assistant-quality && npm run test:pump-stock-travel && npm run test:offer-job-evidence",
     "test:offer-job-evidence": "node --test tests/offer-job-evidence.test.mjs",
     "test:lead-original-inquiry": "node --test tests/lead-original-inquiry.test.mjs",
