@@ -17058,10 +17058,10 @@ html:has(dialog:modal) {
 .completion-actual-grid > label:only-child { grid-column: 1 / -1; }
 .completion-actual-more > summary { min-height: 44px; padding: 10px; font-weight: 650; color: var(--primary, #17645b); cursor: pointer; overflow-wrap: anywhere; }
 .completion-actual-more[open] > summary { margin-bottom: 8px; }
-.completion-actual-controls label { min-width: 0; display: grid; gap: 4px; padding: 10px; background: #f6f9f9; border-radius: 8px; }
-.completion-actual-controls label > span { overflow-wrap: anywhere; font-size: 14px; }
-.completion-actual-controls input { min-width: 0; width: 100%; min-height: 44px; }
-.completion-actual-controls small { font-weight: normal; color: var(--muted); }
+.completion-actual-controls :is([data-completion-material-row], .completion-material-picker) { min-width: 0; display: grid; gap: 4px; padding: 10px; background: #f6f9f9; border-radius: 8px; }
+.completion-actual-controls :is([data-completion-material-row], .completion-material-picker) > span { overflow-wrap: anywhere; font-size: 14px; }
+.completion-actual-controls [data-completion-actual-item] { min-width: 0; width: 100%; min-height: 44px; }
+.completion-actual-controls [data-completion-material-row] > small { font-weight: normal; color: var(--muted); }
 #completionActualMaterials h3 { margin: 0 0 6px; font-size: 17px; }
 .offer-accessories { margin-block: 16px; padding: 14px; background: #f3f6f8; border-radius: 10px; }
 .offer-discount-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; margin-top: 14px; }
