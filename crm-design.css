@@ -289,6 +289,24 @@ button:disabled, button[data-busy="true"] { cursor: default; }
 #completionDialog #completionPhotoRoleButtons.completion-photo-checklist { grid-template-columns: minmax(0,1fr); }
 #completionDialog #completionPhotoRoleButtons button { min-width: 0; min-height: 44px; padding: 8px; font-size: 12px; line-height: 1.35; white-space: normal; }
 #completionDialog .completion-field-report { gap: 8px; padding: 12px; }
+#completionDialog .completion-photos-details .completion-attachment-section { border: 0; border-radius: 0; background: none; margin: 0; }
+#completionDialog .completion-photos-details > summary { min-height: 48px; }
+#completionDialog #completionFieldReportHint:empty,
+#completionDialog #completionServiceDefault:empty { display: none; }
+.customer-work-focus { display: grid; gap: 12px; min-width: 0; }
+.customer-work-focus > .customer-jobs-summary { margin: 0; }
+.customer-work-priority { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--blue-soft); }
+.customer-work-priority > div { min-width: 0; }
+.customer-work-priority strong { display: block; font-size: 14px; }
+.customer-work-priority small { display: block; color: var(--muted); margin-top: 3px; overflow-wrap: anywhere; }
+.customer-job-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; align-items: center; }
+.customer-job-actions button { min-height: 44px; }
+@media (max-width: 600px) {
+  .customer-work-priority { align-items: flex-start; flex-direction: column; }
+  .customer-work-priority > button { width: 100%; }
+  .customer-job-actions { width: 100%; }
+  .customer-job-actions button { flex: 1 1 120px; }
+}
 @media (min-width: 601px) {
   #completionDialog .completion-actual-grid > label { grid-template-columns: minmax(0,1fr) 90px 110px auto; grid-template-areas: "name quantity amount actions" "estimate quantity amount actions"; column-gap: 10px; }
   #completionDialog .completion-reviewed-line { grid-template-columns: minmax(0,1fr) 110px auto; align-items: center; gap: 10px; }
