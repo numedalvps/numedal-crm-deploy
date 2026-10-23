@@ -137,6 +137,12 @@ button:disabled, button[data-busy="true"] { cursor: default; }
 .order-list-row > button .order-card-title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; min-width: 0; max-width: 100%; color: inherit; font-size: inherit; }
 .customer-title h2 { font-size: 24px; font-weight: 600; }
 .customer-title p { font-size: 14px; line-height: 1.5; }
+.customer-contact-details { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 16px; min-width: 0; font-size: 14px; line-height: 1.5; }
+.customer-contact-phone { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 10px; min-width: 0; }
+.customer-contact-details a, .customer-contact-details button { display: inline-flex; align-items: center; min-height: 44px; max-width: 100%; padding: 4px 0; border: 0; background: transparent; box-shadow: none; color: var(--teal); font: inherit; text-decoration: underline; text-underline-offset: 3px; overflow-wrap: anywhere; }
+.customer-contact-details a:focus-visible, .customer-contact-details button:focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; }
+.customer-contact-details button { min-width: 44px; justify-content: center; }
+.customer-contact-city { color: var(--muted); overflow-wrap: anywhere; }
 .customer-key-facts { border-radius: 10px; }
 .customer-key-facts span { font-size: 12px; font-weight: 500; text-transform: none; letter-spacing: 0; }
 .customer-key-facts strong { font-size: 14px; font-weight: 600; }
