@@ -301,6 +301,10 @@ button:disabled, button[data-busy="true"] { cursor: default; }
 .customer-work-priority small { display: block; color: var(--muted); margin-top: 3px; overflow-wrap: anywhere; }
 .customer-job-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; align-items: center; }
 .customer-job-actions button { min-height: 44px; }
+.customer-job-row .customer-job-title { display: inline-block; min-height: 44px; max-width: 100%; padding: 6px 0; border: 0; border-radius: 3px; background: transparent; box-shadow: none; color: var(--teal); font: inherit; font-weight: 800; text-align: left; overflow-wrap: anywhere; text-decoration: underline; text-underline-offset: 3px; }
+.customer-job-row .customer-job-title:hover { color: var(--ink); background: transparent; }
+.customer-job-row .customer-job-title > span { display: inline; color: inherit; }
+.customer-job-row .customer-job-title:focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; }
 @media (max-width: 600px) {
   .customer-work-priority { align-items: flex-start; flex-direction: column; }
   .customer-work-priority > button { width: 100%; }
