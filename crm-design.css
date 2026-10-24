@@ -554,3 +554,8 @@ button:disabled, button[data-busy="true"] { cursor: default; }
 .customer-reply-stored { margin:10px 0; padding:10px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; }
 .customer-reply-stored pre { max-height:160px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; font:inherit; font-size:13px; }
 @media(max-width:480px) { .customer-reply-composer { padding:12px; } .customer-reply-actions button { flex:1 1 140px; } }
+
+/* Item titles open the existing inline editor; avoid a duplicate Edit button. */
+#completionDialog .completion-line-title { display: inline-block; min-height: 44px; max-width: 100%; padding: 4px 0; border: 0; border-radius: 2px; background: transparent; box-shadow: none; color: var(--teal); font: inherit; font-weight: 650; text-align: left; text-decoration: underline; text-underline-offset: 3px; white-space: normal; overflow-wrap: anywhere; }
+#completionDialog .completion-line-title:focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; }
+#completionDialog .completion-line-title:disabled { color: var(--muted); cursor: default; }
