@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css?v=1.9.4" />
-    <link rel="stylesheet" href="./styles.css?v=20261024-18" />
+    <link rel="stylesheet" href="./styles.css?v=20261024-19" />
     <link rel="preload" href="./vendor/inter/InterVariable.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="stylesheet" href="./crm-design.css?v=20261024-18" />
+    <link rel="stylesheet" href="./crm-design.css?v=20261024-19" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -561,6 +561,7 @@
               <p class="form-hint">Dra en jobb til ønsket dag og klokkeslett, eller trykk «Book tid». Kontroller avtalen før du lagrer.</p>
               <label class="sr-only" for="planningBacklogSearch">Søk i ikke bookede jobber</label>
               <input id="planningBacklogSearch" type="search" placeholder="Søk kunde, område eller arbeid" autocomplete="off" />
+              <label class="planning-backlog-area-filter"><span id="planningBacklogAreaLabel">Serviceområde</span><select id="planningBacklogArea" aria-labelledby="planningBacklogAreaLabel"><option value="">Alle områder</option></select></label>
               <fieldset class="planning-backlog-filters">
                 <legend>Vis jobbtyper</legend>
                 <label><input id="planningBacklogService" type="checkbox" /><span>Standard service</span></label>
@@ -1189,6 +1190,15 @@
             <select id="orderLocationSelect" aria-describedby="orderLocationHint"></select>
             <small id="orderLocationHint" class="form-hint"></small>
           </label>
+          <label class="form-wide">Serviceområde
+            <select id="orderServiceArea" aria-describedby="orderServiceAreaHelp"></select>
+            <small id="orderServiceAreaHelp" class="form-hint"></small>
+          </label>
+          <div class="form-wide section-actions">
+            <button id="orderServiceAreaSave" class="secondary hidden" type="button">Lagre serviceområde</button>
+            <button id="orderServiceAreaReset" class="secondary hidden" type="button">Tilbakestill område</button>
+          </div>
+          <p id="orderServiceAreaMessage" class="form-wide dialog-message hidden" role="status"></p>
           <label class="form-wide">Tittel<input id="orderTitleInput" required /></label>
           <label class="check-row form-wide"><input id="orderBookNow" type="checkbox" /> Book jobben i kalender etterpå</label>
           <label class="check-row form-wide"><input id="orderFlexible" type="checkbox" /> Åpen ordre – hvis tid</label>
@@ -1478,6 +1488,15 @@
             <select id="bookingLocationSelect" aria-describedby="bookingLocationHint"></select>
             <small id="bookingLocationHint" class="booking-field-help"></small>
           </label>
+          <label class="form-wide">Serviceområde
+            <select id="bookingServiceArea" aria-describedby="bookingServiceAreaHelp"></select>
+            <small id="bookingServiceAreaHelp" class="booking-field-help"></small>
+          </label>
+          <div class="form-wide section-actions">
+            <button id="bookingServiceAreaSave" class="secondary hidden" type="button">Lagre serviceområde</button>
+            <button id="bookingServiceAreaReset" class="secondary hidden" type="button">Tilbakestill område</button>
+          </div>
+          <p id="bookingServiceAreaMessage" class="form-wide dialog-message hidden" role="status"></p>
           <div id="bookingOpenOrderChoice" class="form-wide hidden">
             <button id="bookingOpenOrderButton" class="secondary" type="button">Åpen ordre – hvis tid</button>
             <p class="form-hint">Ingen fast avtaletid? Velg én eller flere aktuelle dager. Kunde, anlegg, tekniker og notat følger med.</p>
@@ -2054,13 +2073,13 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20261024-18"></script>
-    <script src="./supabase-adapter.js?v=20261024-18"></script>
-    <script src="./intake-parser.js?v=20261024-18"></script>
-    <script src="./assistant-coordinator.js?v=20261024-18"></script>
-    <script src="./nearby-planning.js?v=20261024-18"></script>
-    <script src="./customer-reply-composer.js?v=20261024-18"></script>
-    <script src="./contextual-assistant.js?v=20261024-18"></script>
-    <script src="./app-20261024-18.js"></script>
+    <script src="./supabase-config.js?v=20261024-19"></script>
+    <script src="./supabase-adapter.js?v=20261024-19"></script>
+    <script src="./intake-parser.js?v=20261024-19"></script>
+    <script src="./assistant-coordinator.js?v=20261024-19"></script>
+    <script src="./nearby-planning.js?v=20261024-19"></script>
+    <script src="./customer-reply-composer.js?v=20261024-19"></script>
+    <script src="./contextual-assistant.js?v=20261024-19"></script>
+    <script src="./app-20261024-19.js"></script>
   </body>
 </html>

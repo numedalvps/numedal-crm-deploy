@@ -586,6 +586,13 @@ button:disabled, button[data-busy="true"] { cursor: default; }
 .customer-reply-stored pre { max-height:160px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; font:inherit; font-size:13px; }
 @media(max-width:480px) { .customer-reply-composer { padding:12px; } .customer-reply-actions button { flex:1 1 140px; } }
 
+/* Unbooked service work is grouped by its controlled physical service area. */
+.planning-backlog-area-filter { display: grid; gap: 5px; margin: 10px 0; font-size: 13px; font-weight: 600; }
+.planning-backlog-area-filter select { width: 100%; min-width: 0; }
+.planning-backlog-area-group { display: grid; gap: 8px; min-width: 0; }
+.planning-backlog-area-group + .planning-backlog-area-group { margin-top: 10px; }
+.planning-backlog-area-group > h4 { display: flex; align-items: center; gap: 8px; margin: 0; padding: 8px 0 3px; color: var(--ink); font-size: 14px; }
+.planning-backlog-area-group > h4 > span { color: var(--muted); font-size: 12px; font-weight: 500; }
 /* Item titles open the existing inline editor; avoid a duplicate Edit button. */
 #completionDialog .completion-line-title { display: inline-block; min-height: 44px; max-width: 100%; padding: 4px 0; border: 0; border-radius: 2px; background: transparent; box-shadow: none; color: var(--teal); font: inherit; font-weight: 650; text-align: left; text-decoration: underline; text-underline-offset: 3px; white-space: normal; overflow-wrap: anywhere; }
 #completionDialog .completion-line-title:focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; }

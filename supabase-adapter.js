@@ -2785,7 +2785,7 @@
         }
         throw error;
       }
-      if (!data?.location || String(data.location.customer_id || "") !== String(customerId)) {
+      if (!data?.location || String(data.location.id || "") !== String(locationId) || String(data.location.customer_id || "") !== String(customerId)) {
         throw new Error("Serviceområdet ble ikke bekreftet på riktig kundeadresse.");
       }
       return data.location;
