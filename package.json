@@ -4,7 +4,7 @@
   "private": true,
   "description": "Intern CRM-webapp for Numedal Varmepumpeservice.",
   "scripts": {
-    "test:parked-assistant": "node --test tests/assistant-parked-sql.test.mjs tests/crm-parked-performance.test.mjs tests/email-intake-lazy-reply.test.mjs",
+    "test:parked-assistant": "node --test tests/website-fallback-parked-sql.test.mjs tests/manual-inbox-copy.test.mjs tests/manual-nearby-workspace.test.mjs tests/manual-review-workspace.test.mjs tests/manual-direct-controls.test.mjs tests/manual-invoice-access.test.mjs tests/assistant-parked-sql.test.mjs tests/crm-parked-performance.test.mjs tests/email-intake-lazy-reply.test.mjs",
     "test:completed-job-installation-mirror-sql": "node tools/run-local-sql-tests.mjs tests/completed-job-installation-mirror-integration.sql",
     "test:completed-job-installation-mirror-concurrency": "node tests/completed-job-installation-mirror-concurrency.test.mjs --local",
     "test:sms-history-content": "node --test tests/sms-history-content-adapter.test.mjs tests/sms-history-content.test.mjs",
