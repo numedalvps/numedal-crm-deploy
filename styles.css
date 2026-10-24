@@ -6314,6 +6314,23 @@ label > .form-hint {
   min-width: 0;
 }
 
+.offer-purchase-mode {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin: 0 0 18px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #f6f9fc;
+}
+
+.offer-purchase-mode legend { padding: 0 6px; font-weight: 700; }
+.offer-purchase-mode .check-row { align-items: flex-start; margin: 0; }
+.offer-purchase-mode .check-row span { display: grid; gap: 3px; }
+.offer-purchase-mode input[type="radio"] { flex: 0 0 auto; width: 18px; height: 18px; margin-top: 2px; }
+.offer-purchase-mode .form-hint { margin: 0; }
+
 .lead-offer-standard-installation,
 .lead-offer-option-prices {
   margin: 2px 0 0;
