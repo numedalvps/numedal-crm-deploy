@@ -1913,6 +1913,7 @@
           ? {}
           : Object.fromEntries((settingsResult.data || []).map((row) => [row.key, row.value])),
         timeEntries: timeEntryResult.error ? [] : timeEntryResult.data || [],
+        timeEntriesAvailable: !timeEntryResult.error,
         workPeriods: workPeriodResult.error ? [] : workPeriodResult.data || [],
         workPeriodsAvailable: !workPeriodResult.error,
       };
