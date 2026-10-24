@@ -6331,6 +6331,20 @@ label > .form-hint {
 .offer-purchase-mode input[type="radio"] { flex: 0 0 auto; width: 18px; height: 18px; margin-top: 2px; }
 .offer-purchase-mode .form-hint { margin: 0; }
 
+.offer-site-notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.offer-site-notes legend { padding: 0 6px; font-weight: 600; }
+.offer-site-notes .check-row { margin: 0; gap: 7px; }
+.offer-site-notes input[type="checkbox"] { width: 18px; height: 18px; flex: 0 0 auto; }
+.offer-site-notes > small { flex-basis: 100%; color: var(--muted); }
+
 .lead-offer-standard-installation,
 .lead-offer-option-prices {
   margin: 2px 0 0;
