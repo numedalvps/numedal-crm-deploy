@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css?v=1.9.4" />
-    <link rel="stylesheet" href="./styles.css?v=20261024-17" />
+    <link rel="stylesheet" href="./styles.css?v=20261024-18" />
     <link rel="preload" href="./vendor/inter/InterVariable.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="stylesheet" href="./crm-design.css?v=20261024-17" />
+    <link rel="stylesheet" href="./crm-design.css?v=20261024-18" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -1106,6 +1106,8 @@
           <p id="installationSiteHelp" class="manual-section-help">Flere pumper kan dele samme anleggssted. Velg et eksisterende sted, eller registrer et nytt.</p>
           <div class="form-grid">
             <label class="form-wide">Anleggssted<select id="installationLocationSelect" aria-describedby="installationSiteHelp"></select></label>
+            <button id="installationEditLocation" class="secondary hidden" type="button" aria-describedby="installationEditLocationHelp">Endre adresse / sted</button>
+            <p id="installationEditLocationHelp" class="manual-section-help form-wide hidden">Adressen lagres separat og gjelder alle pumper på dette stedet. Endringene dine på pumpen beholdes.</p>
             <button id="installationUseCustomerAddress" class="secondary manual-address-shortcut hidden" type="button" title="Bare hvis pumpen står på kundens hovedadresse">Bruk kundens hovedadresse</button>
             <label class="installation-location-field form-wide">Navn på stedet<input id="installationLocationName" placeholder="F.eks. Bolig eller Hytte Blefjell" /></label>
             <label class="installation-location-field form-wide">Anleggsadresse<input id="installationAddress" autocomplete="section-installation street-address" /></label>
@@ -2052,13 +2054,13 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20261024-17"></script>
-    <script src="./supabase-adapter.js?v=20261024-17"></script>
-    <script src="./intake-parser.js?v=20261024-17"></script>
-    <script src="./assistant-coordinator.js?v=20261024-17"></script>
-    <script src="./nearby-planning.js?v=20261024-17"></script>
-    <script src="./customer-reply-composer.js?v=20261024-17"></script>
-    <script src="./contextual-assistant.js?v=20261024-17"></script>
-    <script src="./app-20261024-17.js"></script>
+    <script src="./supabase-config.js?v=20261024-18"></script>
+    <script src="./supabase-adapter.js?v=20261024-18"></script>
+    <script src="./intake-parser.js?v=20261024-18"></script>
+    <script src="./assistant-coordinator.js?v=20261024-18"></script>
+    <script src="./nearby-planning.js?v=20261024-18"></script>
+    <script src="./customer-reply-composer.js?v=20261024-18"></script>
+    <script src="./contextual-assistant.js?v=20261024-18"></script>
+    <script src="./app-20261024-18.js"></script>
   </body>
 </html>
