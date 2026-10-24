@@ -6423,6 +6423,7 @@ label > .form-hint {
 
 .lead-offer-preview > header {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   align-items: center;
   justify-content: space-between;
@@ -6438,6 +6439,16 @@ label > .form-hint {
 
 .lead-offer-preview > header small {
   color: var(--muted);
+}
+
+.offer-preview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.offer-preview-actions button {
+  min-height: 44px;
 }
 
 .lead-offer-preview iframe {
