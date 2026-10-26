@@ -3883,6 +3883,22 @@
         authorization_mode: authorizationMode,
       }, 90000);
     },
+    async setJobInvoiceRecipient(request) {
+      const supabase = await requireClient();
+      if (!isUuid(request?.jobId) || (request.customerId && !isUuid(request.customerId))
+        || !isUuid(request?.clientEventId) || !request.expectedUpdatedAt || !request.expectedCustomerUpdatedAt) {
+        throw new Error("Fakturamottakeren mangler ferskt jobb- eller kundegrunnlag.");
+      }
+      const { data, error } = await supabase.rpc("set_job_invoice_recipient_v1", {
+        p_job: request.jobId, p_invoice_customer: request.customerId || null,
+        p_expected_updated_at: request.expectedUpdatedAt,
+        p_expected_customer_updated_at: request.expectedCustomerUpdatedAt,
+        p_event: request.clientEventId, p_key: `invoice-recipient:${request.clientEventId}`,
+      });
+      if (error) throw error;
+      if (!data?.job?.id) throw new Error("Fakturamottakeren mangler lagringskvittering.");
+      return data;
+    },
     async prepareCompletedJobInvoiceAction(jobId, values = {}) {
       const supabase = await requireClient();
       if (!isUuid(jobId)) throw new Error("Ugyldig jobb for automatisk fakturagrunnlag.");
