@@ -532,6 +532,7 @@
       customerId: row.customer_id,
       date: osloStarts.date,
       time: osloStarts.time,
+      starts_at: row.starts_at,
       type: isInsulation ? "blaseisolering" : isBefaring ? "befaring" : row.job_type,
       duration: String(row.duration_minutes || 60),
       resource: row.assigned_name || "Hubert",

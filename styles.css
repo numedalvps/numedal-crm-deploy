@@ -17336,6 +17336,13 @@ html:has(dialog:modal) {
 
 /* A compact personal checklist before the technician's daily jobs. */
 .technician-attention { margin: 0 0 16px; }
+.technician-pending-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; margin-bottom: 16px; border: 1px solid #d5a35b; border-radius: 12px; background: #fff8eb; }
+.technician-pending-banner p { margin: 4px 0 0; font-size: 14px; }
+.technician-pending-banner button { flex-shrink: 0; min-height: 44px; }
+.technician-attention.has-overdue > section { border-color: #d5a35b; background: #fffaf1; }
+@media (max-width: 760px) {
+  .technician-pending-banner { align-items: stretch; flex-direction: column; }
+}
 .technician-attention > section { padding: 14px; border: 1px solid #d7e5df; border-radius: 12px; background: #f4faf7; }
 .technician-attention h3 { margin: 0 0 12px; }
 .technician-attention h4 { margin: 0 0 6px; font-size: 14px; }
