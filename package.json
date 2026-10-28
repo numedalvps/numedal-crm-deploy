@@ -46,7 +46,7 @@
     "test:job-priority-service-intake": "node tests/job-priority-service-intake.test.mjs",
     "test:website-service-classification-sql": "node --test tests/website-service-classification.integration.mjs",
     "test:website-service-classification-harness": "node tools/website-service-classification-harness.mjs --install-migration",
-    "test:automatic-invoice-action": "node tests/automatic-invoice-action.test.mjs && node --test tests/standard-service-price-default.test.mjs tests/installation-title-invoice-basis.test.mjs tests/billing-canonical-preparation.test.mjs tests/invoice-draft-identity.test.mjs tests/invoice-completion-coverage.test.mjs tests/billing-completion-history-freshness.test.mjs tests/completion-extra-cleaning.test.mjs",
+    "test:automatic-invoice-action": "node tests/automatic-invoice-action.test.mjs && node --test tests/standard-service-price-default.test.mjs tests/installation-title-invoice-basis.test.mjs tests/billing-canonical-preparation.test.mjs tests/invoice-draft-identity.test.mjs tests/invoice-recipient-preparation-current.test.mjs tests/invoice-completion-coverage.test.mjs tests/billing-completion-history-freshness.test.mjs tests/completion-extra-cleaning.test.mjs",
     "test:service-extra-cleaning-sql": "node tools/run-local-sql-tests.mjs tests/service-extra-cleaning-basis-integration.sql",
     "test:precreation-extra-cleaning-sql": "node tools/run-local-sql-tests.mjs tests/precreation-extra-cleaning-integration.sql",
     "test:precreation-included-installation-sql": "node tools/run-local-sql-tests.mjs tests/precreation-included-installation-integration.sql",
