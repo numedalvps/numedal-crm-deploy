@@ -1911,7 +1911,7 @@
     const units = { time: "tim", timer: "tim", sett: "stk", g: "gr" };
     const unit = units[item.unit] || item.unit;
     if (item.kind !== "addition" || ["service_heatpump", "standard_installation", "driving_km", "no_show"].includes(id)
-      || !/^[a-z0-9][a-z0-9_-]{0,79}$/.test(id) || typeof item.articleNo !== "string" || !/^\d{3,6}$/.test(item.articleNo)
+      || !/^[a-z0-9][a-z0-9_-]{0,79}$/.test(id) || typeof item.articleNo !== "string" || !/^\d{2,6}$/.test(item.articleNo)
       || typeof item.label !== "string" || !item.label.trim() || item.label.length > 160
       || typeof item.unit !== "string" || !["stk", "m", "time", "tim", "timer", "g", "gr", "sett"].includes(item.unit)) return null;
     const legacyAlias = /^(ekstra rør( og.*)?|ekstra rørstrekk|ekstra (pvc[- ]?)?kanal(er)?|pvc[- ]kanal(er)?|bakkestativ|flexkanal( 600 mm)?|kjerneboring i tømmer( - pris avtales)?)$/;
@@ -1925,8 +1925,8 @@
     const exact = value => String(value || "").trim().toLowerCase().replace(/[‐‑‒–—−]/g, "-").replace(/[ \t\u00a0\u202f]+/g, " ");
     const rows = String(basis || "").split(/\r?\n/).filter(Boolean).map(text => {
       const raw = text.replace(/^\s*-\s*/, "").trim();
-      const number = raw.match(/^(\d{3,6})\s+/)?.[1] || "";
-      const label = exact(raw.replace(/^\d{3,6}\s+/, "").split(":")[0]);
+      const number = raw.match(/^(\d{2,6})\s+/)?.[1] || "";
+      const label = exact(raw.replace(/^\d{2,6}\s+/, "").split(":")[0]);
       const quantity = raw.match(/:\s*((?:\d{1,3}(?:[ \u00a0\u202f]\d{3})+|\d+)(?:[,.]\d{1,2})?)\s+(\S+)\s+(?:x|à|a)\s/i);
       const aliases = { time: "tim", timer: "tim", sett: "stk", g: "gr" };
       return { number, label, quantity: quantity ? Number(quantity[1].replace(/[ \u00a0\u202f]/g, "").replace(",", ".")) : NaN,
