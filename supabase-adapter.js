@@ -1949,6 +1949,56 @@
       if (error && !isOptionalAssistantActionsError(error)) throw error;
       return error ? [] : data || [];
     },
+    async loadCustomerServiceSmsActions(customerId) {
+      if (!isUuid(customerId)) throw new Error("Velg et gyldig kundekort.");
+      const supabase = await requireClient();
+      const { data, error } = await withDbTimeout(supabase.from("assistant_actions")
+        .select("id,title,status,created_at,updated_at,review_revision,review_content_hash,source_ref,source_kind,channel,action_type,approval_required,linked_customer_id,payload_json,expires_at")
+        .eq("linked_customer_id", customerId).eq("action_type", "sms_reply").eq("channel", "sms")
+        .eq("source_kind", "crm_assistant_service_outreach").eq("payload_json->>reviewPurpose", "service_invitation")
+        .not("payload_json->>managementCampaignOperationHash", "is", null)
+        .in("status", ["needs_review", "approved", "executing", "failed"])
+        .order("created_at", { ascending: false }).limit(51), "hente kundens SMS-utkast", 12000);
+      if (error) throw error;
+      if ((data || []).length > 50) throw new Error("Kunden har for mange uavklarte SMS-utkast. Kontroller saken før du sender noe.");
+      return data || [];
+    },
+    async recordServiceSmsDisplay(id, request = {}) {
+      if (!isUuid(id) || !isUuid(request.clientEventId)
+        || !["needs_review", "approved", "executing", "failed", "completed", "rejected", "expired"].includes(request.expectedStatus)
+        || !Number.isSafeInteger(request.expectedRevision) || request.expectedRevision < 1
+        || !/^[0-9a-f]{64}$/.test(request.expectedContentHash || "")
+        || !request.expectedUpdatedAt || Number.isNaN(Date.parse(request.expectedUpdatedAt))) {
+        throw new Error("SMS-kontrollen mangler en gyldig utkastversjon.");
+      }
+      const snapshot = request.expectedSnapshot;
+      const keys = ["action_type", "channel", "approval_required", "recipient", "subject", "body", "payload_json", "evidence_json", "blockers_json", "source_kind", "source_intake_id", "linked_customer_id", "linked_lead_id", "linked_job_id", "linked_order_id"];
+      if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)
+        || Object.keys(snapshot).length !== keys.length || keys.some(key => !Object.hasOwn(snapshot, key))
+        || snapshot.action_type !== "sms_reply" || snapshot.channel !== "sms") throw new Error("SMS-kontrollen mangler det eksakte lagrede utkastet.");
+      const supabase = await requireClient();
+      const { data, error } = await withDbTimeout(supabase.rpc("record_service_sms_display_v1", {
+        p_action_id: id, p_client_event_id: request.clientEventId, p_expected_status: request.expectedStatus,
+        p_expected_updated_at: request.expectedUpdatedAt, p_expected_revision: request.expectedRevision,
+        p_expected_content_hash: request.expectedContentHash, p_expected_source_ref: request.expectedSourceRef ?? null,
+        p_expected_snapshot: snapshot,
+      }), "registrere SMS-kontroll", 12000);
+      if (error) throw error;
+      const canonical = value => Array.isArray(value) ? value.map(canonical) : value && typeof value === "object"
+        ? Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])])) : value;
+      if (!data || data.action?.id !== id || data.action?.action_type !== "sms_reply" || data.action?.channel !== "sms"
+        || data.action.status !== request.expectedStatus || data.action.review_revision !== request.expectedRevision
+        || data.action.review_content_hash !== request.expectedContentHash
+        || data.action.updated_at !== request.expectedUpdatedAt
+        || (data.action.source_ref ?? null) !== (request.expectedSourceRef ?? null)
+        || keys.some(key => JSON.stringify(canonical(data.action[key] ?? (["payload_json", "evidence_json"].includes(key) ? {} : key === "blockers_json" ? [] : null))) !== JSON.stringify(canonical(snapshot[key])))
+        || !isUuid(data.receipt_id) || !isUuid(data.review_id) || !isUuid(data.actor_profile_id)
+        || data.client_event_id !== request.clientEventId || data.send_authorized !== false
+        || !/^[0-9a-f]{64}$/.test(data.snapshot_hash || "") || !data.displayed_at || Number.isNaN(Date.parse(data.displayed_at))) {
+        throw new Error("Serveren bekreftet ikke den eksakte SMS-kontrollen.");
+      }
+      return data;
+    },
     async loadAssistantEmailAction(id) {
       if (!isUuid(id)) throw new Error("Ugyldig e-postutkast.");
       const supabase = await requireClient();
