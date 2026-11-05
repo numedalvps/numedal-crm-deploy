@@ -2549,6 +2549,27 @@
       if (sourceActivity && !activityRows.some((row) => row.id === sourceActivity.id)) activityRows.push(sourceActivity);
       return { ...context, lead, activities: activityRows, job, order: order ? orderFromDb(order) : null };
     },
+    async loadOpenJobCompletionContext(orderId) {
+      if (!isUuid(orderId)) throw new Error("Velg en gyldig jobb.");
+      const supabase = await requireClient();
+      const { data, error } = await withDbTimeout(supabase.rpc("load_open_job_completion_context_v1", { p_order_id: orderId }), "hente åpen jobb");
+      if (error) throw error;
+      if (!data?.customer?.id || data.order?.id !== orderId || !data.job?.id) throw new Error("Fant ikke den åpne jobben.");
+      return { ...data, order: { ...orderFromDb(data.order), jobId: data.job.id, job_id: data.job.id } };
+    },
+    async completeOpenJob(request, options = {}) {
+      const result = await manualReceiptRpc("complete_open_job_v1", request, options, ["order", "job", "serviceEvent"]);
+      if (result.order.id !== request.order_id || result.job.id !== request.job_id
+        || result.order.customer_id !== request.customer_id || result.job.customer_id !== request.customer_id
+        || result.job.source_table !== "orders" || result.job.source_id !== result.order.id
+        || result.order.status !== "completed" || result.job.work_status !== "completed"
+        || (result.order.booking_ids || []).length) {
+        const error = new Error("Fullføringssvaret mangler riktig jobb. Kontroller samme fullføring igjen.");
+        error.manualOutcomeUncertain = true;
+        throw error;
+      }
+      return { ...result, order: { ...orderFromDb(result.order), jobId: result.job.id, job_id: result.job.id } };
+    },
     async deleteOrder(id) {
       const supabase = await requireClient();
       await cancelJobForOrder(supabase, id);
