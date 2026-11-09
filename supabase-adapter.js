@@ -979,7 +979,12 @@
       priority: order.priority || order.job_priority || existingJob?.priority || "normal",
       source_table: "orders",
       source_id: orderId,
-      completed_at: dateToTimestamp(order.completedAt || order.completed_at),
+      // A completed order is a lossy date mirror, not a correction of the
+      // canonical job timestamp. Omit the PATCH field so a concurrent canonical
+      // correction is preserved too; new/legacy-null mirrors still get a date.
+      ...(existingJob?.work_status === "completed" && existingJob.completed_at && order.status === "completed"
+        ? {}
+        : { completed_at: dateToTimestamp(order.completedAt || order.completed_at) }),
       cancelled_at: order.status === "cancelled" ? new Date().toISOString() : null,
     };
   }
