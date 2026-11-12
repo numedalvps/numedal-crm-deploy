@@ -232,7 +232,7 @@
     "test:customer-completion-usability": "node --test tests/daily-workflow.test.mjs tests/customer-simple-workflow.test.mjs tests/completion-simple-workflow.test.mjs && node --test tests/customer-search-pending.test.mjs",
     "test:email-usability": "node --test tests/external-email-editable.test.mjs tests/mobile-email-flow.test.mjs tests/mobile-email-session-races.test.mjs tests/global-search-render-work.test.mjs tests/offer-site-notes.test.mjs",
     "test:site-service-area": "node --test tests/planning-backlog-area.test.mjs tests/work-service-area-editor.test.mjs tests/service-area-physical-source-sql.test.mjs tests/route-open-job-site.test.mjs",
-    "test:open-job-completion": "node --test tests/open-job-completion-adapter.test.mjs tests/open-job-completion-sql.test.mjs"
+    "test:open-job-completion": "node --test tests/open-job-completion-adapter.test.mjs tests/open-job-completion-sql.test.mjs tests/open-job-completion-recovery.test.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.10",
