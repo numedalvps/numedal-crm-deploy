@@ -3727,6 +3727,16 @@
       if (error) throw error;
       return Array.isArray(data) ? data : [];
     },
+    async loadInstallationServiceHistory() {
+      const supabase = await requireClient();
+      const { data, error } = await withDbTimeout(
+        fetchAllRows(() => supabase.from("installation_service_history_v1").select("*")
+          .order("service_priority_rank").order("installation_id")),
+        "laste servicehistorikk for anlegg", 30000,
+      );
+      if (error) throw error;
+      return Array.isArray(data) ? data : [];
+    },
     async recordServiceCampaignResponse(memberId, values = {}) {
       const supabase = await requireClient();
       if (!isUuid(memberId)) throw new Error("Ugyldig kunde i serviceutsendingen.");

@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Numedal CRM Webapp</title>
     <link rel="stylesheet" href="./vendor/leaflet/leaflet.css?v=1.9.4" />
-    <link rel="stylesheet" href="./styles.css?v=20261113-01" />
+    <link rel="stylesheet" href="./styles.css?v=20261113-02" />
     <link rel="preload" href="./vendor/inter/InterVariable.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="stylesheet" href="./crm-design.css?v=20261113-01" />
+    <link rel="stylesheet" href="./crm-design.css?v=20261113-02" />
   </head>
   <body>
     <div id="loginView" class="login-view">
@@ -227,6 +227,12 @@
                   <option value="insulation">Blåseisolering</option>
                   <option value="inactive">Inaktive</option>
                   <option value="missing">Mangler serviceinfo</option>
+                  <option value="history_missing">Uten dokumentert service på anlegget</option>
+                  <option value="history_service_history_unknown">Servicehistorikk må sjekkes</option>
+                  <option value="history_customer_service_unallocated">Service finnes kun på kunden</option>
+                  <option value="history_legacy_service_reminder">Kun gammel servicepåminnelse</option>
+                  <option value="history_new_installation">Nytt anlegg uten utført service</option>
+                  <option value="history_service_due_only">Servicefrist uten utført service</option>
                   <option value="quality_phone">Mangler telefon</option>
                   <option value="quality_email">Mangler e-post</option>
                   <option value="quality_address">Mangler adresse/kart</option>
@@ -2089,13 +2095,13 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js?v=20261113-01"></script>
-    <script src="./supabase-adapter.js?v=20261113-01"></script>
-    <script src="./intake-parser.js?v=20261113-01"></script>
-    <script src="./assistant-coordinator.js?v=20261113-01"></script>
-    <script src="./nearby-planning.js?v=20261113-01"></script>
-    <script src="./customer-reply-composer.js?v=20261113-01"></script>
-    <script src="./contextual-assistant.js?v=20261113-01"></script>
-    <script src="./app-20261113-01.js"></script>
+    <script src="./supabase-config.js?v=20261113-02"></script>
+    <script src="./supabase-adapter.js?v=20261113-02"></script>
+    <script src="./intake-parser.js?v=20261113-02"></script>
+    <script src="./assistant-coordinator.js?v=20261113-02"></script>
+    <script src="./nearby-planning.js?v=20261113-02"></script>
+    <script src="./customer-reply-composer.js?v=20261113-02"></script>
+    <script src="./contextual-assistant.js?v=20261113-02"></script>
+    <script src="./app-20261113-02.js"></script>
   </body>
 </html>
