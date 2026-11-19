@@ -1587,6 +1587,21 @@
     return true;
   }
 
+  function completionDraftCanonicalJson(value) {
+    if (Array.isArray(value)) return `[${value.map(completionDraftCanonicalJson).join(",")}]`;
+    if (value && typeof value === "object") return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${completionDraftCanonicalJson(value[key])}`).join(",")}}`;
+    return JSON.stringify(value);
+  }
+
+  function validCompletionReportDraftResult(data, { jobId, bookingId, mode, ownerProfileId = null }) {
+    if (!data || !/^[0-9a-f]{64}$/.test(String(data.bindingHash || "")) || !("draft" in data)) return false;
+    const draft = data.draft;
+    return draft === null || (isUuid(draft?.id) && draft.jobId === jobId && draft.bookingId === bookingId && draft.mode === mode
+      && isUuid(draft.ownerProfileId) && (!ownerProfileId || draft.ownerProfileId === ownerProfileId)
+      && Number.isSafeInteger(draft.revision) && draft.revision > 0 && /^[0-9a-f]{64}$/.test(String(draft.contentHash || ""))
+      && Number.isFinite(Date.parse(draft.updatedAt)) && draft.payload?.version === 1 && draft.payload.mode === mode);
+  }
+
   function manualResponseOutcomeUncertain(response) {
     const code = String(response?.error?.code || "");
     if (/^[0-9A-Z]{5}$/.test(code)) return false;
@@ -2553,6 +2568,41 @@
       const activityRows = [...(recentActivities || [])];
       if (sourceActivity && !activityRows.some((row) => row.id === sourceActivity.id)) activityRows.push(sourceActivity);
       return { ...context, lead, activities: activityRows, job, order: order ? orderFromDb(order) : null };
+    },
+    async loadCompletionReportDraft({ jobId, bookingId = null, mode, ownerProfileId = null } = {}) {
+      if (!isUuid(jobId) || !["booked", "open"].includes(mode) || (mode === "booked" ? !isUuid(bookingId) : bookingId !== null)
+        || (ownerProfileId !== null && !isUuid(ownerProfileId))) throw new Error("Velg riktig jobb for rapportutkastet.");
+      const supabase = await requireClient();
+      const { data, error } = await withDbTimeout(supabase.rpc("load_completion_report_draft_v1", {
+        p_job_id: jobId, p_booking_id: bookingId, p_mode: mode, p_owner_profile_id: ownerProfileId,
+      }), "hente lagret rapportutkast");
+      if (error) throw error;
+      if (!validCompletionReportDraftResult(data, { jobId, bookingId, mode, ownerProfileId })) throw new Error("Lagret rapport kunne ikke bekreftes for denne jobben.");
+      return data;
+    },
+    async saveCompletionReportDraft(request, options = {}) {
+      const { jobId, bookingId = null, mode, expectedRevision, expectedContentHash, expectedBindingHash, payload } = request || {};
+      if (!isUuid(jobId) || !["booked", "open"].includes(mode) || (mode === "booked" ? !isUuid(bookingId) : bookingId !== null)
+        || !Number.isSafeInteger(expectedRevision) || expectedRevision < 0
+        || (expectedContentHash !== null && !/^[0-9a-f]{64}$/.test(String(expectedContentHash || "")))
+        || !/^[0-9a-f]{64}$/.test(String(expectedBindingHash || "")) || !payload || payload.version !== 1 || payload.mode !== mode) {
+        throw new Error("Rapportlagringen mangler kontrollgrunnlag. Dine felter er beholdt.");
+      }
+      const data = await manualReceiptRpc("save_completion_report_draft_v1", {
+        job_id: jobId, booking_id: bookingId, mode, expected_revision: expectedRevision,
+        expected_content_hash: expectedContentHash, expected_binding_hash: expectedBindingHash, payload,
+      }, options, ["draft"]);
+      if (!validCompletionReportDraftResult(data, { jobId, bookingId, mode }) || data.eventId !== options.clientEventId
+        || typeof data.alreadyApplied !== "boolean" || data.bindingHash !== expectedBindingHash
+        || typeof data.currentMismatch !== "boolean"
+        || (data.currentMismatch ? (!data.alreadyApplied || !validCompletionReportDraftResult({ bindingHash: data.bindingHash, draft: data.currentDraft }, { jobId, bookingId, mode })
+          || !data.currentDraft || data.currentDraft.id !== data.draft.id || data.currentDraft.ownerProfileId !== data.draft.ownerProfileId
+          || data.currentDraft.revision <= data.draft.revision) : data.currentDraft !== null)
+        || data.draft.revision < Math.max(1, expectedRevision) || data.draft.revision > expectedRevision + 1
+        || completionDraftCanonicalJson(data.draft.payload) !== completionDraftCanonicalJson(payload)) {
+        throw Object.assign(new Error("Rapportlagringen mangler en entydig kvittering. Kontroller samme lagring igjen."), { manualOutcomeUncertain: true });
+      }
+      return data;
     },
     async loadOpenJobCompletionContext(orderId) {
       if (!isUuid(orderId)) throw new Error("Velg en gyldig jobb.");

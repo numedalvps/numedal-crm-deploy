@@ -17380,3 +17380,17 @@ html:has(dialog:modal) {
 .technician-more-actions { margin-top: 8px; }
 .technician-more-actions > summary { cursor: pointer; color: var(--muted); padding: 8px 0; }
 .technician-more-actions > button { margin-top: 4px; }
+.completion-draft-status {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border: 1px solid #b6c9bd;
+  border-radius: 8px;
+  background: #f2f7f3;
+  color: #183c27;
+  font-size: 0.9rem;
+}
+.completion-draft-status.has-error { background: #fff5eb; color: #71350a; border-color: #d7a980; }
+.completion-draft-status p { margin: 0 0 6px; }
+.completion-draft-status p:last-child { margin-bottom: 0; }
+.completion-draft-status button { margin: 6px 8px 0 0; }
+.completion-draft-status pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
