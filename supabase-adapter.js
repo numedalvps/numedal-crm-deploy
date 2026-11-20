@@ -1101,26 +1101,29 @@
       .select("*")
       .eq("customer_id", customerId)
       .eq("note_type", "adkomst")
+      .is("location_id", null)
       .eq("active", true)
       .order("updated_at", { ascending: false })
       .limit(5);
     if (existingError) throw existingError;
     const existing = existingRows?.[0] || null;
     const extra = (existingRows || []).slice(1);
+    const updateGeneralNote = (id, patch) => supabase.from("access_notes").update(patch)
+      .eq("id", id).eq("customer_id", customerId).eq("note_type", "adkomst").is("location_id", null);
     for (const row of extra) {
-      const { error } = await supabase.from("access_notes").update({ active: false }).eq("id", row.id);
+      const { error } = await updateGeneralNote(row.id, { active: false });
       if (error) throw error;
     }
     if (!cleanNote) {
       if (existing) {
-        const { error } = await supabase.from("access_notes").update({ active: false }).eq("id", existing.id);
+        const { error } = await updateGeneralNote(existing.id, { active: false });
         if (error) throw error;
       }
       return;
     }
     const payload = { customer_id: customerId, note_type: "adkomst", note: cleanNote, active: true };
     const query = existing
-      ? supabase.from("access_notes").update(payload).eq("id", existing.id)
+      ? updateGeneralNote(existing.id, payload)
       : supabase.from("access_notes").insert(payload);
     const { error } = await query;
     if (error) throw error;
@@ -2634,6 +2637,8 @@
     async saveCustomer(customer) {
       const supabase = await requireClient();
       const dbCustomer = customerToDb(customer);
+      const includesAccess = Object.hasOwn(customer, "access_note") && customer.access_note !== undefined;
+      if (!includesAccess) delete dbCustomer.access_note;
       const customerId = String(customer.id || "");
       const isSupabaseId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(customerId);
       let query;
@@ -2670,13 +2675,13 @@
               "lagre kunde",
             );
             if (retryError) throw retryError;
-            await syncAccessNote(supabase, retryData.id, dbCustomer.access_note);
+            if (includesAccess) await syncAccessNote(supabase, retryData.id, dbCustomer.access_note);
             return customerFromDb(retryData);
           }
         }
         throw error;
       }
-      await syncAccessNote(supabase, data.id, dbCustomer.access_note);
+      if (includesAccess) await syncAccessNote(supabase, data.id, dbCustomer.access_note);
       return customerFromDb(data);
     },
     async deleteCustomer(customer) {
